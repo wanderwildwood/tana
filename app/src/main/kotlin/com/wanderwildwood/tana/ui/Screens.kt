@@ -10,8 +10,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.isImeVisible
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
@@ -198,7 +196,8 @@ fun FolderScreen(state: UiState, work: com.wanderwildwood.tana.work.Work, vm: Br
         bottomBar = { Column { Foot(state, work, vm) { more = true } } },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            if (folder != null && root != null) PathLine(root, rootLabel, folder, onJump = { vm.go(Place.Folder(it)) })
+            // Not at the root itself, where it would only say the title again.
+            if (folder != null && root != null && folder.path != root.path) PathLine(root, rootLabel, folder, onJump = { vm.go(Place.Folder(it)) })
             Box(Modifier.weight(1f)) {
                 when {
                     state.reading == Reading.FAILED -> Column(Modifier.padding(16.dp)) {
@@ -227,7 +226,7 @@ fun FolderScreen(state: UiState, work: com.wanderwildwood.tana.work.Work, vm: Br
                                 entry = entry,
                                 selecting = state.selecting,
                                 selected = entry.loc in state.selection,
-                                showFolder = if (state.place == Place.Recent) entry.loc.parent?.name else null,
+                                showFolder = if (state.place == Place.Recent) vm.folderLabel(entry.loc) else null,
                                 onPress = { vm.press(entry) },
                                 onLongPress = { vm.toggle(entry) },
                             )
@@ -276,13 +275,13 @@ fun SearchScreen(search: SearchState, vm: BrowserViewModel) {
         focusManager.clearFocus()
         vm.searchFor(words, kind)
     }
-    KeyboardFirst()
+    KeyboardFirst(vm::closeSearch)
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             TopAppBarMMD(
-                title = { TextMMD(text = stringResource(R.string.search_within, search.within), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
+                title = { TextMMD(text = search.within, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
                 navigationIcon = { BarButton(Icons.Back, stringResource(R.string.cd_back), vm::closeSearch) },
             )
         },
@@ -308,7 +307,7 @@ fun SearchScreen(search: SearchState, vm: BrowserViewModel) {
                         textDecoration = if (k == kind) androidx.compose.ui.text.style.TextDecoration.Underline else null,
                         modifier = Modifier.clickable {
                             kind = k
-                            if (search.ran || words.isNotBlank()) vm.searchFor(words, k)
+                            if (search.ran || words.isNotBlank() || k != Kind.ANY) vm.searchFor(words, k)
                         }.padding(horizontal = 6.dp, vertical = 8.dp),
                     )
                 }
@@ -328,7 +327,7 @@ fun SearchScreen(search: SearchState, vm: BrowserViewModel) {
                                 entry = entry,
                                 selecting = false,
                                 selected = false,
-                                showFolder = entry.loc.parent?.name?.ifEmpty { vm.rootOf(entry.loc).second },
+                                showFolder = vm.folderLabel(entry.loc),
                                 onPress = { vm.pressResult(entry) },
                                 onLongPress = { vm.pressResult(entry) },
                             )
@@ -342,18 +341,27 @@ fun SearchScreen(search: SearchState, vm: BrowserViewModel) {
 }
 
 /**
- * Back with the keyboard up puts the keyboard away, and does nothing else. Without this it
- * closed the whole screen, and what had been typed into it went with it.
+ * Back with the keyboard up puts the keyboard away, and does nothing else; otherwise it is
+ * [onBack]. Without this, Back closed the whole screen and what had been typed went with it.
+ *
+ * Whether the keyboard is up is asked of the window at the moment Back is pressed. Compose's
+ * own keyboard state is only kept current for an app drawn edge to edge, which this is not,
+ * and read from there it stayed "up" for good after the first time, and Back stopped working.
  */
-@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-private fun KeyboardFirst() {
+private fun KeyboardFirst(onBack: () -> Unit) {
+    val view = androidx.compose.ui.platform.LocalView.current
     val focusManager = LocalFocusManager.current
     val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
-    val up = WindowInsets.isImeVisible
-    androidx.activity.compose.BackHandler(enabled = up) {
-        keyboard?.hide()
-        focusManager.clearFocus()
+    androidx.activity.compose.BackHandler {
+        val up = androidx.core.view.ViewCompat.getRootWindowInsets(view)
+            ?.isVisible(androidx.core.view.WindowInsetsCompat.Type.ime()) == true
+        if (up) {
+            keyboard?.hide()
+            focusManager.clearFocus()
+        } else {
+            onBack()
+        }
     }
 }
 
@@ -395,7 +403,7 @@ fun ServerScreen(initial: Server, vm: BrowserViewModel, onDone: () -> Unit) {
         onDone()
     }
     val ready = host.isNotBlank() && share.isNotBlank() && !checking
-    KeyboardFirst()
+    KeyboardFirst(onDone)
 
     val save = {
         if (ready) {

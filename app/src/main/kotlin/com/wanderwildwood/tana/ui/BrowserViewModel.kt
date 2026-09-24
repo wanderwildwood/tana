@@ -226,6 +226,13 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         return if (volume != null) volume.loc to volume.label else Loc(LocalStore.ID, "") to "/"
     }
 
+    /** What to call the folder something is in: its name, or the volume's or server's at a root. */
+    fun folderLabel(loc: Loc): String? {
+        val parent = loc.parent ?: return null
+        val (root, label) = rootOf(parent)
+        return if (parent.path == root.path) label else parent.name
+    }
+
     // ---------------------------------------------------------------- the rows
 
     fun press(entry: Entry) {
@@ -496,7 +503,10 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     fun openSearch() {
         val s = _state.value
         val (roots, within) = when (val place = s.place) {
-            is Place.Folder -> listOf(place.loc) to (if (place.loc.path == rootOf(place.loc).first.path) rootOf(place.loc).second else place.loc.name)
+            is Place.Folder -> listOf(place.loc) to app.getString(
+                R.string.search_within,
+                if (place.loc.path == rootOf(place.loc).first.path) rootOf(place.loc).second else place.loc.name,
+            )
             else -> s.volumes.map { it.loc } to app.getString(R.string.search_everywhere)
         }
         _state.update { it.copy(search = SearchState(roots, within), selection = emptySet()) }

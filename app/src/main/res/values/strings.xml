@@ -171,7 +171,7 @@
     <string name="server_name">Name</string>
     <string name="server_name_hint">What to call it here</string>
     <string name="server_host">Address</string>
-    <string name="server_host_hint">192.168.1.70, or its Tailscale address</string>
+    <string name="server_host_hint">192.168.1.20, or its Tailscale address</string>
     <string name="server_share">Share</string>
     <string name="server_share_hint">The name of the shared folder</string>
     <string name="server_user">User</string>
@@ -189,9 +189,9 @@
     <!-- Search -->
 
     <string name="search_hint">Words in the name</string>
-    <!-- "Searching in Music" / "Searching everywhere on the phone" -->
+    <!-- The search screen's title: "In Music", or the second one when searching the whole phone -->
     <string name="search_within">In %1$s</string>
-    <string name="search_everywhere">everywhere on the phone</string>
+    <string name="search_everywhere">Everywhere on the phone</string>
     <string name="search_go">Search</string>
     <string name="search_running">Searching…</string>
     <string name="search_none">Nothing found.</string>

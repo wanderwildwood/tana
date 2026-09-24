@@ -12,6 +12,11 @@ Not a fork. Written from scratch in Kotlin and Jetpack Compose, using Mudita's o
 already ships with. Berend Sliedrecht's [MonoFiles](https://github.com/berendsliedrecht/MonoFiles)
 showed there was a gap for one; this is a different answer to the same question.
 
+| | |
+|---|---|
+| ![The start page: places, pins and servers](screenshots/1-home.png) | ![Two files chosen in a folder on a server](screenshots/2-server.png) |
+| ![Info, with the SHA-256 worked out on request](screenshots/3-info.png) | ![All the audio in a folder, found by kind](screenshots/4-search.png) |
+
 ## Why it exists
 
 The phone's own file manager is Android's, and it does nearly everything. It is also drawn for
@@ -64,9 +69,15 @@ the system Files app still does that. Nothing is sent anywhere but to the server
 
 ## Where this is up to
 
-Version 0.1.0, not released. The copy, move, delete and search engine is unit tested against
-real folders, including stopping a copy half way and a write that fails over a file being
-replaced. It has not yet been driven on a device, and the launcher icon is a stand-in.
+Version 0.1.0. The copy, move, delete and search engine is unit tested against real folders —
+including a copy stopped half way, and a write that fails while replacing a file, where the old
+file has to survive. A second suite runs against a real Samba share when one is named, and
+passes: a five-megabyte folder there and back byte for byte, an upload stopped half way leaving
+nothing on the server, a connection left idle for ninety seconds still answering at once.
+
+Every screen has been driven on an Android 12 emulator the size of a Kompakt, against a real
+server: the checksum the app worked out for a file on the server matched the server's own. What
+has not happened yet is anybody using it on the phone for a week.
 
 ## Building
 
@@ -77,6 +88,20 @@ replaced. It has not yet been driven on a device, and the launcher icon is a sta
 A release build needs a keystore at `signing/signing.keystore` with a matching
 `signing/signing.properties`. There is no fallback key in this repository: without one, a
 release build comes out unsigned rather than wrongly signed.
+
+## Getting it, and keeping it
+
+Download <https://github.com/wanderwildwood/tana/releases/latest/download/tana.apk> and
+sideload it. That address always points at the newest release, and every release publishes a
+`.sha256` beside the APK if you would rather check than trust.
+
+For updates without doing this by hand, add this repository to
+[Obtainium](https://github.com/ImranR98/Obtainium):
+
+    https://github.com/wanderwildwood/tana
+
+It will offer each new release as it appears. **The application id is settled** — updates
+install over what you have, keeping your settings and anything the app has stored.
 
 ## Licence
 
