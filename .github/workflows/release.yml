@@ -68,7 +68,7 @@ jobs:
       # every other wrong key and for an unsigned build, which is why it is not used here.
       - name: Verify the signing certificate
         env:
-          EXPECTED: NOT-YET-SET  # the new key's SHA-256; until then every release refuses
+          EXPECTED: 2b3995b71fe50c7514d975b8df753b1ea9695e695c3c4d1f1ed83d64c81afe86
         run: |
           apk=$(find app/build/outputs/apk/release -maxdepth 1 -name '*.apk')
           apksigner=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
