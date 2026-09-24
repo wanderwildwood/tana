@@ -164,7 +164,10 @@ fun SortDialog(sort: Sort, showHidden: Boolean, onSort: (SortBy) -> Unit, onHidd
 @Composable
 fun MoreDialog(
     chosen: List<Entry>,
+    readOnly: Boolean,
     onShare: () -> Unit,
+    onCompress: () -> Unit,
+    onExtract: () -> Unit,
     onOpenWith: () -> Unit,
     onRename: () -> Unit,
     onInfo: () -> Unit,
@@ -175,9 +178,13 @@ fun MoreDialog(
     EInkDialog(onDismiss = onDismiss) {
         if (chosen.any { !it.isFolder }) DialogRow(stringResource(R.string.action_share), onClick = onShare)
         if (one != null && !one.isFolder) DialogRow(stringResource(R.string.action_open_with), onClick = onOpenWith)
-        if (one != null) DialogRow(stringResource(R.string.action_rename), onClick = onRename)
+        if (one != null && !readOnly && !one.isFolder && Names.extension(one.name) == "zip") {
+            DialogRow(stringResource(R.string.action_extract), onClick = onExtract)
+        }
+        if (!readOnly) DialogRow(stringResource(R.string.action_compress), onClick = onCompress)
+        if (one != null && !readOnly) DialogRow(stringResource(R.string.action_rename), onClick = onRename)
         if (one != null) DialogRow(stringResource(R.string.action_info), onClick = onInfo)
-        if (one != null && one.isFolder) DialogRow(stringResource(R.string.action_pin), onClick = onPin)
+        if (one != null && one.isFolder && !readOnly) DialogRow(stringResource(R.string.action_pin), onClick = onPin)
         Spacer(Modifier.height(14.dp))
         WideButton(stringResource(R.string.close), onDismiss)
     }

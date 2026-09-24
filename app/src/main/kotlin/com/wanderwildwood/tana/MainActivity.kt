@@ -7,7 +7,9 @@ import android.os.Environment
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -111,6 +113,10 @@ private fun Browser(
     val state by vm.state.collectAsStateWithLifecycle()
     val work by Transfers.work.collectAsStateWithLifecycle()
     var editing by remember { mutableStateOf<Server?>(null) }
+    // Android's own folder picker, which is how another app's storage is reached at all.
+    val pickOther = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        if (uri != null) vm.addOther(uri)
+    }
     var about by remember { mutableStateOf(false) }
 
     // Coming back to the app is when a file may have arrived from elsewhere: a download, a
@@ -146,6 +152,7 @@ private fun Browser(
             vm = vm,
             onAddServer = { editing = Server(id = "", name = "", host = "", share = "") },
             onEditServer = { editing = it },
+            onAddOther = { runCatching { pickOther.launch(null) } },
             onAbout = { about = true },
         )
         else -> FolderScreen(state, work, vm)

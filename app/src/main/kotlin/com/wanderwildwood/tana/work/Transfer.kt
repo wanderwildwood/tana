@@ -4,7 +4,10 @@ import com.wanderwildwood.tana.store.Entry
 import com.wanderwildwood.tana.store.Loc
 import com.wanderwildwood.tana.store.Store
 import com.wanderwildwood.tana.store.StoreException
+import java.io.BufferedOutputStream
 import java.io.File
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 
 enum class Mode { COPY, MOVE }
 
@@ -132,6 +135,48 @@ class Transfer(
             done++
         }
         return Outcome(done, skipped)
+    }
+
+    /**
+     * The sources, and everything in the folders among them, into one zip in [dest]. Written
+     * under a temporary name like any copy, and named only once it is whole. Returns the
+     * archive's name, which is [name] or a numbered one when that is taken.
+     */
+    fun compress(sources: List<Entry>, dest: Loc, name: String): String {
+        val plans = sources.map { it to flatten(it) }
+        filesTotal = plans.sumOf { (_, items) -> items.count { !it.second.isFolder } }
+        bytesTotal = plans.sumOf { (_, items) -> items.sumOf { it.second.size } }
+        val to = resolve(dest.store)
+        val finalName = Names.unique(name) { to.stat(dest.child(it).path) != null }
+        val part = dest.child(Names.unique(finalName + PART) { to.stat(dest.child(it).path) != null })
+        try {
+            to.openWrite(part.path).use { raw ->
+                ZipOutputStream(BufferedOutputStream(raw, BUFFER)).use { zip ->
+                    for ((source, items) in plans) {
+                        val from = resolve(source.loc.store)
+                        for ((relative, item) in items) {
+                            checkCancelled()
+                            val entryName = if (relative.isEmpty()) source.name else "${source.name}/$relative"
+                            if (item.isFolder) {
+                                zip.putNextEntry(ZipEntry("$entryName/").also { if (item.modified > 0) it.time = item.modified })
+                                zip.closeEntry()
+                            } else {
+                                zip.putNextEntry(ZipEntry(entryName).also { if (item.modified > 0) it.time = item.modified })
+                                from.openRead(item.loc.path).use { input -> pump(input, zip, item.name) }
+                                zip.closeEntry()
+                                filesDone++
+                                report(item.name)
+                            }
+                        }
+                    }
+                }
+            }
+            to.rename(part.path, dest.child(finalName).path)
+        } catch (e: Exception) {
+            runCatching { to.deleteFile(part.path) }
+            throw e
+        }
+        return finalName
     }
 
     fun delete(entries: List<Entry>): Outcome {

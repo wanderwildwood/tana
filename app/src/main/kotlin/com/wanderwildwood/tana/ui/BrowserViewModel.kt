@@ -8,7 +8,9 @@ import com.wanderwildwood.tana.store.Entry
 import com.wanderwildwood.tana.store.LocalStore
 import com.wanderwildwood.tana.store.Loc
 import com.wanderwildwood.tana.store.Server
+import com.wanderwildwood.tana.store.SafRoot
 import com.wanderwildwood.tana.store.SmbStore
+import com.wanderwildwood.tana.store.ZipStore
 import com.wanderwildwood.tana.store.StoreException
 import com.wanderwildwood.tana.store.Stores
 import com.wanderwildwood.tana.work.Clash
@@ -94,6 +96,7 @@ data class UiState(
     val showHidden: Boolean = false,
     val volumes: List<Volume> = emptyList(),
     val servers: List<Server> = emptyList(),
+    val others: List<SafRoot> = emptyList(),
     val pins: List<Pin> = emptyList(),
     val notice: Notice? = null,
     val info: Info? = null,
@@ -101,6 +104,8 @@ data class UiState(
 ) {
     val selecting: Boolean get() = selection.isNotEmpty()
     val folder: Loc? get() = (place as? Place.Folder)?.loc
+    /** Inside a zip: things can be copied out, nothing can be changed. */
+    val readOnly: Boolean get() = folder?.let { Stores.isReadOnly(it.store) } == true
     fun selected(): List<Entry> = entries.filter { it.loc in selection }
 }
 
@@ -114,6 +119,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
             sort = prefs.sort,
             showHidden = prefs.showHidden,
             servers = prefs.servers,
+            others = prefs.others,
             pins = prefs.pins,
         ),
     )
@@ -126,7 +132,8 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     @Volatile private var searchCancelled = false
 
     init {
-        Stores.setServers(prefs.servers)
+        Stores.setServers(_state.value.servers)
+        Stores.setOthers(_state.value.others, application.contentResolver)
         Opener.tidyFetched(application)
         refreshVolumes()
         viewModelScope.launch {
@@ -230,9 +237,11 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     /** The folder a place hangs from, and what to call it: a volume on the phone, or a server. */
     fun rootOf(loc: Loc): Pair<Loc, String> {
         val s = _state.value
+        if (loc.store.startsWith(ZipStore.PREFIX)) return Loc(loc.store, "") to loc.store.substringAfterLast('/')
         if (loc.store != LocalStore.ID) {
             val server = s.servers.firstOrNull { it.storeId == loc.store }
-            return Loc(loc.store, "") to (server?.name ?: loc.store)
+            val other = s.others.firstOrNull { it.storeId == loc.store }
+            return Loc(loc.store, "") to (server?.name ?: other?.label ?: loc.store)
         }
         val volume = s.volumes.filter { loc.isWithin(it.loc) }.maxByOrNull { it.loc.path.length }
         return if (volume != null) volume.loc to volume.label else Loc(LocalStore.ID, "") to "/"
@@ -255,6 +264,8 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         }
         if (entry.isFolder) {
             go(Place.Folder(entry.loc))
+        } else if (Names.extension(entry.name) == "zip") {
+            browse(entry)
         } else {
             open(entry, if (Names.extension(entry.name) == "apk") Purpose.INSTALL else Purpose.OPEN)
         }
@@ -349,7 +360,10 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         when (work) {
             is Work.Finished -> {
                 val job = work.job
-                if (job is Job.Fetch) {
+                if (job is Job.Fetch && job.purpose == Purpose.BROWSE) {
+                    work.fetched.firstOrNull()?.let { go(Place.Folder(Loc(ZipStore.idFor(it), ""))) }
+                    Transfers.seen()
+                } else if (job is Job.Fetch) {
                     if (!Opener.hand(app, work.fetched, job.purpose)) notice(Notice.NothingOpens)
                     Transfers.seen()
                 } else {
@@ -359,6 +373,85 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
             is Work.Failed, is Work.Stopped -> refresh()
             else -> Unit
         }
+    }
+
+    // ---------------------------------------------------------------- zips
+
+    /** Into a zip as if it were a folder. One not on the phone is fetched first. */
+    fun browse(entry: Entry) {
+        if (entry.loc.store == LocalStore.ID) {
+            go(Place.Folder(Loc(ZipStore.idFor(Stores.phone.file(entry.loc.path)), "")))
+        } else {
+            start(Job.Fetch(listOf(entry), Purpose.BROWSE))
+        }
+    }
+
+    /** The chosen things into one zip, here. One thing is named after itself; several, "Archive". */
+    fun compress() {
+        val s = _state.value
+        val folder = s.folder ?: return
+        if (s.readOnly) return
+        val picked = s.selected().ifEmpty { return }
+        val one = picked.singleOrNull()
+        val base = when {
+            one == null -> app.getString(R.string.archive_name)
+            one.isFolder -> one.name
+            else -> one.name.substringBeforeLast('.', one.name)
+        }
+        if (start(Job.Compress(picked, folder, "$base.zip"))) clearSelection()
+    }
+
+    /** A zip's contents into a new folder beside it, named after it. */
+    fun extractHere(entry: Entry) {
+        val s = _state.value
+        val folder = s.folder ?: return
+        if (s.readOnly) return
+        if (start(Job.Extract(entry, folder))) clearSelection()
+    }
+
+    // ---------------------------------------------------------------- folders from other apps
+
+    /**
+     * A folder the reader picked in Android's own picker. The grant is made to last, then the
+     * folder is kept on the start page under its own name, with the app it belongs to beneath.
+     */
+    fun addOther(uri: android.net.Uri) {
+        runCatching {
+            app.contentResolver.takePersistableUriPermission(
+                uri,
+                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+            )
+        }
+        val docId = runCatching { android.provider.DocumentsContract.getTreeDocumentId(uri) }.getOrNull() ?: return
+        val label = runCatching {
+            app.contentResolver.query(
+                android.provider.DocumentsContract.buildDocumentUriUsingTree(uri, docId),
+                arrayOf(android.provider.DocumentsContract.Document.COLUMN_DISPLAY_NAME), null, null, null,
+            )?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
+        }.getOrNull() ?: docId
+        val note = runCatching {
+            val info = app.packageManager.resolveContentProvider(uri.authority ?: "", 0)
+            info?.applicationInfo?.loadLabel(app.packageManager)?.toString()
+        }.getOrNull() ?: uri.authority.orEmpty()
+        val others = _state.value.others.filterNot { it.uri == uri.toString() } +
+            SafRoot(UUID.randomUUID().toString(), label, note, uri.toString())
+        prefs.others = others
+        Stores.setOthers(others, app.contentResolver)
+        _state.update { it.copy(others = others) }
+    }
+
+    fun removeOther(root: SafRoot) {
+        runCatching {
+            app.contentResolver.releasePersistableUriPermission(
+                android.net.Uri.parse(root.uri),
+                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+            )
+        }
+        val others = _state.value.others.filterNot { it.id == root.id }
+        prefs.others = others
+        Stores.setOthers(others, app.contentResolver)
+        save(_state.value.pins.filterNot { it.loc.store == root.storeId })
+        _state.update { it.copy(others = others) }
     }
 
     // ---------------------------------------------------------------- naming
@@ -579,6 +672,7 @@ fun describe(app: android.content.Context, problem: Throwable): String {
         StoreException.Reason.NOT_ALLOWED -> R.string.problem_not_allowed
         StoreException.Reason.SERVER_ERROR -> R.string.problem_server_error
         StoreException.Reason.INTO_ITSELF -> R.string.problem_into_itself
+        StoreException.Reason.READ_ONLY -> R.string.problem_read_only
     }
     return app.getString(id, e.subject)
 }

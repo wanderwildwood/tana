@@ -22,6 +22,11 @@
     <!-- Under a storage volume's name: "12 GB free of 32 GB" -->
     <string name="home_free_of">%1$s free of %2$s</string>
     <string name="home_add_server">Add a server</string>
+    <string name="home_section_other_apps">From other apps</string>
+    <!-- Opens Android's folder picker, to add a folder another app offers (Termux's home, say) -->
+    <string name="home_add_other">Add a folder from another app</string>
+    <!-- A folder from another app after a long press; a tap now takes it off the start page -->
+    <string name="home_remove_armed">Remove — tap again</string>
     <!-- A pinned folder after a long press; a tap now takes it off the start page -->
     <string name="home_unpin_armed">Unpin — tap again</string>
     <string name="volume_phone">Phone storage</string>
@@ -57,6 +62,12 @@
     <string name="action_rename">Rename</string>
     <string name="action_info">Info</string>
     <string name="action_pin">Pin to the start page</string>
+    <!-- Makes one zip archive of what is chosen, in this folder -->
+    <string name="action_compress">Compress</string>
+    <!-- Unpacks a zip beside it: its one top folder as it is, or its contents in a folder named after it -->
+    <string name="action_extract">Extract here</string>
+    <!-- The name of a zip made from several things at once -->
+    <string name="archive_name">Archive</string>
     <string name="close">Close</string>
     <string name="cancel">Cancel</string>
 
@@ -77,6 +88,11 @@
     <string name="work_moving">Moving %1$d of %2$d</string>
     <string name="work_deleting">Deleting %1$d of %2$d</string>
     <string name="work_fetching">Fetching from the server</string>
+    <string name="work_compressing">Compressing %1$d of %2$d</string>
+    <string name="work_extracting">Extracting %1$d of %2$d</string>
+    <!-- %1$s is the archive's name -->
+    <string name="work_compressed">Made %1$s.</string>
+    <string name="work_extracted">Extracted %1$s.</string>
     <string name="work_starting">Starting…</string>
     <string name="work_stop">Stop</string>
     <plurals name="work_copied">
@@ -219,6 +235,7 @@
     <string name="problem_not_allowed">The server does not allow that for “%1$s”.</string>
     <string name="problem_server_error">The server refused, over “%1$s”.</string>
     <string name="problem_into_itself">“%1$s” cannot go inside itself.</string>
+    <string name="problem_read_only">Nothing inside “%1$s” can be changed. Copy it out first.</string>
     <string name="problem_other">That did not work: %1$s</string>
 
     <!-- ============================================================ -->
@@ -230,6 +247,8 @@
     <string name="notify_moving">Moving</string>
     <string name="notify_deleting">Deleting</string>
     <string name="notify_fetching">Fetching from the server</string>
+    <string name="notify_compressing">Compressing</string>
+    <string name="notify_extracting">Extracting</string>
     <string name="notify_progress">%1$d of %2$d</string>
     <string name="notify_stop">Stop</string>
 
@@ -237,7 +256,7 @@
     <!-- About -->
 
     <string name="about_title">Files %1$s</string>
-    <string name="about_body">It reaches the servers you add, and nothing else. A server’s password is kept only on this phone.</string>
+    <string name="about_body">It reaches the servers you add, and nothing else. A server’s password is kept only on this phone, sealed with a key that never leaves it.</string>
     <string name="about_licence">GNU General Public License v3</string>
     <string name="about_bundled">Servers through smbj and Bouncy Castle (Apache-2.0, MIT). Icons from Material Symbols (Apache-2.0).</string>
     <string name="about_feed_the_llamas">Feed the llamas</string>

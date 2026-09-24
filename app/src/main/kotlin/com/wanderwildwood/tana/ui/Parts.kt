@@ -218,11 +218,20 @@ internal fun PathLine(root: Loc, rootLabel: String, here: Loc, onJump: (Loc) -> 
 
 /** Four words along the foot while things are chosen. Delete asks in its own face. */
 @Composable
-internal fun SelectionBar(count: Int, onCopy: () -> Unit, onMove: () -> Unit, onDelete: () -> Unit, onMore: () -> Unit) {
+internal fun SelectionBar(count: Int, readOnly: Boolean, onCopy: () -> Unit, onMove: () -> Unit, onDelete: () -> Unit, onMore: () -> Unit) {
     val (armed, pressDelete) = rememberArmed(count, onDelete)
     HorizontalDividerMMD()
     if (armed) {
         FootButton(stringResource(R.string.action_delete_armed), Modifier.fillMaxWidth().padding(10.dp), pressDelete)
+        return
+    }
+    // Inside a zip, nothing can be moved out of it or deleted from it; copying out is all.
+    if (readOnly) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 10.dp)) {
+            FootButton(stringResource(R.string.action_copy), Modifier.weight(1f), onCopy)
+            Spacer(Modifier.width(6.dp))
+            FootButton(stringResource(R.string.action_more), Modifier.weight(1f), onMore)
+        }
         return
     }
     Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 10.dp)) {
@@ -285,6 +294,8 @@ internal fun WorkStrip(work: Work) {
                     is Job.Paste -> stringResource(if (job.mode == Mode.MOVE) R.string.work_moving else R.string.work_copying, done, p.filesTotal)
                     is Job.Delete -> stringResource(R.string.work_deleting, p.filesDone, p.filesTotal)
                     is Job.Fetch -> stringResource(R.string.work_fetching)
+                    is Job.Compress -> stringResource(R.string.work_compressing, done, p.filesTotal)
+                    is Job.Extract -> stringResource(R.string.work_extracting, done, p.filesTotal)
                 }
                 val percent = if (p.bytesTotal > 0) " · ${p.bytesDone * 100 / p.bytesTotal}%" else ""
                 head + percent
@@ -298,6 +309,8 @@ internal fun WorkStrip(work: Work) {
                 if (skipped > 0) first + " " + pluralStringResource(R.plurals.work_skipped, skipped, skipped) else first
             }
             is Job.Delete -> pluralStringResource(R.plurals.work_deleted, work.outcome.done, work.outcome.done)
+            is Job.Compress -> stringResource(R.string.work_compressed, job.name)
+            is Job.Extract -> stringResource(R.string.work_extracted, job.archive.name)
             is Job.Fetch -> return
         }
         is Work.Stopped -> stringResource(R.string.work_stopped)

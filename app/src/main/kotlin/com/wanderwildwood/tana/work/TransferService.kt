@@ -11,6 +11,7 @@ import android.os.IBinder
 import com.wanderwildwood.tana.MainActivity
 import com.wanderwildwood.tana.R
 import com.wanderwildwood.tana.store.Entry
+import com.wanderwildwood.tana.store.LocalStore
 import com.wanderwildwood.tana.store.Loc
 import com.wanderwildwood.tana.store.Stores
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,13 +20,16 @@ import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 
 /** What a fetched file is for, once it is on the phone. */
-enum class Purpose { OPEN, OPEN_WITH, SHARE, INSTALL }
+enum class Purpose { OPEN, OPEN_WITH, SHARE, INSTALL, BROWSE }
 
 /** One piece of work for the service. */
 sealed interface Job {
     data class Paste(val sources: List<Entry>, val dest: Loc, val mode: Mode, val clash: Clash) : Job
     data class Delete(val entries: List<Entry>) : Job
     data class Fetch(val entries: List<Entry>, val purpose: Purpose) : Job
+    data class Compress(val sources: List<Entry>, val dest: Loc, val name: String) : Job
+    /** An archive's contents beside it: its one top folder as it is, or several things in a folder named after it. */
+    data class Extract(val archive: Entry, val dest: Loc) : Job
 }
 
 sealed interface Work {
@@ -134,6 +138,34 @@ class TransferService : Service() {
                     }
                     Work.Finished(job, Outcome(files.size, 0), files)
                 }
+                is Job.Compress -> {
+                    transfer.compress(job.sources, job.dest, job.name)
+                    Work.Finished(job, Outcome(job.sources.size, 0))
+                }
+                is Job.Extract -> {
+                    // An archive that is not on the phone is fetched first: a zip has to be
+                    // read from the end, which a stream from a server cannot do.
+                    val file = if (job.archive.loc.store == LocalStore.ID) {
+                        Stores.phone.file(job.archive.loc.path)
+                    } else {
+                        File(cacheDir, "fetched/${System.currentTimeMillis()}/${job.archive.name}").also { transfer.fetch(job.archive, it) }
+                    }
+                    val zip = Stores.zip(file)
+                    val top = zip.list("")
+                    val outcome = if (top.size == 1) {
+                        // One thing at the top — most archives are a folder zipped whole — goes
+                        // straight beside the archive, numbered if its name is taken, rather than
+                        // into a second folder of the same name around it.
+                        transfer.paste(top, job.dest, Mode.COPY, Clash.KEEP_BOTH)
+                    } else {
+                        val to = Stores.get(job.dest.store)
+                        val stem = job.archive.name.substringBeforeLast('.', job.archive.name)
+                        val folder = job.dest.child(Names.unique(stem) { to.stat(job.dest.child(it).path) != null })
+                        to.makeFolder(folder.path)
+                        transfer.paste(top, folder, Mode.COPY, Clash.KEEP_BOTH)
+                    }
+                    Work.Finished(job, outcome)
+                }
             }
         } catch (e: Cancelled) {
             Work.Stopped(job)
@@ -149,6 +181,8 @@ class TransferService : Service() {
         is Job.Paste -> getString(if (job.mode == Mode.MOVE) R.string.notify_moving else R.string.notify_copying)
         is Job.Delete -> getString(R.string.notify_deleting)
         is Job.Fetch -> getString(R.string.notify_fetching)
+        is Job.Compress -> getString(R.string.notify_compressing)
+        is Job.Extract -> getString(R.string.notify_extracting)
     }
 
     private fun notification(title: String, progress: Progress?): Notification {

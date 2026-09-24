@@ -54,13 +54,14 @@ private fun Foot(state: UiState, work: com.wanderwildwood.tana.work.Work, vm: Br
     if (state.selecting) {
         SelectionBar(
             count = state.selection.size,
+            readOnly = state.readOnly,
             onCopy = { vm.pickUp(com.wanderwildwood.tana.work.Mode.COPY) },
             onMove = { vm.pickUp(com.wanderwildwood.tana.work.Mode.MOVE) },
             onDelete = vm::delete,
             onMore = onMore,
         )
     } else {
-        state.carry?.let { CarryStrip(it, canPaste = state.folder != null, onPaste = vm::paste, onCancel = vm::putDown) }
+        state.carry?.let { CarryStrip(it, canPaste = state.folder != null && !state.readOnly, onPaste = vm::paste, onCancel = vm::putDown) }
     }
     WorkStrip(work)
     when (val n = state.notice) {
@@ -83,6 +84,7 @@ fun HomeScreen(
     vm: BrowserViewModel,
     onAddServer: () -> Unit,
     onEditServer: (Server) -> Unit,
+    onAddOther: () -> Unit,
     onAbout: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -143,6 +145,19 @@ fun HomeScreen(
                 )
             }
             item { PlaceRow(stringResource(R.string.home_add_server), null, onAddServer) }
+
+            // Folders other apps offer through Android's picker, which no path reaches.
+            item { Heading(stringResource(R.string.home_section_other_apps)) }
+            items(state.others, key = { "o:" + it.id }) { root ->
+                val (armed, press) = rememberArmed(root.id) { vm.removeOther(root) }
+                PlaceRow(
+                    if (armed) stringResource(R.string.home_remove_armed) else root.label,
+                    root.note,
+                    onPress = { if (armed) press() else vm.go(Place.Folder(com.wanderwildwood.tana.store.Loc(root.storeId, ""))) },
+                    onLongPress = { if (!armed) press() },
+                )
+            }
+            item { PlaceRow(stringResource(R.string.home_add_other), null, onAddOther) }
         }
     }
 }
@@ -187,7 +202,7 @@ fun FolderScreen(state: UiState, work: com.wanderwildwood.tana.work.Work, vm: Br
                         )
                     } else {
                         BarButton(Icons.Search, stringResource(R.string.cd_search), vm::openSearch)
-                        if (folder != null) BarButton(Icons.NewFolder, stringResource(R.string.cd_new_folder)) { naming = true }
+                        if (folder != null && !state.readOnly) BarButton(Icons.NewFolder, stringResource(R.string.cd_new_folder)) { naming = true }
                         if (state.place != Place.Recent) BarButton(Icons.Sort, stringResource(R.string.cd_sort)) { sorting = true }
                     }
                 },
@@ -242,7 +257,10 @@ fun FolderScreen(state: UiState, work: com.wanderwildwood.tana.work.Work, vm: Br
         val one = chosen.singleOrNull()
         MoreDialog(
             chosen = chosen,
+            readOnly = state.readOnly,
             onShare = { more = false; vm.share() },
+            onCompress = { more = false; vm.compress() },
+            onExtract = { more = false; one?.let(vm::extractHere) },
             onOpenWith = { more = false; one?.let { vm.open(it, com.wanderwildwood.tana.work.Purpose.OPEN_WITH) }; vm.clearSelection() },
             onRename = { more = false; renaming = one },
             onInfo = { more = false; one?.let(vm::info) },

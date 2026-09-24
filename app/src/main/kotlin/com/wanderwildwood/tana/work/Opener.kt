@@ -18,11 +18,12 @@ object Opener {
 
     /** False when nothing on the phone can take it; the screen says so. */
     fun hand(context: Context, files: List<File>, purpose: Purpose): Boolean {
-        if (files.isEmpty()) return true
+        // A zip fetched to be looked inside is opened by this app, not handed on.
+        if (files.isEmpty() || purpose == Purpose.BROWSE) return true
         val uris = files.map { uri(context, it) }
         val intent = when (purpose) {
             Purpose.SHARE -> share(files, uris)
-            Purpose.OPEN, Purpose.OPEN_WITH, Purpose.INSTALL -> {
+            Purpose.OPEN, Purpose.OPEN_WITH, Purpose.INSTALL, Purpose.BROWSE -> {
                 val file = files.first()
                 Intent(Intent.ACTION_VIEW)
                     .setDataAndType(uris.first(), Names.mime(file.name))

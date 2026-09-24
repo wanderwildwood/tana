@@ -48,6 +48,10 @@ as places like any other.
   Browse, open, copy either way, rename, delete, make folders. A file on a server is fetched to
   the phone to be opened or shared. Away from home it reaches whatever the phone can reach, so a
   server's Tailscale address works with Tailscale on.
+- **Zip files.** Open one like a folder and copy out what you want, or *Extract here* for all of
+  it. *Compress* makes one of whatever is chosen. It works the same for a zip on a server.
+- **Folders from other apps.** Anything Android's own folder picker can reach that no path can —
+  Termux's home, for one — can be added to the start page, and then works like any other place.
 - **Search** by name below the folder you are in, or everywhere on the phone: every word you type
   has to be in the name, in any order. Narrow it to documents, pictures, audio, video, archives
   or apps.
@@ -66,15 +70,16 @@ as places like any other.
 ## What it does not do
 
 No thumbnails: a photograph at the size of a list row is a grey smudge on this screen. No
-`Android/data`: Android 12 lets no app into another app's private folders. Other apps' own
-storage — Termux's, say — is reached through Android's file picker, not a path, and is not here;
-the system Files app still does that. Nothing is sent anywhere but to the servers you add.
+`Android/data`: Android 12 lets no app into another app's private folders. A zip is read, never
+rewritten: to change what is in one, extract it, change that, and compress it again. Nothing is
+sent anywhere but to the servers you add.
 
 ## Where this is up to
 
-Version 0.1.1. The copy, move, delete and search engine is unit tested against real folders —
+Version 0.2.0. The copy, move, delete and search engine is unit tested against real folders —
 including a copy stopped half way, and a write that fails while replacing a file, where the old
-file has to survive. A second suite runs against a real Samba share when one is named, and
+file has to survive. Zips are made and read back byte for byte, and an archive that tries to
+write outside the folder it is extracted into has those entries left out. A second suite runs against a real Samba share when one is named, and
 passes: a five-megabyte folder there and back byte for byte, an upload stopped half way leaving
 nothing on the server, a connection left idle for ninety seconds still answering at once.
 

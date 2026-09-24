@@ -24,9 +24,17 @@ policy that cannot be checked is just a promise.
 ## Server passwords
 
 A server added with a user and password keeps that password in the app's own private storage
-on the phone, which no other app can read. It is left out of Android's backups
-(`allowBackup="false"`), so it does not leave the phone that way either. It is sent only to that
-server, when signing in. A server added as a guest has no password to keep.
+on the phone, which no other app can read, and **sealed** there with a key held in the phone's
+keystore (AES-256-GCM). The key cannot be taken off the phone, so a copy of the app's settings,
+by whatever route, carries no password anyone can read. The settings are also left out of
+Android's backups (`allowBackup="false"`). The password is sent only to that server, when
+signing in. A server added as a guest has no password to keep.
+
+## Folders from other apps
+
+A folder added from another app is one you chose in Android's own folder picker, and the access
+that comes back covers that folder and nothing else. Removing it from the start page hands the
+access back.
 
 ## Files fetched from a server
 

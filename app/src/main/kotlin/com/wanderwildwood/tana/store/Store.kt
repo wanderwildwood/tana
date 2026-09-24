@@ -93,5 +93,6 @@ class StoreException(
         NOT_ALLOWED,
         SERVER_ERROR,
         INTO_ITSELF,
+        READ_ONLY,
     }
 }
