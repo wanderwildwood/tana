@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Everything on the phone's storage and the SD card, which is what a file manager is
+         for. Android asks the reader for this on its own settings page; the app cannot
+         grant it to itself. -->
+    <uses-permission
+        android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
+        tools:ignore="ScopedStorage" />
+
+    <!-- The servers the reader adds, and nothing else. There is no other address in the app
+         but the llama's, which is handed to a browser. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Without this, tapping an APK hands it to the installer and the installer refuses it:
+         Android only takes an install from an app that declares it means to ask. The
+         reader is still asked, once, whether to allow installs from here. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
+    <!-- A long copy keeps going with the screen off or the app put away. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+
+    <queries>
+        <!-- What can open a file, and what can take one to share. Without these, asking
+             quietly answers "nothing" from Android 11 on, however many apps would. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:mimeType="*/*" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.SEND" />
+            <data android:mimeType="*/*" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+    </queries>
+
+    <application
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
+        android:supportsRtl="false"
+        android:theme="@style/Theme.App">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|screenSize|keyboard|keyboardHidden">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".work.TransferService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <!-- How another app is handed a file to open or share: a content address with a
+             one-off grant, rather than a path it would need its own permission to read. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+    </application>
+
+</manifest>

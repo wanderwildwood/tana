@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- The whole of storage, because the SD card mounts under /storage/<its id>, outside
+         anything external-path can name. -->
+    <root-path name="storage" path="storage/" />
+    <!-- A file fetched from a server to be opened or shared. -->
+    <cache-path name="fetched" path="fetched/" />
+</paths>

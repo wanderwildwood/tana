@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Files</string>
+
+    <!-- ============================================================ -->
+    <!-- Asking for access, on first launch -->
+
+    <string name="access_title">Files needs to see your storage.</string>
+    <string name="access_body">Android keeps this behind a switch of its own, called “All files access”. The button opens that page; turn the switch on for Files and come back.</string>
+    <string name="access_open">Open the setting</string>
+
+    <!-- ============================================================ -->
+    <!-- The start page -->
+
+    <string name="home_recent">Recent</string>
+    <string name="home_recent_note">Changed on the phone in the last month</string>
+    <string name="home_downloads">Downloads</string>
+    <!-- Section headings on the start page -->
+    <string name="home_section_phone">On the phone</string>
+    <string name="home_section_pinned">Pinned</string>
+    <string name="home_section_servers">Servers</string>
+    <!-- Under a storage volume's name: "12 GB free of 32 GB" -->
+    <string name="home_free_of">%1$s free of %2$s</string>
+    <string name="home_add_server">Add a server</string>
+    <!-- A pinned folder after a long press; a tap now takes it off the start page -->
+    <string name="home_unpin_armed">Unpin — tap again</string>
+    <string name="volume_phone">Phone storage</string>
+    <string name="volume_card">SD card</string>
+
+    <!-- ============================================================ -->
+    <!-- A folder -->
+
+    <string name="cd_back">Back</string>
+    <string name="cd_search">Search</string>
+    <string name="cd_new_folder">New folder</string>
+    <string name="cd_sort">Sort and show</string>
+    <string name="cd_info">About</string>
+    <string name="cd_clear_selection">Clear the selection</string>
+    <string name="folder_reading">Reading…</string>
+    <string name="folder_empty">Nothing here.</string>
+    <string name="folder_try_again">Try again</string>
+    <!-- Top bar while things are selected -->
+    <plurals name="selected">
+        <item quantity="one">%d selected</item>
+        <item quantity="other">%d selected</item>
+    </plurals>
+    <string name="select_all">All</string>
+    <!-- The bar along the foot of the screen while things are selected -->
+    <string name="action_copy">Copy</string>
+    <string name="action_move">Move</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_delete_armed">Delete — tap again</string>
+    <string name="action_more">More</string>
+    <!-- In the "More" dialog -->
+    <string name="action_share">Share</string>
+    <string name="action_open_with">Open with…</string>
+    <string name="action_rename">Rename</string>
+    <string name="action_info">Info</string>
+    <string name="action_pin">Pin to the start page</string>
+    <string name="close">Close</string>
+    <string name="cancel">Cancel</string>
+
+    <!-- The strip along the foot while things have been picked up with Copy or Move -->
+    <plurals name="carry_copy">
+        <item quantity="one">%d thing to copy</item>
+        <item quantity="other">%d things to copy</item>
+    </plurals>
+    <plurals name="carry_move">
+        <item quantity="one">%d thing to move</item>
+        <item quantity="other">%d things to move</item>
+    </plurals>
+    <string name="carry_paste">Paste here</string>
+    <string name="carry_open_a_folder">Open the folder to put them in.</string>
+
+    <!-- The strip along the foot while a copy, move or delete is running. "3 of 12" -->
+    <string name="work_copying">Copying %1$d of %2$d</string>
+    <string name="work_moving">Moving %1$d of %2$d</string>
+    <string name="work_deleting">Deleting %1$d of %2$d</string>
+    <string name="work_fetching">Fetching from the server</string>
+    <string name="work_starting">Starting…</string>
+    <string name="work_stop">Stop</string>
+    <plurals name="work_copied">
+        <item quantity="one">Copied %d.</item>
+        <item quantity="other">Copied %d.</item>
+    </plurals>
+    <plurals name="work_moved">
+        <item quantity="one">Moved %d.</item>
+        <item quantity="other">Moved %d.</item>
+    </plurals>
+    <plurals name="work_deleted">
+        <item quantity="one">Deleted %d.</item>
+        <item quantity="other">Deleted %d.</item>
+    </plurals>
+    <plurals name="work_skipped">
+        <item quantity="one">%d was already there and was left alone.</item>
+        <item quantity="other">%d were already there and were left alone.</item>
+    </plurals>
+    <string name="work_stopped">Stopped. What had arrived is kept; nothing half-copied is left.</string>
+
+    <!-- One-line notices -->
+    <string name="notice_busy">Wait for the one under way to finish first.</string>
+    <string name="notice_nothing_opens">Nothing on the phone opens this kind of file.</string>
+    <string name="notice_folders_not_shared">A folder cannot be shared. Open it and choose the files.</string>
+
+    <!-- ============================================================ -->
+    <!-- Dialogs -->
+
+    <string name="new_folder_title">New folder</string>
+    <string name="new_folder_confirm">Make it</string>
+    <string name="rename_title">Rename</string>
+    <string name="rename_confirm">Rename</string>
+
+    <string name="sort_title">Sort by</string>
+    <string name="sort_name">Name</string>
+    <string name="sort_date">Date</string>
+    <string name="sort_size">Size</string>
+    <string name="sort_type">Type</string>
+    <!-- Under the order in use; pressing it again turns it round -->
+    <string name="sort_name_forward">A to Z</string>
+    <string name="sort_name_reversed">Z to A</string>
+    <string name="sort_date_forward">Newest first</string>
+    <string name="sort_date_reversed">Oldest first</string>
+    <string name="sort_size_forward">Largest first</string>
+    <string name="sort_size_reversed">Smallest first</string>
+    <string name="sort_type_forward">By extension, A to Z</string>
+    <string name="sort_type_reversed">By extension, Z to A</string>
+    <string name="sort_hidden">Show hidden files</string>
+    <string name="sort_hidden_note">Names beginning with a dot, which apps keep their own things in.</string>
+
+    <!-- When pasting finds names already taken. "2 of these are already here" -->
+    <plurals name="clash_title">
+        <item quantity="one">“%2$s” is already here.</item>
+        <item quantity="other">%1$d of these are already here.</item>
+    </plurals>
+    <string name="clash_keep_both">Keep both</string>
+    <string name="clash_skip">Leave those out</string>
+    <string name="clash_replace">Replace them</string>
+    <string name="clash_replace_armed">Replace — the ones here are deleted; tap again</string>
+
+    <string name="info_where">Where</string>
+    <string name="info_size">Size</string>
+    <string name="info_contains">Holds</string>
+    <string name="info_counting">Counting…</string>
+    <!-- A folder: "1.2 GB in 340 files" -->
+    <plurals name="info_size_in_files">
+        <item quantity="one">%1$s in %2$d file</item>
+        <item quantity="other">%1$s in %2$d files</item>
+    </plurals>
+    <string name="info_modified">Changed</string>
+    <string name="info_type">Kind</string>
+    <string name="info_sha256">SHA-256</string>
+    <string name="info_sha256_work_out">Work it out</string>
+    <string name="info_sha256_working">Reading the whole file…</string>
+
+    <string name="trouble_close">Close</string>
+
+    <!-- ============================================================ -->
+    <!-- A server -->
+
+    <string name="server_add_title">Add a server</string>
+    <string name="server_edit_title">Server</string>
+    <string name="server_name">Name</string>
+    <string name="server_name_hint">What to call it here</string>
+    <string name="server_host">Address</string>
+    <string name="server_host_hint">192.168.1.70, or its Tailscale address</string>
+    <string name="server_share">Share</string>
+    <string name="server_share_hint">The name of the shared folder</string>
+    <string name="server_user">User</string>
+    <string name="server_user_hint">Leave empty to come in as a guest</string>
+    <string name="server_password">Password</string>
+    <string name="server_note">The shared drives on a Samba or Windows server. Away from home, the phone reaches it only if the server’s address is one it can reach from there, such as a Tailscale address with Tailscale on.</string>
+    <string name="server_save">Save</string>
+    <string name="server_checking">Checking it can be reached…</string>
+    <string name="server_remove">Remove this server</string>
+    <string name="server_remove_armed">Remove — tap again</string>
+
+    <!-- ============================================================ -->
+    <!-- Search -->
+
+    <string name="search_hint">Words in the name</string>
+    <!-- "Searching in Music" / "Searching everywhere on the phone" -->
+    <string name="search_within">In %1$s</string>
+    <string name="search_everywhere">everywhere on the phone</string>
+    <string name="search_go">Search</string>
+    <string name="search_running">Searching…</string>
+    <string name="search_none">Nothing found.</string>
+    <string name="kind_any">Anything</string>
+    <string name="kind_documents">Documents</string>
+    <string name="kind_images">Pictures</string>
+    <string name="kind_audio">Audio</string>
+    <string name="kind_video">Video</string>
+    <string name="kind_archives">Archives</string>
+    <string name="kind_apps">Apps</string>
+
+    <!-- ============================================================ -->
+    <!-- Problems. %1$s is the name of the file, folder, server or share concerned. -->
+
+    <string name="problem_folder_unreadable">“%1$s” cannot be read.</string>
+    <string name="problem_gone">“%1$s” is not there any more.</string>
+    <string name="problem_already_there">Something called “%1$s” is already there.</string>
+    <string name="problem_cannot_make_folder">The folder “%1$s” could not be made here.</string>
+    <string name="problem_cannot_rename">“%1$s” could not be renamed.</string>
+    <string name="problem_cannot_delete">“%1$s” could not be deleted.</string>
+    <string name="problem_cannot_write">“%1$s” could not be written. There may not be room for it.</string>
+    <string name="problem_server_unreachable">%1$s cannot be reached. Away from home, check that Tailscale is on.</string>
+    <string name="problem_login_refused">The server did not accept that user and password.</string>
+    <string name="problem_no_such_share">The server has no share called “%1$s”.</string>
+    <string name="problem_not_allowed">The server does not allow that for “%1$s”.</string>
+    <string name="problem_server_error">The server refused, over “%1$s”.</string>
+    <string name="problem_into_itself">“%1$s” cannot go inside itself.</string>
+    <string name="problem_other">That did not work: %1$s</string>
+
+    <!-- ============================================================ -->
+    <!-- The notification while a copy runs -->
+
+    <string name="notify_channel">Copying and moving</string>
+    <string name="notify_starting">Starting…</string>
+    <string name="notify_copying">Copying</string>
+    <string name="notify_moving">Moving</string>
+    <string name="notify_deleting">Deleting</string>
+    <string name="notify_fetching">Fetching from the server</string>
+    <string name="notify_progress">%1$d of %2$d</string>
+    <string name="notify_stop">Stop</string>
+
+    <!-- ============================================================ -->
+    <!-- About -->
+
+    <string name="about_title">Files %1$s</string>
+    <string name="about_body">It reaches the servers you add, and nothing else. A server’s password is kept only on this phone.</string>
+    <string name="about_licence">GNU General Public License v3</string>
+    <string name="about_bundled">Servers through smbj and Bouncy Castle (Apache-2.0, MIT). Icons from Material Symbols (Apache-2.0).</string>
+    <string name="about_feed_the_llamas">Feed the llamas</string>
+    <string name="about_no_browser">Nothing here opens web pages — %1$s</string>
+    <string name="about_close">Close</string>
+</resources>
