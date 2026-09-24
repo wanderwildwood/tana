@@ -153,6 +153,18 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         show(place)
     }
 
+    /**
+     * Straight to a folder another app asked to see. Back from it goes to the start page:
+     * whatever the reader had open before belongs to a different errand.
+     */
+    fun openAt(loc: Loc) {
+        searchCancelled = true
+        searching?.cancel()
+        history.clear()
+        _state.update { it.copy(search = null, info = null, selection = emptySet()) }
+        if (_state.value.place != Place.Folder(loc)) show(Place.Folder(loc)) else refresh()
+    }
+
     /** False when there is nowhere further back, and Back should leave the app. */
     fun back(): Boolean {
         val s = _state.value

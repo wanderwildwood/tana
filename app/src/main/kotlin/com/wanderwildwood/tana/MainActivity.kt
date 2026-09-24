@@ -10,6 +10,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,22 +37,36 @@ import com.wanderwildwood.tana.ui.ServerScreen
 import com.wanderwildwood.tana.ui.TroubleDialog
 import com.wanderwildwood.tana.ui.describe
 import com.wanderwildwood.tana.ui.monochrome
+import com.wanderwildwood.tana.work.Asked
 import com.wanderwildwood.tana.work.Transfers
 import com.wanderwildwood.tana.work.Work
 
 class MainActivity : ComponentActivity() {
+    /** What the app was last opened with, so "show the downloads" can land in Downloads. */
+    private var asked by mutableStateOf<Intent?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Only on a fresh start: turned round or brought back, the reader is wherever they
+        // had got to, not wherever the app was first asked to open.
+        if (savedInstanceState == null) asked = intent
         setContent {
             ThemeMMD(colorScheme = monochrome) {
-                Files(this)
+                Files(this, asked) { asked = null }
             }
         }
+    }
+
+    // One of these runs at a time (singleTask), so a second "show the downloads" arrives
+    // here rather than stacking a second copy of the app.
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        asked = intent
     }
 }
 
 @Composable
-private fun Files(activity: ComponentActivity) {
+private fun Files(activity: ComponentActivity, asked: Intent?, onAnswered: () -> Unit) {
     // Asked again every time the app comes back, because the answer is given on another
     // app's page, and coming back from it is the moment it may have changed.
     var access by remember { mutableStateOf(Environment.isExternalStorageManager()) }
@@ -76,11 +91,22 @@ private fun Files(activity: ComponentActivity) {
         return
     }
 
-    Browser(activity)
+    Browser(activity, asked, onAnswered)
 }
 
 @Composable
-private fun Browser(activity: ComponentActivity, vm: BrowserViewModel = viewModel()) {
+private fun Browser(
+    activity: ComponentActivity,
+    asked: Intent?,
+    onAnswered: () -> Unit,
+    vm: BrowserViewModel = viewModel(),
+) {
+    LaunchedEffect(asked) {
+        if (asked != null) {
+            Asked.place(asked)?.let(vm::openAt)
+            onAnswered()
+        }
+    }
     val context = LocalContext.current
     val state by vm.state.collectAsStateWithLifecycle()
     val work by Transfers.work.collectAsStateWithLifecycle()

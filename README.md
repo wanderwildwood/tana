@@ -57,6 +57,9 @@ as places like any other.
   APK** — the installer asks once whether to allow installs from here.
 - **Info**: size, where, when, and — on request, because it means reading the whole file — its
   SHA-256, set out in fours so it can be read against a checksum posted somewhere else.
+- **Can be the phone's file manager.** It answers when something asks for "the files app",
+  for "show the downloads", or to open a folder, and opens in the place it was asked for.
+  Choose it once with *Always* and it keeps answering.
 - **Rename, new folder, show hidden files**, and a path along the top where each step is a press
   back to it.
 
@@ -69,7 +72,7 @@ the system Files app still does that. Nothing is sent anywhere but to the server
 
 ## Where this is up to
 
-Version 0.1.0. The copy, move, delete and search engine is unit tested against real folders —
+Version 0.1.1. The copy, move, delete and search engine is unit tested against real folders —
 including a copy stopped half way, and a write that fails while replacing a file, where the old
 file has to survive. A second suite runs against a real Samba share when one is named, and
 passes: a five-megabyte folder there and back byte for byte, an upload stopped half way leaving
