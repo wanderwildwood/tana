@@ -256,8 +256,8 @@ fun ClashDialog(clashing: Clashing, onAnswer: (Clash?) -> Unit) {
         }
         Spacer(Modifier.height(8.dp))
         DialogRow(stringResource(R.string.clash_keep_both)) { onAnswer(Clash.KEEP_BOTH) }
-        DialogRow(stringResource(R.string.clash_skip)) { onAnswer(Clash.SKIP) }
-        DialogRow(stringResource(if (armed) R.string.clash_replace_armed else R.string.clash_replace), onClick = pressReplace)
+        DialogRow(pluralStringResource(R.plurals.clash_skip, n)) { onAnswer(Clash.SKIP) }
+        DialogRow(pluralStringResource(if (armed) R.plurals.clash_replace_armed else R.plurals.clash_replace, n), onClick = pressReplace)
         Spacer(Modifier.height(14.dp))
         WideButton(stringResource(R.string.cancel)) { onAnswer(null) }
     }

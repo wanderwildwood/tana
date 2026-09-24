@@ -139,7 +139,17 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     fun go(place: Place) {
         val current = _state.value.place
         if (place == current) return
-        history.addLast(current)
+        val up = (place as? Place.Folder)?.loc
+        if (up != null && current is Place.Folder && current.loc.isWithin(up)) {
+            // Going up is going back, not going on: drop the folders below it from the
+            // history rather than stacking one more Back to press later. Back from there then
+            // goes wherever you were before you came down into this tree.
+            while ((history.lastOrNull() as? Place.Folder)?.loc?.isWithin(up) == true) {
+                history.removeLast()
+            }
+        } else {
+            history.addLast(current)
+        }
         show(place)
     }
 

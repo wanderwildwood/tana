@@ -133,9 +133,18 @@
         <item quantity="other">%1$d of these are already here.</item>
     </plurals>
     <string name="clash_keep_both">Keep both</string>
-    <string name="clash_skip">Leave those out</string>
-    <string name="clash_replace">Replace them</string>
-    <string name="clash_replace_armed">Replace — the ones here are deleted; tap again</string>
+    <plurals name="clash_skip">
+        <item quantity="one">Leave it out</item>
+        <item quantity="other">Leave those out</item>
+    </plurals>
+    <plurals name="clash_replace">
+        <item quantity="one">Replace it</item>
+        <item quantity="other">Replace them</item>
+    </plurals>
+    <plurals name="clash_replace_armed">
+        <item quantity="one">Replace — the one here is deleted; tap again</item>
+        <item quantity="other">Replace — the ones here are deleted; tap again</item>
+    </plurals>
 
     <string name="info_where">Where</string>
     <string name="info_size">Size</string>
@@ -171,6 +180,8 @@
     <string name="server_note">The shared drives on a Samba or Windows server. Away from home, the phone reaches it only if the server’s address is one it can reach from there, such as a Tailscale address with Tailscale on.</string>
     <string name="server_save">Save</string>
     <string name="server_checking">Checking it can be reached…</string>
+    <!-- The same, where Save was, in the top bar -->
+    <string name="server_checking_short">Checking…</string>
     <string name="server_remove">Remove this server</string>
     <string name="server_remove_armed">Remove — tap again</string>
 

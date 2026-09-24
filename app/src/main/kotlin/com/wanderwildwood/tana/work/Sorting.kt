@@ -19,7 +19,12 @@ data class Sort(val by: SortBy = SortBy.NAME, val reversed: Boolean = false) {
 
     fun apply(entries: List<Entry>): List<Entry> {
         val collator = Collator.getInstance(Locale.getDefault()).apply { strength = Collator.SECONDARY }
-        val byName = Comparator<Entry> { a, b -> naturalCompare(a.name, b.name, collator) }
+        // The name without its extension first, so a copy called "Chapter 1 (1).mp3" sits
+        // straight after "Chapter 1.mp3" rather than in front of it.
+        val byName = Comparator<Entry> { a, b ->
+            val stems = naturalCompare(stem(a), stem(b), collator)
+            if (stems != 0) stems else naturalCompare(a.name, b.name, collator)
+        }
         val natural: Comparator<Entry> = when (by) {
             SortBy.NAME -> byName
             SortBy.DATE -> compareByDescending<Entry> { it.modified }.then(byName)
@@ -31,6 +36,11 @@ data class Sort(val by: SortBy = SortBy.NAME, val reversed: Boolean = false) {
     }
 
     companion object {
+        private fun stem(e: Entry): String {
+            val ext = Names.extension(e.name)
+            return if (e.isFolder || ext.isEmpty()) e.name else e.name.dropLast(ext.length + 1)
+        }
+
         /**
          * "Track 2" before "Track 10". A plain string order puts 10 before 2, which on an
          * audiobook's chapters or a camera's photographs is the wrong order every time.

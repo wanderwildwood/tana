@@ -70,11 +70,22 @@ class SmbStore(val server: Server) : Store {
         }
     }
 
+    /**
+     * [force] is for a connection that has stopped answering. A polite close sends a logoff
+     * and waits for the reply, which from a dead connection never comes; and until the socket
+     * is actually shut, smbj keeps handing the same dead connection back to the next connect.
+     * Otherwise the connection is shared with any other store on the same server, and a polite
+     * close only lets go of this store's hold on it.
+     */
     @Synchronized
-    fun close() {
-        runCatching { share?.close() }
-        runCatching { session?.close() }
-        runCatching { connection?.close() }
+    fun close(force: Boolean = false) {
+        if (force) {
+            runCatching { connection?.close(true) }
+        } else {
+            runCatching { share?.close() }
+            runCatching { session?.close() }
+            runCatching { connection?.close() }
+        }
         share = null
         session = null
         connection = null
@@ -91,10 +102,10 @@ class SmbStore(val server: Server) : Store {
                 throw translate(e, subject)
             } catch (e: SMBRuntimeException) {
                 lastProblem = e
-                if (attempt == 0) close()
+                close(force = true)
             } catch (e: IOException) {
                 lastProblem = e
-                if (attempt == 0) close()
+                close(force = true)
             }
         }
         throw StoreException(StoreException.Reason.SERVER_UNREACHABLE, server.host, lastProblem)
@@ -246,15 +257,29 @@ class SmbStore(val server: Server) : Store {
 
     companion object {
         /**
-         * Timeouts on everything. A read with no timeout waits forever on a connection that
-         * died in a pocket, and the copy it belongs to then never finishes and never fails.
+         * A timeout on every request, and none on the socket.
+         *
+         * Each request waits at most 15 seconds for its answer, so a connection that died in a
+         * pocket fails a copy rather than hanging it forever. The socket itself has no read
+         * timeout on purpose: smbj reads it on a thread of its own that sits idle between
+         * requests, and a socket timeout there is taken as a fatal error — the thread ends,
+         * the socket stays open, and smbj goes on thinking it is connected while nothing reads
+         * the replies. Every connection left alone for longer than the timeout was dead that
+         * way, and the next press cost a full timeout to find out.
          */
         private val client = SMBClient(
             SmbConfig.builder()
                 .withSecurityProvider(BCSecurityProvider())
-                .withTimeout(30, TimeUnit.SECONDS)
-                .withSoTimeout(45, TimeUnit.SECONDS)
+                .withTimeout(15, TimeUnit.SECONDS)
+                .withSoTimeout(0)
                 .withBufferSize(1 shl 20)
+                // smbj 0.15 holds a lease on each folder it lists and answers the next listing
+                // of it from memory. A change this app makes itself does not break its own
+                // lease, so a folder it had just made was missing from the very next listing,
+                // and lease traffic left unanswered on an idle connection stalled the next
+                // call for the length of a timeout. Every listing goes to the server instead:
+                // on a home network it costs a few milliseconds.
+                .withDirectoryLeasingEnabled(false)
                 .build(),
         )
 

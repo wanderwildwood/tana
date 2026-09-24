@@ -58,6 +58,14 @@ class NamesAndSortTest {
         )
     }
 
+    @Test fun aNumberedCopySitsStraightAfterItsOriginal() {
+        val list = listOf(e("Chapter 2.mp3"), e("Chapter 1 (1).mp3"), e("Chapter 1.mp3"))
+        assertEquals(
+            listOf("Chapter 1.mp3", "Chapter 1 (1).mp3", "Chapter 2.mp3"),
+            Sort(SortBy.NAME).apply(list).map { it.name },
+        )
+    }
+
     @Test fun datesNewestFirstThenTurnedRound() {
         val list = listOf(e("old", modified = 1), e("new", modified = 3), e("mid", modified = 2))
         assertEquals(listOf("new", "mid", "old"), Sort(SortBy.DATE).apply(list).map { it.name })

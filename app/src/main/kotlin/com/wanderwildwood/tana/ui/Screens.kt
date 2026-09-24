@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
@@ -274,6 +276,7 @@ fun SearchScreen(search: SearchState, vm: BrowserViewModel) {
         focusManager.clearFocus()
         vm.searchFor(words, kind)
     }
+    KeyboardFirst()
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
@@ -338,6 +341,22 @@ fun SearchScreen(search: SearchState, vm: BrowserViewModel) {
     }
 }
 
+/**
+ * Back with the keyboard up puts the keyboard away, and does nothing else. Without this it
+ * closed the whole screen, and what had been typed into it went with it.
+ */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun KeyboardFirst() {
+    val focusManager = LocalFocusManager.current
+    val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+    val up = WindowInsets.isImeVisible
+    androidx.activity.compose.BackHandler(enabled = up) {
+        keyboard?.hide()
+        focusManager.clearFocus()
+    }
+}
+
 @Composable
 private fun Status(text: String) {
     TextMMD(text = text, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(16.dp))
@@ -376,6 +395,7 @@ fun ServerScreen(initial: Server, vm: BrowserViewModel, onDone: () -> Unit) {
         onDone()
     }
     val ready = host.isNotBlank() && share.isNotBlank() && !checking
+    KeyboardFirst()
 
     val save = {
         if (ready) {
@@ -402,10 +422,33 @@ fun ServerScreen(initial: Server, vm: BrowserViewModel, onDone: () -> Unit) {
             TopAppBarMMD(
                 title = { TextMMD(text = stringResource(if (editing) R.string.server_edit_title else R.string.server_add_title)) },
                 navigationIcon = { BarButton(Icons.Close, stringResource(R.string.cancel), onDone) },
+                // In the bar, not at the foot of the form: with the keyboard up the foot of
+                // the form is under it, and a button you cannot see is one you cannot press.
+                actions = {
+                    TextMMD(
+                        text = stringResource(if (checking) R.string.server_checking_short else R.string.server_save),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = if (ready) FontWeight.Bold else null,
+                        modifier = Modifier.clickable(enabled = ready, onClick = save).padding(horizontal = 14.dp, vertical = 12.dp),
+                    )
+                },
             )
         },
     ) { padding ->
         LazyColumnMMD(Modifier.fillMaxSize().padding(padding).imePadding().background(MaterialTheme.colorScheme.surface)) {
+            // First, where it will be seen: the answer to Save is read from the top of the
+            // screen, next to the word that was pressed.
+            problem?.let {
+                item {
+                    TextMMD(
+                        text = it,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    )
+                    HorizontalDividerMMD()
+                }
+            }
             item { Field(stringResource(R.string.server_name), stringResource(R.string.server_name_hint), name, { name = it }) }
             item { Field(stringResource(R.string.server_host), stringResource(R.string.server_host_hint), host, { host = it }, keyboard = KeyboardType.Uri) }
             item { Field(stringResource(R.string.server_share), stringResource(R.string.server_share_hint), share, { share = it }) }
@@ -413,18 +456,10 @@ fun ServerScreen(initial: Server, vm: BrowserViewModel, onDone: () -> Unit) {
             item { Field(stringResource(R.string.server_password), "", password, { password = it }, secret = true) }
             item {
                 Column(Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
-                    TextMMD(text = stringResource(R.string.server_note), style = MaterialTheme.typography.labelSmall)
-                    problem?.let {
-                        Spacer(Modifier.height(10.dp))
-                        TextMMD(text = it, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
-                    }
-                    Spacer(Modifier.height(14.dp))
-                    OutlinedButtonMMD(onClick = save, enabled = ready, modifier = Modifier.fillMaxWidth().height(48.dp)) {
-                        TextMMD(
-                            text = stringResource(if (checking) R.string.server_checking else R.string.server_save),
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                    }
+                    TextMMD(
+                        text = stringResource(if (checking) R.string.server_checking else R.string.server_note),
+                        style = MaterialTheme.typography.labelSmall,
+                    )
                 }
             }
             if (editing) {

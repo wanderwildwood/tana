@@ -118,6 +118,23 @@ class SmbStoreLiveTest {
         assertTrue("the original stays on the phone", File(tmp.root, "phone/big.bin").exists())
     }
 
+    @Test fun aNewFolderIsInTheVeryNextListing() {
+        smb.list(scratch)
+        smb.makeFolder("$scratch/fresh")
+        assertEquals(listOf("fresh"), smb.list(scratch).map { it.name })
+    }
+
+    /** A connection left idle, as a phone's is between one look and the next. */
+    @Test fun aConnectionLeftIdleStillAnswersPromptly() {
+        val idle = System.getenv("TANA_SMB_IDLE_SECONDS")?.toLongOrNull() ?: return
+        smb.list(scratch)
+        Thread.sleep(idle * 1000)
+        val started = System.currentTimeMillis()
+        smb.list(scratch)
+        val took = System.currentTimeMillis() - started
+        assertTrue("took ${took}ms after ${idle}s idle", took < 5000)
+    }
+
     @Test fun aMissingFileIsGoneNotAnError() {
         assertNull(smb.stat("$scratch/not-here.txt"))
     }
