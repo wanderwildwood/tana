@@ -44,6 +44,8 @@ class Transfer(
     private val resolve: (String) -> Store,
     private val isCancelled: () -> Boolean = { false },
     private val onProgress: (Progress) -> Unit = {},
+    /** A partial copy made (true) or finished with (false). See [PartJournal]. */
+    private val onPart: (Loc, Boolean) -> Unit = { _, _ -> },
 ) {
     private var filesDone = 0
     private var filesTotal = 0
@@ -99,9 +101,10 @@ class Transfer(
             val target = dest.child(name)
 
             // A file replacing a file keeps the old one until the new one has fully arrived
-            // (see copyFile). Anything involving a folder cannot be swapped in one step, so
-            // the old one goes first.
+            // (see copyFile). Anything involving a folder is copied in beside the old one under
+            // a temporary name and swapped in once it is whole -- see below.
             var replacing = false
+            var replacingFolder: Entry? = null
             if (clash == Clash.REPLACE && name == source.name) {
                 to.stat(target.path)?.let { existing ->
                     // Replacing the folder the source lives in would delete the source with it.
@@ -109,14 +112,14 @@ class Transfer(
                         throw StoreException(StoreException.Reason.INTO_ITSELF, source.name)
                     }
                     if (existing.isFolder || source.isFolder) {
-                        deleteTree(to, existing, counting = false)
+                        replacingFolder = existing
                     } else {
                         replacing = true
                     }
                 }
             }
 
-            if (mode == Mode.MOVE && source.loc.store == dest.store && !replacing) {
+            if (mode == Mode.MOVE && source.loc.store == dest.store && !replacing && replacingFolder == null) {
                 val renamed = try {
                     from.rename(source.loc.path, target.path)
                     true
@@ -130,8 +133,30 @@ class Transfer(
                 }
             }
 
-            copyTree(from, to, target, items, replacing)
-            if (mode == Mode.MOVE) deleteTree(from, source, counting = false)
+            val old = replacingFolder
+            if (old != null) {
+                // ⚠ Not delete-then-copy, which is what this was: the old folder went first, so
+                // a copy that failed or was cancelled partway left neither the old one nor a
+                // whole new one. The new one arrives beside it under a temporary name, the old
+                // one goes only once that is complete, and a rename puts the new one in place.
+                // Should the rename itself fail, the temporary one is the whole copy and stays.
+                val staging = dest.child(Names.unique(name + PART) { to.stat(dest.child(it).path) != null })
+                onPart(staging, true)
+                try {
+                    copyTree(from, to, staging, items, replacing = false)
+                } catch (e: Exception) {
+                    removeQuietly(to, staging.path)
+                    onPart(staging, false)
+                    throw e
+                }
+                // From here the staged copy is the one to keep: struck off before the old one goes.
+                onPart(staging, false)
+                deleteTree(to, old, counting = false)
+                to.rename(staging.path, target.path)
+            } else {
+                copyTree(from, to, target, items, replacing)
+            }
+            if (mode == Mode.MOVE) deleteCopied(from, items)
             done++
         }
         return Outcome(done, skipped)
@@ -241,6 +266,7 @@ class Transfer(
         val partName = Names.unique(dest.name + PART) { to.stat(folder.child(it).path) != null }
         val part = folder.child(partName)
         var oldGone = false
+        onPart(part, true)
         try {
             from.openRead(item.loc.path).use { input ->
                 to.openWrite(part.path).use { output -> pump(input, output, item.name) }
@@ -248,14 +274,18 @@ class Transfer(
             val written = to.stat(part.path)?.size
             if (written != item.size) throw StoreException(StoreException.Reason.CANNOT_WRITE, item.name)
             if (replacing) {
+                // About to be the only whole copy: never to be swept as a leftover.
+                onPart(part, false)
                 to.deleteFile(dest.path)
                 oldGone = true
             }
             to.rename(part.path, dest.path)
+            onPart(part, false)
         } catch (e: Exception) {
             // Once the old file is gone the temporary one is the only whole copy left, so it
             // stays, under its temporary name, rather than being tidied away with the rest.
             if (!oldGone) runCatching { to.deleteFile(part.path) }
+            onPart(part, false)
             throw e
         }
         to.setModified(dest.path, item.modified)
@@ -281,6 +311,38 @@ class Transfer(
     }
 
     /** Children before their folder, so each folder is empty by the time it is deleted. */
+    /**
+     * The source of a move, removed as it was copied: exactly the items that went, deepest
+     * first, and a folder only once it is empty.
+     *
+     * ⚠ Not the source as it stands now, which is what this was. Deleting by listing the folder
+     * again removed anything that arrived during a long move -- from another app, or another
+     * user of a shared server -- without its ever having been copied. A folder something new
+     * landed in is left where it is, with just the new thing in it.
+     */
+    private fun deleteCopied(store: Store, items: List<Pair<String, Entry>>) {
+        for ((_, entry) in items.asReversed()) {
+            if (entry.isFolder) {
+                if (store.list(entry.loc.path).isEmpty()) store.deleteFolder(entry.loc.path)
+            } else {
+                store.deleteFile(entry.loc.path)
+            }
+        }
+    }
+
+    /** Best effort, and deaf to cancelling: tidying up after a copy that stopped part way. */
+    private fun removeQuietly(store: Store, path: String) {
+        runCatching {
+            val entry = store.stat(path) ?: return
+            if (entry.isFolder) {
+                store.list(path).forEach { removeQuietly(store, it.loc.path) }
+                store.deleteFolder(path)
+            } else {
+                store.deleteFile(path)
+            }
+        }
+    }
+
     private fun deleteTree(store: Store, entry: Entry, counting: Boolean) {
         checkCancelled()
         if (entry.isFolder) {

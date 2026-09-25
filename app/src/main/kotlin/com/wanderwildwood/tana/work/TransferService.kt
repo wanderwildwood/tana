@@ -113,9 +113,14 @@ class TransferService : Service() {
 
     private fun run(job: Job, manager: NotificationManager) {
         var lastShown = 0L
+        // What a killed process left behind, before this one starts making its own.
+        runCatching { PartJournal.sweepLeftovers(this) }
         val transfer = Transfer(
             resolve = Stores::get,
             isCancelled = Transfers::isCancelled,
+            onPart = { loc, started ->
+                if (started) PartJournal.started(this, loc) else PartJournal.done(this, loc)
+            },
             onProgress = { progress ->
                 // An e-ink panel and a notification shade both pay for every redraw. Once a
                 // second, or when a file finishes, is as often as anyone reads it.
