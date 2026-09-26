@@ -259,7 +259,7 @@
     <string name="about_body">It reaches the servers you add, and nothing else. A server’s password is kept only on this phone, sealed with a key that never leaves it.</string>
     <string name="about_licence">GNU General Public License v3</string>
     <string name="about_bundled">Servers through smbj and Bouncy Castle (Apache-2.0, MIT). Icons from Material Symbols (Apache-2.0).</string>
-    <string name="about_feed_the_llamas">Feed the llamas</string>
+    <string name="about_feed_the_llamas">feed the llamas</string>
     <string name="about_no_browser">Nothing here opens web pages — %1$s</string>
     <string name="about_close">Close</string>
 </resources>
