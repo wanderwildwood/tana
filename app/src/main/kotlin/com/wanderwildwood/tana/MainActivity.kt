@@ -40,6 +40,7 @@ import com.wanderwildwood.tana.ui.TroubleDialog
 import com.wanderwildwood.tana.ui.describe
 import com.wanderwildwood.tana.ui.monochrome
 import com.wanderwildwood.tana.work.Asked
+import com.wanderwildwood.tana.work.Picking
 import com.wanderwildwood.tana.work.Transfers
 import com.wanderwildwood.tana.work.Work
 
@@ -54,7 +55,7 @@ class MainActivity : ComponentActivity() {
         if (savedInstanceState == null) asked = intent
         setContent {
             ThemeMMD(colorScheme = monochrome) {
-                Files(this, asked) { asked = null }
+                Files(this, asked, onAnswered = { asked = null })
             }
         }
     }
@@ -68,7 +69,13 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun Files(activity: ComponentActivity, asked: Intent?, onAnswered: () -> Unit) {
+internal fun Files(
+    activity: ComponentActivity,
+    asked: Intent?,
+    onAnswered: () -> Unit,
+    picking: Picking? = null,
+    onPicked: (List<java.io.File>) -> Unit = {},
+) {
     // Asked again every time the app comes back, because the answer is given on another
     // app's page, and coming back from it is the moment it may have changed.
     var access by remember { mutableStateOf(Environment.isExternalStorageManager()) }
@@ -93,7 +100,7 @@ private fun Files(activity: ComponentActivity, asked: Intent?, onAnswered: () ->
         return
     }
 
-    Browser(activity, asked, onAnswered)
+    Browser(activity, asked, onAnswered, picking, onPicked)
 }
 
 @Composable
@@ -101,8 +108,13 @@ private fun Browser(
     activity: ComponentActivity,
     asked: Intent?,
     onAnswered: () -> Unit,
+    picking: Picking?,
+    onPicked: (List<java.io.File>) -> Unit,
     vm: BrowserViewModel = viewModel(),
 ) {
+    // Before anything can be pressed: see BrowserViewModel.press.
+    if (picking != null && vm.picking == null) vm.picking = picking
+    LaunchedEffect(vm) { vm.picked.collect { onPicked(it) } }
     LaunchedEffect(asked) {
         if (asked != null) {
             Asked.place(asked)?.let(vm::openAt)

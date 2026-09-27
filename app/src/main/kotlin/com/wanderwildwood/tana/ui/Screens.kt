@@ -51,7 +51,11 @@ import kotlinx.coroutines.launch
 /** Everything along the foot of a screen, in the order it stacks. */
 @Composable
 private fun Foot(state: UiState, work: com.wanderwildwood.tana.work.Work, vm: BrowserViewModel, onMore: () -> Unit) {
-    if (state.selecting) {
+    val picking = vm.picking
+    if (picking != null) {
+        // Choosing for another app: nothing here copies, moves or deletes.
+        if (state.selecting) PickBar(state.selection.size, vm::pickSelected)
+    } else if (state.selecting) {
         SelectionBar(
             count = state.selection.size,
             readOnly = state.readOnly,
@@ -236,7 +240,7 @@ fun FolderScreen(state: UiState, work: com.wanderwildwood.tana.work.Work, vm: Br
                         modifier = Modifier.padding(16.dp),
                     )
                     else -> LazyColumnMMD(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) {
-                        items(state.entries, key = { it.loc.path }) { entry ->
+                        items(vm.shown(state.entries), key = { it.loc.path }) { entry ->
                             EntryRow(
                                 entry = entry,
                                 selecting = state.selecting,

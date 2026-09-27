@@ -19,6 +19,7 @@ import com.wanderwildwood.tana.work.Kind
 import com.wanderwildwood.tana.work.Mode
 import com.wanderwildwood.tana.work.Names
 import com.wanderwildwood.tana.work.Opener
+import com.wanderwildwood.tana.work.Picking
 import com.wanderwildwood.tana.work.Pin
 import com.wanderwildwood.tana.work.Prefs
 import com.wanderwildwood.tana.work.Purpose
@@ -124,6 +125,28 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         ),
     )
     val state: StateFlow<UiState> = _state
+
+    /** Set when another app opened this to choose a file; see [Picking]. */
+    var picking: Picking? = null
+
+    private val _picked = kotlinx.coroutines.flow.MutableSharedFlow<List<java.io.File>>(extraBufferCapacity = 1)
+    /** The files chosen for the app that asked, as files on the phone. */
+    val picked: kotlinx.coroutines.flow.SharedFlow<List<java.io.File>> = _picked
+
+    /** What a folder shows: while choosing for another app, only what it will take. */
+    fun shown(entries: List<Entry>): List<Entry> {
+        val p = picking ?: return entries
+        return entries.filter { it.isFolder || p.accepts(it.name) }
+    }
+
+    /** The chosen files, handed back; one only, if the asking app takes one. */
+    fun pickSelected() {
+        val p = picking ?: return
+        val files = _state.value.selected().filter { !it.isFolder }
+        if (files.isEmpty()) return
+        hand(if (p.several) files else files.take(1), Purpose.PICK)
+        clearSelection()
+    }
 
     /** Where Back goes. Home is always at the bottom and is never pushed. */
     private val history = ArrayDeque<Place>()
@@ -262,8 +285,13 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
             toggle(entry)
             return
         }
+        val p = picking
         if (entry.isFolder) {
             go(Place.Folder(entry.loc))
+        } else if (p != null) {
+            // Choosing for another app, a zip is a file like any other. Several allowed:
+            // tapping chooses, and Attach hands them all back.
+            if (p.several) toggle(entry) else hand(listOf(entry), Purpose.PICK)
         } else if (Names.extension(entry.name) == "zip") {
             browse(entry)
         } else {
@@ -297,7 +325,8 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     private fun hand(entries: List<Entry>, purpose: Purpose) {
         if (entries.all { it.loc.store == LocalStore.ID }) {
             val files = entries.map { Stores.phone.file(it.loc.path) }
-            if (!Opener.hand(app, files, purpose)) notice(Notice.NothingOpens)
+            if (purpose == Purpose.PICK) _picked.tryEmit(files)
+            else if (!Opener.hand(app, files, purpose)) notice(Notice.NothingOpens)
         } else {
             start(Job.Fetch(entries, purpose))
         }
@@ -363,6 +392,12 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
                 if (job is Job.Fetch && job.purpose == Purpose.BROWSE) {
                     work.fetched.firstOrNull()?.let { go(Place.Folder(Loc(ZipStore.idFor(it), ""))) }
                     Transfers.seen()
+                } else if (job is Job.Fetch && job.purpose == Purpose.PICK) {
+                    // Only the picking screen answers this; the app's own window leaves it be.
+                    if (picking != null) {
+                        _picked.tryEmit(work.fetched)
+                        Transfers.seen()
+                    }
                 } else if (job is Job.Fetch) {
                     if (!Opener.hand(app, work.fetched, job.purpose)) notice(Notice.NothingOpens)
                     Transfers.seen()

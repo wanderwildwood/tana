@@ -20,10 +20,12 @@ object Opener {
     fun hand(context: Context, files: List<File>, purpose: Purpose): Boolean {
         // A zip fetched to be looked inside is opened by this app, not handed on.
         if (files.isEmpty() || purpose == Purpose.BROWSE) return true
+        // Chosen for another app: the picking screen hands it back itself. See PickActivity.
+        if (purpose == Purpose.PICK) return true
         val uris = files.map { uri(context, it) }
         val intent = when (purpose) {
             Purpose.SHARE -> share(files, uris)
-            Purpose.OPEN, Purpose.OPEN_WITH, Purpose.INSTALL, Purpose.BROWSE -> {
+            Purpose.OPEN, Purpose.OPEN_WITH, Purpose.INSTALL, Purpose.BROWSE, Purpose.PICK -> {
                 val file = files.first()
                 Intent(Intent.ACTION_VIEW)
                     .setDataAndType(uris.first(), Names.mime(file.name))
@@ -62,7 +64,7 @@ object Opener {
         return intent.setType(mime).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
 
-    private fun uri(context: Context, file: File): Uri =
+    fun uri(context: Context, file: File): Uri =
         FileProvider.getUriForFile(context, context.packageName + ".files", file)
 
     /** Files fetched from a server a day or more ago; they were only ever there to be handed on. */

@@ -20,7 +20,7 @@ import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 
 /** What a fetched file is for, once it is on the phone. */
-enum class Purpose { OPEN, OPEN_WITH, SHARE, INSTALL, BROWSE }
+enum class Purpose { OPEN, OPEN_WITH, SHARE, INSTALL, BROWSE, PICK }
 
 /** One piece of work for the service. */
 sealed interface Job {

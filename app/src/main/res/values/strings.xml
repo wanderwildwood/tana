@@ -45,6 +45,11 @@
     <string name="folder_empty">Nothing here.</string>
     <string name="folder_try_again">Try again</string>
     <!-- Top bar while things are selected -->
+    <!-- While choosing files for another app: the button that hands them back -->
+    <plurals name="pick_attach">
+        <item quantity="one">Attach %1$d file</item>
+        <item quantity="other">Attach %1$d files</item>
+    </plurals>
     <plurals name="selected">
         <item quantity="one">%d selected</item>
         <item quantity="other">%d selected</item>

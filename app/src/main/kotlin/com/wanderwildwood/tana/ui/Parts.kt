@@ -245,6 +245,17 @@ internal fun SelectionBar(count: Int, readOnly: Boolean, onCopy: () -> Unit, onM
     }
 }
 
+/** While choosing for another app: the one thing to do with what is chosen. */
+@Composable
+internal fun PickBar(count: Int, onPick: () -> Unit) {
+    HorizontalDividerMMD()
+    FootButton(
+        pluralStringResource(R.plurals.pick_attach, count, count),
+        Modifier.fillMaxWidth().padding(10.dp),
+        onPick,
+    )
+}
+
 @Composable
 internal fun FootButton(label: String, modifier: Modifier, onClick: () -> Unit, enabled: Boolean = true) {
     OutlinedButtonMMD(
