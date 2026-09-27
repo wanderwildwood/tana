@@ -116,6 +116,18 @@
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
+        <!-- The servers, inside Android's own file picker. See ServersProvider. -->
+        <provider
+            android:name=".work.ServersProvider"
+            android:authorities="${applicationId}.servers"
+            android:exported="true"
+            android:grantUriPermissions="true"
+            android:permission="android.permission.MANAGE_DOCUMENTS">
+            <intent-filter>
+                <action android:name="android.content.action.DOCUMENTS_PROVIDER" />
+            </intent-filter>
+        </provider>
+
         <!-- How another app is handed a file to open or share: a content address with a
              one-off grant, rather than a path it would need its own permission to read. -->
         <provider

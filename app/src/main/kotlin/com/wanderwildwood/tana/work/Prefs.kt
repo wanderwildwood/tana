@@ -12,6 +12,7 @@ data class Pin(val loc: Loc, val label: String)
 
 /** What the app remembers between runs. All of it is small, so all of it is one file. */
 class Prefs(context: Context) {
+    private val app = context.applicationContext
     private val prefs = context.getSharedPreferences("tana", Context.MODE_PRIVATE)
 
     var sort: Sort
@@ -37,9 +38,13 @@ class Prefs(context: Context) {
             if (stored.any { it.password.isNotEmpty() && !Secrets.isSealed(it.password) }) servers = opened
             return opened
         }
-        set(value) = prefs.edit()
-            .putString("servers", Server.listToJson(value.map { it.copy(password = Secrets.seal(it.password)) }))
-            .apply()
+        set(value) {
+            prefs.edit()
+                .putString("servers", Server.listToJson(value.map { it.copy(password = Secrets.seal(it.password)) }))
+                .apply()
+            // Android's picker lists them too, and has to be told.
+            ServersProvider.rootsChanged(app)
+        }
 
     var others: List<SafRoot>
         get() {

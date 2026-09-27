@@ -46,6 +46,8 @@
     <string name="folder_try_again">Try again</string>
     <!-- Top bar while things are selected -->
     <!-- While choosing files for another app: the button that hands them back -->
+    <!-- Shown inside Android's own file picker when a server does not answer -->
+    <string name="provider_unreachable">The server did not answer. Is it on, and is this phone on its network?</string>
     <plurals name="pick_attach">
         <item quantity="one">Attach %1$d file</item>
         <item quantity="other">Attach %1$d files</item>
