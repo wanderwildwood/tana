@@ -26,6 +26,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -542,6 +543,63 @@ fun AccessScreen(onOpen: () -> Unit) {
         Spacer(Modifier.height(20.dp))
         OutlinedButtonMMD(onClick = onOpen, modifier = Modifier.fillMaxWidth().height(48.dp)) {
             TextMMD(text = stringResource(R.string.access_open), style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+/**
+ * A picture tapped while choosing for another app: shown whole, so a name like IMG_2041.jpg
+ * is not all there is to go on. Back returns to the folder, nothing chosen.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PreviewScreen(preview: Preview, chosen: Boolean, several: Boolean, vm: BrowserViewModel) {
+    val context = LocalContext.current
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.surface,
+        topBar = {
+            TopAppBarMMD(
+                title = { TextMMD(text = preview.entry.name, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
+                navigationIcon = { BarButton(Icons.Back, stringResource(R.string.cd_back), vm::closePreview) },
+            )
+        },
+        bottomBar = {
+            Column {
+                HorizontalDividerMMD()
+                FootButton(
+                    stringResource(
+                        when {
+                            !several -> R.string.preview_attach
+                            chosen -> R.string.preview_unchoose
+                            else -> R.string.preview_choose
+                        },
+                    ),
+                    Modifier.fillMaxWidth().padding(10.dp),
+                    vm::choosePreviewed,
+                )
+            }
+        },
+    ) { padding ->
+        Box(Modifier.fillMaxSize().padding(padding), contentAlignment = androidx.compose.ui.Alignment.Center) {
+            val image = preview.image
+            when {
+                image != null -> androidx.compose.foundation.Image(
+                    bitmap = remember(image) { image.asImageBitmap() },
+                    contentDescription = preview.entry.name,
+                    contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize(),
+                )
+                preview.failure != null -> TextMMD(
+                    text = stringResource(R.string.preview_failed),
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(16.dp),
+                )
+                else -> TextMMD(
+                    text = stringResource(R.string.folder_reading),
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.padding(16.dp),
+                )
+            }
         }
     }
 }

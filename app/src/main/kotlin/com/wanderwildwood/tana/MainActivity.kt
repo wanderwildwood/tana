@@ -30,6 +30,7 @@ import com.wanderwildwood.tana.ui.AccessScreen
 import com.wanderwildwood.tana.ui.BrowserViewModel
 import com.wanderwildwood.tana.ui.ClashDialog
 import com.wanderwildwood.tana.ui.FolderScreen
+import com.wanderwildwood.tana.ui.PreviewScreen
 import com.wanderwildwood.tana.ui.HomeScreen
 import com.wanderwildwood.tana.ui.InfoDialog
 import com.wanderwildwood.tana.ui.Notice
@@ -155,8 +156,10 @@ private fun Browser(
 
     val server = editing
     val search = state.search
+    val preview = state.preview
     when {
         server != null -> ServerScreen(server, vm) { editing = null }
+        preview != null -> PreviewScreen(preview, preview.entry.loc in state.selection, picking?.several == true, vm)
         search != null -> SearchScreen(search, vm)
         state.place == Place.Home -> HomeScreen(
             state = state,

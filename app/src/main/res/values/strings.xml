@@ -52,6 +52,12 @@
         <item quantity="one">Attach %1$d file</item>
         <item quantity="other">Attach %1$d files</item>
     </plurals>
+    <!-- Under a picture tapped while choosing for another app; it is sent back as it is -->
+    <string name="preview_attach">Attach</string>
+    <!-- The same, when the asking app takes several: adds it to (or takes it out of) the ones chosen -->
+    <string name="preview_choose">Choose</string>
+    <string name="preview_unchoose">Leave out</string>
+    <string name="preview_failed">This picture cannot be shown. It can still be attached.</string>
     <plurals name="selected">
         <item quantity="one">%d selected</item>
         <item quantity="other">%d selected</item>

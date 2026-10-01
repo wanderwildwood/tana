@@ -22,6 +22,7 @@ import com.wanderwildwood.tana.work.Opener
 import com.wanderwildwood.tana.work.Picking
 import com.wanderwildwood.tana.work.Pin
 import com.wanderwildwood.tana.work.Prefs
+import com.wanderwildwood.tana.work.Previews
 import com.wanderwildwood.tana.work.Purpose
 import com.wanderwildwood.tana.work.Recent
 import com.wanderwildwood.tana.work.Search
@@ -75,6 +76,14 @@ data class Info(
     val hashing: Boolean = false,
 )
 
+/** A picture opened before it is chosen for another app. [file] and [image] arrive together once it has been read. */
+data class Preview(
+    val entry: Entry,
+    val file: java.io.File? = null,
+    val image: android.graphics.Bitmap? = null,
+    val failure: Throwable? = null,
+)
+
 data class SearchState(
     val roots: List<Loc>,
     val within: String,
@@ -102,6 +111,7 @@ data class UiState(
     val notice: Notice? = null,
     val info: Info? = null,
     val search: SearchState? = null,
+    val preview: Preview? = null,
 ) {
     val selecting: Boolean get() = selection.isNotEmpty()
     val folder: Loc? get() = (place as? Place.Folder)?.loc
@@ -199,6 +209,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     fun back(): Boolean {
         val s = _state.value
         when {
+            s.preview != null -> closePreview()
             s.info != null -> _state.update { it.copy(info = null) }
             s.search != null -> closeSearch()
             s.selecting -> clearSelection()
@@ -281,6 +292,11 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
     fun press(entry: Entry) {
         val s = _state.value
+        // Choosing a picture for another app, it is looked at first, chosen or not.
+        if (picking != null && !entry.isFolder && Previews.isImage(entry.name)) {
+            preview(entry)
+            return
+        }
         if (s.selecting) {
             toggle(entry)
             return
@@ -296,6 +312,50 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
             browse(entry)
         } else {
             open(entry, if (Names.extension(entry.name) == "apk") Purpose.INSTALL else Purpose.OPEN)
+        }
+    }
+
+    // ---------------------------------------------------------------- a picture, looked at first
+
+    private var previewing: CoroutineJob? = null
+
+    fun preview(entry: Entry) {
+        previewing?.cancel()
+        _state.update { it.copy(preview = Preview(entry)) }
+        previewing = viewModelScope.launch {
+            val job = coroutineContext
+            val result = withContext(Dispatchers.IO) {
+                runCatching { Previews.load(app, entry) { !job.isActive } }
+            }
+            if (!isActive || _state.value.preview?.entry != entry) return@launch
+            _state.update { s ->
+                s.copy(
+                    preview = result.fold(
+                        onSuccess = { (file, image) -> Preview(entry, file, image) },
+                        onFailure = { Preview(entry, failure = it) },
+                    ),
+                )
+            }
+        }
+    }
+
+    fun closePreview() {
+        previewing?.cancel()
+        _state.update { it.copy(preview = null) }
+    }
+
+    /**
+     * The picture on screen, chosen: handed straight back when the asking app takes one;
+     * added to (or taken out of) the chosen ones when it takes several.
+     */
+    fun choosePreviewed() {
+        val p = picking ?: return
+        val shown = _state.value.preview ?: return
+        closePreview()
+        when {
+            p.several -> toggle(shown.entry)
+            shown.file != null -> _picked.tryEmit(listOf(shown.file))
+            else -> hand(listOf(shown.entry), Purpose.PICK)
         }
     }
 
