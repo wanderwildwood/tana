@@ -21,8 +21,13 @@ import java.io.FileNotFoundException
  *
  * Every app that asks Android for a file -- Signal, a browser's upload button -- gets
  * Android's picker, which no other app can stand in for. What an app can do is appear inside
- * it: each server is a place in the picker's list, beside the phone's own storage, and a
- * file chosen from one is fetched here and handed over.
+ * it: one place in the picker's list, beside the phone's own storage, holding each server as
+ * a folder, and a file chosen from one is fetched here and handed over.
+ *
+ * One place named after this app, not one per server: Android's picker folds an app's own
+ * picking screen into that app's place, behind a small arrow beside it, and stops listing the
+ * app on its own. Named after a server, nothing said this app's picker -- the one that shows
+ * a picture before it is chosen -- was there at all.
  *
  * Read-only. The picker offers nothing but choosing, and writing to a server from another
  * app's save dialog is a different thing with different risks. The phone's own storage is
@@ -40,32 +45,32 @@ class ServersProvider : DocumentsProvider() {
 
     override fun queryRoots(projection: Array<out String>?): Cursor {
         val cursor = MatrixCursor(projection ?: ROOT_COLUMNS)
-        servers().forEach { server ->
-            cursor.newRow()
-                .add(Root.COLUMN_ROOT_ID, server.id)
-                .add(Root.COLUMN_DOCUMENT_ID, idOf(server.storeId, ""))
-                .add(Root.COLUMN_TITLE, server.name.ifBlank { server.host })
-                .add(Root.COLUMN_SUMMARY, "${server.host}/${server.share}")
-                .add(Root.COLUMN_FLAGS, Root.FLAG_SUPPORTS_IS_CHILD)
-                .add(Root.COLUMN_ICON, R.mipmap.ic_launcher)
-                .add(Root.COLUMN_MIME_TYPES, "*/*")
-        }
+        // With no servers there is no place, and the picker lists this app by its name instead.
+        val servers = servers().ifEmpty { return cursor }
+        cursor.newRow()
+            .add(Root.COLUMN_ROOT_ID, ROOT_ID)
+            .add(Root.COLUMN_DOCUMENT_ID, TOP)
+            .add(Root.COLUMN_TITLE, context!!.getString(R.string.app_name))
+            .add(Root.COLUMN_SUMMARY, servers.joinToString(", ") { label(it) })
+            .add(Root.COLUMN_FLAGS, Root.FLAG_SUPPORTS_IS_CHILD)
+            .add(Root.COLUMN_ICON, R.mipmap.ic_launcher)
+            .add(Root.COLUMN_MIME_TYPES, "*/*")
         return cursor
     }
 
     override fun queryDocument(documentId: String, projection: Array<out String>?): Cursor {
         val cursor = MatrixCursor(projection ?: DOCUMENT_COLUMNS)
-        val (store, path) = split(documentId)
-        servers()
-        if (path.isEmpty()) {
-            val server = servers().firstOrNull { it.storeId == store } ?: throw FileNotFoundException(documentId)
-            cursor.newRow()
-                .add(Document.COLUMN_DOCUMENT_ID, documentId)
-                .add(Document.COLUMN_DISPLAY_NAME, server.name.ifBlank { server.host })
-                .add(Document.COLUMN_MIME_TYPE, Document.MIME_TYPE_DIR)
-                .add(Document.COLUMN_FLAGS, 0)
+        if (documentId == TOP) {
+            folderRow(cursor, TOP, context!!.getString(R.string.app_name))
             return cursor
         }
+        val (store, path) = split(documentId)
+        if (path.isEmpty()) {
+            val server = servers().firstOrNull { it.storeId == store } ?: throw FileNotFoundException(documentId)
+            folderRow(cursor, documentId, label(server))
+            return cursor
+        }
+        servers()
         val entry = find(store, path) ?: throw FileNotFoundException(documentId)
         row(cursor, entry)
         return cursor
@@ -90,6 +95,10 @@ class ServersProvider : DocumentsProvider() {
 
     override fun queryChildDocuments(parentDocumentId: String, projection: Array<out String>?, sortOrder: String?): Cursor {
         val cursor = MatrixCursor(projection ?: DOCUMENT_COLUMNS)
+        if (parentDocumentId == TOP) {
+            servers().forEach { folderRow(cursor, idOf(it.storeId, ""), label(it)) }
+            return cursor
+        }
         val (store, path) = split(parentDocumentId)
         servers()
         val hidden = Prefs(context!!).showHidden
@@ -111,6 +120,7 @@ class ServersProvider : DocumentsProvider() {
     }
 
     override fun isChildDocument(parentDocumentId: String, documentId: String): Boolean {
+        if (parentDocumentId == TOP) return documentId != TOP
         val (parentStore, parentPath) = split(parentDocumentId)
         val (store, path) = split(documentId)
         return store == parentStore && (parentPath.isEmpty() || path.startsWith("$parentPath/"))
@@ -152,6 +162,16 @@ class ServersProvider : DocumentsProvider() {
         return ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
     }
 
+    private fun label(server: Server) = server.name.ifBlank { server.host }
+
+    private fun folderRow(cursor: MatrixCursor, id: String, name: String) {
+        cursor.newRow()
+            .add(Document.COLUMN_DOCUMENT_ID, id)
+            .add(Document.COLUMN_DISPLAY_NAME, name)
+            .add(Document.COLUMN_MIME_TYPE, Document.MIME_TYPE_DIR)
+            .add(Document.COLUMN_FLAGS, 0)
+    }
+
     private fun row(cursor: MatrixCursor, entry: Entry) {
         cursor.newRow()
             .add(Document.COLUMN_DOCUMENT_ID, idOf(entry.loc.store, entry.loc.path))
@@ -183,6 +203,11 @@ class ServersProvider : DocumentsProvider() {
     companion object {
         private const val TAG = "tana.provider"
         private val NETWORK = java.util.concurrent.Executors.newCachedThreadPool()
+
+        private const val ROOT_ID = "servers"
+
+        /** The one place itself, whose folders are the servers. No bar, so no store's id. */
+        private const val TOP = "servers"
 
         /** A document is "<store>|<path>"; a store id never has a bar in it, a path might. */
         fun idOf(store: String, path: String) = "$store|$path"
