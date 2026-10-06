@@ -24,6 +24,12 @@
     <string name="home_add_server">Add a server</string>
     <string name="home_section_other_apps">From other apps</string>
     <!-- Opens Android's folder picker, to add a folder another app offers (Termux's home, say) -->
+    <string name="home_section_opens">Opens folders and downloads</string>
+    <string name="opens_asks">Android asks which app</string>
+    <string name="opens_asks_note">Tap, then choose Files and Always</string>
+    <string name="opens_other_note_short">Another app. Tap for how to change it</string>
+    <string name="opens_other_note">Android opens them in another app, %1$s, without asking, because it was once chosen with Always. On the next page, tap Clear default preferences, then come back and tap this row again.</string>
+    <string name="opens_other_open">Open that page</string>
     <string name="home_add_other">Add a folder from another app</string>
     <!-- A folder from another app after a long press; a tap now takes it off the start page -->
     <string name="home_remove_armed">Remove — tap again</string>

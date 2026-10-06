@@ -63,7 +63,10 @@ as places like any other.
   SHA-256, set out in fours so it can be read against a checksum posted somewhere else.
 - **Can be the phone's file manager.** It answers when something asks for "the files app",
   for "show the downloads", or to open a folder, and opens in the place it was asked for.
-  Choose it once with *Always* and it keeps answering.
+  Choose it once with *Always* and it keeps answering. The last row on the first screen says
+  whether it does, asks the question when Android still would, and opens the other app's
+  "Open by default" page — which the Kompakt's own settings leave out — when that app was chosen
+  instead.
 - **Rename, new folder, show hidden files**, and a path along the top where each step is a press
   back to it.
 
