@@ -15,8 +15,8 @@ android {
         // The Kompakt runs Android 12 (API 31); nothing here needs anything newer.
         minSdk = 31
         targetSdk = 31
-        versionCode = 13
-        versionName = "0.2.10"
+        versionCode = 14
+        versionName = "0.3.0"
     }
 
     // A real keystore in signing/ signs every build type when it is present, so the
@@ -118,6 +118,10 @@ dependencies {
     // stripped copy of that library under the same name and the two must not meet.
     implementation(libs.smbj)
     implementation(libs.bouncycastle)
+
+    // A Nextcloud or other WebDAV server is plain HTTP; OkHttp (Apache-2.0) sends it, since
+    // Android's own HttpURLConnection refuses WebDAV's methods (PROPFIND, MOVE, MKCOL).
+    implementation(libs.okhttp)
 
     testImplementation(libs.junit)
 }

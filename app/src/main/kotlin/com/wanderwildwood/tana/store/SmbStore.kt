@@ -34,7 +34,7 @@ import java.util.concurrent.TimeUnit
  * now. A call that finds the connection dead retries once on a fresh one, and only then says
  * the server cannot be reached.
  */
-class SmbStore(val server: Server) : Store {
+class SmbStore(override val server: Server) : ServerStore {
     override val id: String = server.storeId
 
     private var connection: Connection? = null
@@ -77,8 +77,10 @@ class SmbStore(val server: Server) : Store {
      * Otherwise the connection is shared with any other store on the same server, and a polite
      * close only lets go of this store's hold on it.
      */
+    override fun close() = close(force = false)
+
     @Synchronized
-    fun close(force: Boolean = false) {
+    fun close(force: Boolean) {
         if (force) {
             runCatching { connection?.close(true) }
         } else {
@@ -188,7 +190,11 @@ class SmbStore(val server: Server) : Store {
         disk.mkdir(smb(path))
     }
 
-    override fun rename(from: String, to: String) = onShare(from.substringAfterLast('/')) { disk ->
+    override fun rename(from: String, to: String) = move(from, to, replace = false)
+
+    override fun replace(from: String, to: String) = move(from, to, replace = true)
+
+    private fun move(from: String, to: String, replace: Boolean) = onShare(from.substringAfterLast('/')) { disk ->
         disk.open(
             smb(from),
             EnumSet.of(AccessMask.DELETE, AccessMask.GENERIC_READ),
@@ -197,8 +203,8 @@ class SmbStore(val server: Server) : Store {
             SMB2CreateDisposition.FILE_OPEN,
             null,
         ).use { entry ->
-            // false: never replace what is already at the new name.
-            entry.rename(smb(to), false)
+            // A plain rename never replaces what is already at the new name.
+            entry.rename(smb(to), replace)
         }
     }
 

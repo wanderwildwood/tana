@@ -5,6 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -24,6 +26,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.asImageBitmap
@@ -40,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import com.mudita.mmd.components.buttons.OutlinedButtonMMD
 import com.mudita.mmd.components.divider.HorizontalDividerMMD
 import com.mudita.mmd.components.lazy.LazyColumnMMD
+import com.mudita.mmd.components.radio_button.RadioButtonMMD
 import com.mudita.mmd.components.text.TextMMD
 import com.mudita.mmd.components.text_field.TextFieldMMD
 import com.mudita.mmd.components.top_app_bar.TopAppBarMMD
@@ -144,7 +148,7 @@ fun HomeScreen(
             items(state.servers, key = { "s:" + it.id }) { server ->
                 PlaceRow(
                     server.name,
-                    "${server.host} / ${server.share}",
+                    if (server.isDav) server.host.substringAfter("://").trimEnd('/') else "${server.host} / ${server.share}",
                     onPress = { vm.go(Place.Folder(com.wanderwildwood.tana.store.Loc(server.storeId, ""))) },
                     onLongPress = { onEditServer(server) },
                 )
@@ -417,6 +421,8 @@ fun ServerScreen(initial: Server, vm: BrowserViewModel, onDone: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var name by remember { mutableStateOf(initial.name) }
+    var kind by remember { mutableStateOf(initial.kind) }
+    val dav = kind == Server.DAV
     var host by remember { mutableStateOf(initial.host) }
     var share by remember { mutableStateOf(initial.share) }
     var user by remember { mutableStateOf(initial.user) }
@@ -428,7 +434,7 @@ fun ServerScreen(initial: Server, vm: BrowserViewModel, onDone: () -> Unit) {
         vm.removeServer(initial)
         onDone()
     }
-    val ready = host.isNotBlank() && share.isNotBlank() && !checking
+    val ready = host.isNotBlank() && (dav || share.isNotBlank()) && !checking
     KeyboardFirst(onDone)
 
     val save = {
@@ -437,11 +443,12 @@ fun ServerScreen(initial: Server, vm: BrowserViewModel, onDone: () -> Unit) {
             problem = null
             scope.launch {
                 val draft = initial.copy(
-                    name = name.trim().ifEmpty { "${host.trim()} / ${share.trim()}" },
+                    name = name.trim().ifEmpty { if (dav) host.trim().substringAfter("://").trimEnd('/') else "${host.trim()} / ${share.trim()}" },
                     host = host.trim(),
-                    share = share.trim().trim('/', '\\'),
+                    share = if (dav) "" else share.trim().trim('/', '\\'),
                     user = user.trim(),
                     password = password,
+                    kind = kind,
                 )
                 val failed = vm.saveServer(draft)
                 checking = false
@@ -483,15 +490,32 @@ fun ServerScreen(initial: Server, vm: BrowserViewModel, onDone: () -> Unit) {
                     HorizontalDividerMMD()
                 }
             }
+            // The kind is chosen once, when the server is added: a server's files are known by
+            // it, and pins to them would not survive a change.
+            if (!editing) {
+                item {
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)) {
+                        TextMMD(text = stringResource(R.string.server_kind), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                        ChoiceRow(stringResource(R.string.server_kind_smb), !dav) { kind = Server.SMB }
+                        ChoiceRow(stringResource(R.string.server_kind_dav), dav) { kind = Server.DAV }
+                    }
+                }
+            }
             item { Field(stringResource(R.string.server_name), stringResource(R.string.server_name_hint), name, { name = it }) }
-            item { Field(stringResource(R.string.server_host), stringResource(R.string.server_host_hint), host, { host = it }, keyboard = KeyboardType.Uri) }
-            item { Field(stringResource(R.string.server_share), stringResource(R.string.server_share_hint), share, { share = it }) }
-            item { Field(stringResource(R.string.server_user), stringResource(R.string.server_user_hint), user, { user = it }) }
-            item { Field(stringResource(R.string.server_password), "", password, { password = it }, secret = true) }
+            item {
+                Field(
+                    stringResource(R.string.server_host),
+                    stringResource(if (dav) R.string.server_dav_host_hint else R.string.server_host_hint),
+                    host, { host = it }, keyboard = KeyboardType.Uri,
+                )
+            }
+            if (!dav) item { Field(stringResource(R.string.server_share), stringResource(R.string.server_share_hint), share, { share = it }) }
+            item { Field(stringResource(R.string.server_user), stringResource(if (dav) R.string.server_dav_user_hint else R.string.server_user_hint), user, { user = it }) }
+            item { Field(stringResource(if (dav) R.string.server_dav_password else R.string.server_password), "", password, { password = it }, secret = true) }
             item {
                 Column(Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
                     TextMMD(
-                        text = stringResource(if (checking) R.string.server_checking else R.string.server_note),
+                        text = stringResource(if (checking) R.string.server_checking else if (dav) R.string.server_dav_note else R.string.server_note),
                         style = MaterialTheme.typography.labelSmall,
                     )
                 }
@@ -503,6 +527,19 @@ fun ServerScreen(initial: Server, vm: BrowserViewModel, onDone: () -> Unit) {
                 }
             }
         }
+    }
+}
+
+/** One of a few choices, pressed in place: MMD's radio button, the row taking the press. */
+@Composable
+private fun ChoiceRow(title: String, chosen: Boolean, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButtonMMD(selected = chosen, onClick = null)
+        Spacer(Modifier.width(8.dp))
+        TextMMD(text = title, style = MaterialTheme.typography.bodyMedium)
     }
 }
 

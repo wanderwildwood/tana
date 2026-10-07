@@ -24,12 +24,17 @@ data class Loc(val store: String, val path: String) {
             (other.path.isEmpty() || path == other.path || path.startsWith(other.path + "/"))
 }
 
-/** One thing in a folder. [size] is meaningless for a folder; [modified] is 0 when not known. */
+/**
+ * One thing in a folder. [size] is meaningless for a folder; [modified] is 0 when not known.
+ * [tag] is what a WebDAV server says changes whenever the file does (its etag), where it says
+ * one; a Samba share and the phone have none.
+ */
 data class Entry(
     val loc: Loc,
     val isFolder: Boolean,
     val size: Long,
     val modified: Long,
+    val tag: String? = null,
 ) {
     val name: String get() = loc.name
 }
@@ -59,6 +64,14 @@ interface Store {
 
     /** Within this store only. Throws rather than replace anything already at [to]. */
     fun rename(from: String, to: String)
+
+    /**
+     * Within this store only: [from] takes the place of the file at [to], in one step where the
+     * store can, so that whoever reads [to] finds the old file or the new one and never half.
+     */
+    fun replace(from: String, to: String) {
+        throw StoreException(StoreException.Reason.CANNOT_RENAME, from.substringAfterLast('/'))
+    }
 
     fun deleteFile(path: String)
 
@@ -94,5 +107,7 @@ class StoreException(
         SERVER_ERROR,
         INTO_ITSELF,
         READ_ONLY,
+        NOT_WEBDAV,
+        UNTRUSTED,
     }
 }

@@ -44,10 +44,17 @@ as places like any other.
   with the screen off, with a notification that can stop them.
 - **Asks about names already taken**, before it starts: keep both, leave those out, or replace
   — and replace asks a second time in its own face, because it is the one that deletes.
-- **Servers.** Any Samba or Windows share, signed in as a guest or with a user and password.
-  Browse, open, copy either way, rename, delete, make folders. A file on a server is fetched to
-  the phone to be opened or shared. Away from home it reaches whatever the phone can reach, so a
-  server's Tailscale address works with Tailscale on.
+- **Servers.** Any Samba or Windows share, signed in as a guest or with a user and password, and
+  any Nextcloud or other WebDAV server. Browse, open, copy either way, rename, delete, make
+  folders. A file on a server is fetched to the phone to be opened or shared. Away from home it
+  reaches whatever the phone can reach, so a server's Tailscale address works with Tailscale on.
+  A Nextcloud is added by its address, your user name and an app password made for the phone
+  (in Nextcloud, Settings → Security → Devices & sessions).
+- **Servers in Android's own file picker**, under *Files*. A file chosen there can be saved back
+  by the app that chose it — a password vault, an editor. The app writes into a copy on the
+  phone; when it closes the file, the copy goes up under a name of its own and then takes the old
+  one's place in one step, and only if nobody else saved the file on the server meanwhile.
+  If someone did, theirs is left as it is and the app is told on its next read.
 - **Zip files.** Open one like a folder and copy out what you want, or *Extract here* for all of
   it. *Compress* makes one of whatever is chosen. It works the same for a zip on a server.
 - **Folders from other apps.** Anything Android's own folder picker can reach that no path can —
@@ -133,6 +140,7 @@ not, see <https://www.gnu.org/licenses/>.
 A file manager holds the keys to everything on a phone and, here, to the drives at home too.
 Copyleft means nobody can ship this code with something added that they will not show you.
 
-Servers are reached through [smbj](https://github.com/hierynomus/smbj) (Apache-2.0) and
-[Bouncy Castle](https://www.bouncycastle.org/) (MIT). Icons are from Material Symbols,
+Samba servers are reached through [smbj](https://github.com/hierynomus/smbj) (Apache-2.0) and
+[Bouncy Castle](https://www.bouncycastle.org/) (MIT), WebDAV ones through
+[OkHttp](https://square.github.io/okhttp/) (Apache-2.0). Icons are from Material Symbols,
 Apache 2.0.

@@ -10,7 +10,7 @@ package com.wanderwildwood.tana.store
 object Stores {
     val phone = LocalStore()
 
-    private val servers = mutableMapOf<String, SmbStore>()
+    private val servers = mutableMapOf<String, ServerStore>()
     private val others = mutableMapOf<String, SafStore>()
     private val zips = mutableMapOf<String, Pair<Long, ZipStore>>()
 
@@ -47,8 +47,16 @@ object Stores {
             if (!keep) store.close()
             !keep
         }
-        wanted.forEach { (id, server) -> servers.getOrPut(id) { SmbStore(server) } }
+        wanted.forEach { (id, server) -> servers.getOrPut(id) { open(server) } }
     }
+
+    /** A store for [server], of its kind. [spool] is where a WebDAV upload is held until it is whole. */
+    fun open(server: Server): ServerStore =
+        if (server.isDav) DavStore(server, spool ?: java.io.File(System.getProperty("java.io.tmpdir") ?: "/tmp")) else SmbStore(server)
+
+    /** Set once at start by whoever knows the app's cache folder. */
+    @Volatile
+    var spool: java.io.File? = null
 
     @Synchronized
     fun get(id: String): Store = when {

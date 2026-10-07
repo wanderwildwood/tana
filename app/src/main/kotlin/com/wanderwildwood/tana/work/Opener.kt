@@ -30,6 +30,10 @@ object Opener {
                 Intent(Intent.ACTION_VIEW)
                     .setDataAndType(uris.first(), Names.mime(file.name))
                     .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    // A file on the phone may be saved by the app that opens it, as an editor or
+                    // a password vault will. A copy fetched from a server is not: what was
+                    // written to it would never get back.
+                    .addFlags(if (isFetched(context, file)) 0 else Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
             }
         }
         val launched = when (purpose) {
@@ -63,6 +67,9 @@ object Opener {
         }
         return intent.setType(mime).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
+
+    private fun isFetched(context: Context, file: File): Boolean =
+        file.canonicalPath.startsWith(File(context.cacheDir, "fetched").canonicalPath + File.separator)
 
     fun uri(context: Context, file: File): Uri =
         FileProvider.getUriForFile(context, context.packageName + ".files", file)

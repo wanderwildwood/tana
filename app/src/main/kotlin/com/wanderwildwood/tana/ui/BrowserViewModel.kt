@@ -9,6 +9,7 @@ import com.wanderwildwood.tana.store.LocalStore
 import com.wanderwildwood.tana.store.Loc
 import com.wanderwildwood.tana.store.Server
 import com.wanderwildwood.tana.store.SafRoot
+import com.wanderwildwood.tana.store.DavStore
 import com.wanderwildwood.tana.store.SmbStore
 import com.wanderwildwood.tana.store.ZipStore
 import com.wanderwildwood.tana.store.StoreException
@@ -610,8 +611,17 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
      * means it worked; otherwise the problem, for the dialog to show.
      */
     suspend fun saveServer(draft: Server): Throwable? {
-        val server = if (draft.id.isEmpty()) draft.copy(id = UUID.randomUUID().toString()) else draft
+        var server = if (draft.id.isEmpty()) draft.copy(id = UUID.randomUUID().toString()) else draft
         val problem = withContext(Dispatchers.IO) {
+            if (server.isDav) {
+                // A Nextcloud given by its address alone is kept as the folder its files are in.
+                return@withContext try {
+                    server = server.copy(host = DavStore.resolve(server, java.io.File(getApplication<Application>().cacheDir, "spool")))
+                    null
+                } catch (e: Exception) {
+                    e
+                }
+            }
             val probe = SmbStore(server)
             try {
                 probe.list("")
@@ -768,6 +778,8 @@ fun describe(app: android.content.Context, problem: Throwable): String {
         StoreException.Reason.SERVER_ERROR -> R.string.problem_server_error
         StoreException.Reason.INTO_ITSELF -> R.string.problem_into_itself
         StoreException.Reason.READ_ONLY -> R.string.problem_read_only
+        StoreException.Reason.NOT_WEBDAV -> R.string.problem_not_webdav
+        StoreException.Reason.UNTRUSTED -> R.string.problem_untrusted
     }
     return app.getString(id, e.subject)
 }

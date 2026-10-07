@@ -58,6 +58,11 @@ class LocalStore(private val root: File = File("/")) : Store {
         if (!file(from).renameTo(target)) throw StoreException(StoreException.Reason.CANNOT_RENAME, file(from).name)
     }
 
+    override fun replace(from: String, to: String) {
+        // A rename over a file on one filesystem is a single step.
+        if (!file(from).renameTo(file(to))) throw StoreException(StoreException.Reason.CANNOT_RENAME, file(from).name)
+    }
+
     override fun deleteFile(path: String) {
         val f = file(path)
         if (!f.delete() && f.exists()) throw StoreException(StoreException.Reason.CANNOT_DELETE, f.name)

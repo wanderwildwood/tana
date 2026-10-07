@@ -53,6 +53,10 @@
     <!-- Top bar while things are selected -->
     <!-- While choosing files for another app: the button that hands them back -->
     <!-- Shown inside Android's own file picker when a server does not answer -->
+    <!-- Said to another app that saved a server's file, on its next read of it. Passwords
+         (aikotoba) recognises the words "changed on the server", so they stay as they are. -->
+    <string name="provider_changed" translatable="false">“%1$s” changed on the server since it was read, so it was not replaced</string>
+    <string name="provider_save_failed">“%1$s” did not reach the server: %2$s</string>
     <string name="provider_unreachable">The server did not answer. Is it on, and is this phone on its network?</string>
     <plurals name="pick_attach">
         <item quantity="one">Attach %1$d file</item>
@@ -212,6 +216,13 @@
     <string name="server_user">User</string>
     <string name="server_user_hint">Leave empty to come in as a guest</string>
     <string name="server_password">Password</string>
+    <string name="server_kind">Kind</string>
+    <string name="server_kind_smb">Samba or Windows share</string>
+    <string name="server_kind_dav">Nextcloud or WebDAV</string>
+    <string name="server_dav_host_hint">http://192.168.1.20:11000</string>
+    <string name="server_dav_user_hint">Your user name on it</string>
+    <string name="server_dav_password">App password</string>
+    <string name="server_dav_note">For a Nextcloud, its address alone is enough. Make an app password for this phone in Nextcloud, under Settings → Security → Devices &amp; sessions, and type it here. Any other WebDAV server: the full address of the folder. Away from home, the phone reaches it only if the address is one it can reach from there, such as a Tailscale address with Tailscale on.</string>
     <string name="server_note">The shared drives on a Samba or Windows server. Away from home, the phone reaches it only if the server’s address is one it can reach from there, such as a Tailscale address with Tailscale on.</string>
     <string name="server_save">Save</string>
     <string name="server_checking">Checking it can be reached…</string>
@@ -255,6 +266,8 @@
     <string name="problem_server_error">The server refused, over “%1$s”.</string>
     <string name="problem_into_itself">“%1$s” cannot go inside itself.</string>
     <string name="problem_read_only">Nothing inside “%1$s” can be changed. Copy it out first.</string>
+    <string name="problem_not_webdav">Nothing at %1$s answers as a WebDAV folder. For a Nextcloud, its address alone is enough.</string>
+    <string name="problem_untrusted">The certificate of %1$s cannot be trusted, so nothing was sent to it.</string>
     <string name="problem_other">That did not work: %1$s</string>
 
     <!-- ============================================================ -->
