@@ -15,6 +15,9 @@
     <string name="home_recent">Recent</string>
     <string name="home_recent_note">Changed on the phone in the last month</string>
     <string name="home_downloads">Downloads</string>
+    <!-- Opens the page that sends to and receives from LocalSend on other devices -->
+    <string name="home_nearby">Nearby</string>
+    <string name="home_nearby_note">Send and receive with LocalSend on the same Wi-Fi</string>
     <!-- Section headings on the start page -->
     <string name="home_section_phone">On the phone</string>
     <string name="home_section_pinned">Pinned</string>
@@ -81,6 +84,7 @@
     <string name="action_more">More</string>
     <!-- In the "More" dialog -->
     <string name="action_share">Share</string>
+    <string name="action_send_nearby">Send nearby</string>
     <string name="action_open_with">Open with…</string>
     <string name="action_rename">Rename</string>
     <string name="action_info">Info</string>
@@ -294,4 +298,62 @@
     <string name="about_feed_the_llamas">feed the llamas</string>
     <string name="about_no_browser">Nothing here opens web pages — %1$s</string>
     <string name="about_close">Close</string>
+
+    <!-- ============================================================ -->
+    <!-- Nearby: LocalSend on other devices on the same Wi-Fi -->
+
+    <string name="nearby_title">Nearby</string>
+    <plurals name="nearby_send_title">
+        <item quantity="one">Send %d item</item>
+        <item quantity="other">Send %d items</item>
+    </plurals>
+    <!-- %1$s is the name other devices see; a tap changes it -->
+    <string name="nearby_visible_as">Other devices see this phone as %1$s</string>
+    <string name="nearby_port_taken">This phone is %1$s, but another app here has LocalSend’s port, so devices may not find it</string>
+    <string name="nearby_no_wifi">Not on Wi-Fi. Devices are found on the same Wi-Fi network.</string>
+    <string name="nearby_visible_note">Only while this page is open. Tap to change the name.</string>
+    <string name="nearby_rename_title">Name on other devices</string>
+    <string name="nearby_section_devices">Devices nearby</string>
+    <string name="nearby_section_send_to">Send to</string>
+    <string name="nearby_looking">Looking…</string>
+    <string name="nearby_none">None found. LocalSend has to be open on the other device, on the same Wi-Fi.</string>
+    <string name="nearby_look_again">Look again</string>
+    <string name="nearby_send_note">Tap a device to send. Its owner is asked to accept.</string>
+    <string name="nearby_receive_note">To send here, choose this phone in LocalSend on the other device. You are asked before anything arrives; files land in Downloads.</string>
+    <!-- %1$s is the device -->
+    <string name="nearby_asking">Waiting for %1$s to accept…</string>
+    <!-- "Sending 2 of 5 to Laptop · 40%" -->
+    <string name="nearby_sending">Sending %1$d of %2$d to %3$s · %4$d%%</string>
+    <plurals name="nearby_sent">
+        <item quantity="one">Sent %1$d file to %2$s.</item>
+        <item quantity="other">Sent %1$d files to %2$s.</item>
+    </plurals>
+    <string name="nearby_declined">%1$s declined.</string>
+    <string name="nearby_receiving">Receiving %1$d of %2$d from %3$s · %4$d%%</string>
+    <plurals name="nearby_received">
+        <item quantity="one">%1$d file from %2$s is in Downloads.</item>
+        <item quantity="other">%1$d files from %2$s are in Downloads.</item>
+    </plurals>
+    <plurals name="nearby_not_whole">
+        <item quantity="one">%d did not arrive whole and was not kept.</item>
+        <item quantity="other">%d did not arrive whole and were not kept.</item>
+    </plurals>
+    <string name="nearby_failed_unreachable">%1$s could not be reached.</string>
+    <string name="nearby_failed_busy">%1$s is busy with another transfer.</string>
+    <string name="nearby_failed_stopped">%1$s stopped the transfer.</string>
+    <string name="nearby_failed_unreadable">Could not read what was chosen.</string>
+    <string name="nearby_failed_other">%1$s did not take the files.</string>
+    <string name="nearby_open_downloads">Open Downloads</string>
+    <!-- "Laptop wants to send 3 files (12 MB)" -->
+    <plurals name="nearby_incoming_title">
+        <item quantity="one">%1$s wants to send %2$d file (%3$s)</item>
+        <item quantity="other">%1$s wants to send %2$d files (%3$s)</item>
+    </plurals>
+    <string name="nearby_incoming_where">They go into Downloads.</string>
+    <string name="nearby_incoming_no_room">There is not room for them on the phone.</string>
+    <string name="nearby_accept">Accept</string>
+    <string name="nearby_decline">Decline</string>
+    <string name="nearby_pin_title">%1$s asks for its PIN</string>
+    <string name="nearby_pin_wrong">Not the right PIN for %1$s. Try again</string>
+    <string name="nearby_pin_send">Send</string>
 </resources>

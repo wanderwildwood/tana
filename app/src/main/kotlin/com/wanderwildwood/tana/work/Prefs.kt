@@ -46,6 +46,11 @@ class Prefs(context: Context) {
             ServersProvider.rootsChanged(app)
         }
 
+    /** What the Nearby page calls this phone to other devices; null until the reader names it. */
+    var nearbyName: String?
+        get() = prefs.getString("nearby_name", null)
+        set(value) = prefs.edit().putString("nearby_name", value).apply()
+
     var others: List<SafRoot>
         get() {
             val array = runCatching { JSONArray(prefs.getString("others", "[]")) }.getOrNull() ?: return emptyList()

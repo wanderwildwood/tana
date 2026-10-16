@@ -113,6 +113,8 @@ fun HomeScreen(
         LazyColumnMMD(Modifier.fillMaxSize().padding(padding).background(MaterialTheme.colorScheme.surface), isScrollbarVisible = false) {
             item { PlaceRow(stringResource(R.string.home_recent), stringResource(R.string.home_recent_note), { vm.go(Place.Recent) }) }
             item { PlaceRow(stringResource(R.string.home_downloads), null, { vm.go(Place.Folder(Volumes.downloads())) }) }
+            // Not while choosing for another app: that errand is a file from here, not from elsewhere.
+            if (vm.picking == null) item { PlaceRow(stringResource(R.string.home_nearby), stringResource(R.string.home_nearby_note), { vm.openNearby() }) }
 
             item { Heading(stringResource(R.string.home_section_phone)) }
             items(state.volumes, key = { "v:" + it.loc.path }) { volume ->
@@ -271,6 +273,7 @@ fun FolderScreen(state: UiState, work: com.wanderwildwood.tana.work.Work, vm: Br
             chosen = chosen,
             readOnly = state.readOnly,
             onShare = { more = false; vm.share() },
+            onSendNearby = { more = false; vm.openNearby(chosen) },
             onCompress = { more = false; vm.compress() },
             onExtract = { more = false; one?.let(vm::extractHere) },
             onOpenWith = { more = false; one?.let { vm.open(it, com.wanderwildwood.tana.work.Purpose.OPEN_WITH) }; vm.clearSelection() },

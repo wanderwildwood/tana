@@ -18,6 +18,12 @@
          reader is still asked, once, whether to allow installs from here. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
+    <!-- Nearby: other devices on the Wi-Fi are found by multicast, which Android drops unless an
+         app asks to hear it; and a transfer under way keeps the phone awake and its Wi-Fi up.
+         All of it only while the Nearby page is open. -->
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
     <!-- A long copy keeps going with the screen off or the app put away. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 

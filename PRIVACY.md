@@ -1,13 +1,14 @@
 # Privacy
 
-Files talks to the servers you add, and to nothing else.
+Files talks to the servers you add, to the devices nearby that you send to or accept files from, and to
+nothing else.
 
 That is the whole policy. The rest of this page is the evidence for it, because a privacy
 policy that cannot be checked is just a promise.
 
 ## What it asks for, and why
 
-`app/src/main/AndroidManifest.xml` declares four permissions.
+`app/src/main/AndroidManifest.xml` declares six permissions.
 
 - **All files access** (`MANAGE_EXTERNAL_STORAGE`) — to see and change what is on the phone's
   storage and SD card, which is what a file manager is for. Android asks you for this on a page
@@ -20,6 +21,11 @@ policy that cannot be checked is just a promise.
   the installer shows you the app and asks, and asks once whether to allow installs from here.
 - **Foreground service** (`FOREGROUND_SERVICE`) — so a long copy carries on with the screen off,
   with a notification showing while it runs.
+- **Multicast** (`CHANGE_WIFI_MULTICAST_STATE`) — so the Nearby page can hear other devices
+  announce themselves on the Wi-Fi. Android drops those messages unless an app asks for them; the
+  app asks only while that page is open.
+- **Keep awake** (`WAKE_LOCK`) — so a Nearby transfer is not cut off when the screen goes dark.
+  Held only while one is under way.
 
 ## Server passwords
 
@@ -41,6 +47,21 @@ access back.
 To open or share a file that lives on a server, the app copies it into its own cache on the
 phone first and hands the copy to the app that will open it. Those copies are deleted the next
 time the app starts, once they are a day old.
+
+## Nearby
+
+The Nearby page speaks [LocalSend](https://localsend.org)'s protocol, and does so only while it
+is open. Then, and only then, the phone says on the Wi-Fi that it is there, under the name the
+page shows, and listens for offers. Closing the page stops all of it. Nothing nearby can send to
+the phone without your Accept; an offer you leave for two minutes is declined. What you accept
+goes into Downloads, under its own name or a numbered one beside a name already there, and
+nothing in a name can put a file anywhere else.
+
+Transfers go over HTTPS. The phone makes itself a certificate the first time and keeps it in the
+app's private storage; LocalSend devices know each other by the SHA-256 of their certificates, so
+a send goes only to the device whose certificate matches the one it announced. A device on the
+same Wi-Fi learns this phone's name and model while the page is open, as it would of any
+LocalSend device.
 
 ## The one other address in the app
 

@@ -166,6 +166,7 @@ fun MoreDialog(
     chosen: List<Entry>,
     readOnly: Boolean,
     onShare: () -> Unit,
+    onSendNearby: () -> Unit,
     onCompress: () -> Unit,
     onExtract: () -> Unit,
     onOpenWith: () -> Unit,
@@ -177,6 +178,7 @@ fun MoreDialog(
     val one = chosen.singleOrNull()
     EInkDialog(onDismiss = onDismiss) {
         if (chosen.any { !it.isFolder }) DialogRow(stringResource(R.string.action_share), onClick = onShare)
+        DialogRow(stringResource(R.string.action_send_nearby), onClick = onSendNearby)
         if (one != null && !one.isFolder) DialogRow(stringResource(R.string.action_open_with), onClick = onOpenWith)
         if (one != null && !readOnly && !one.isFolder && Names.extension(one.name) == "zip") {
             DialogRow(stringResource(R.string.action_extract), onClick = onExtract)

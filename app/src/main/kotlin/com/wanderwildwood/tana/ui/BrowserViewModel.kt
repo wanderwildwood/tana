@@ -113,6 +113,8 @@ data class UiState(
     val info: Info? = null,
     val search: SearchState? = null,
     val preview: Preview? = null,
+    /** The Nearby page, open: what is to be sent from it, or nothing when it was opened to receive. */
+    val nearby: List<Entry>? = null,
 ) {
     val selecting: Boolean get() = selection.isNotEmpty()
     val folder: Loc? get() = (place as? Place.Folder)?.loc
@@ -210,6 +212,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     fun back(): Boolean {
         val s = _state.value
         when {
+            s.nearby != null -> closeNearby()
             s.preview != null -> closePreview()
             s.info != null -> _state.update { it.copy(info = null) }
             s.search != null -> closeSearch()
@@ -391,6 +394,23 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         } else {
             start(Job.Fetch(entries, purpose))
         }
+    }
+
+    // ---------------------------------------------------------------- nearby
+
+    /** Opened to receive, from the start page, or with what is chosen, to send it. */
+    fun openNearby(sending: List<Entry> = emptyList()) =
+        _state.update { it.copy(nearby = sending, selection = emptySet()) }
+
+    fun closeNearby() = _state.update { it.copy(nearby = null) }
+
+    /** What other devices see this phone called: the reader's choice, or the phone's own name. */
+    fun nearbyName(): String = prefs.nearbyName
+        ?: android.provider.Settings.Global.getString(app.contentResolver, android.provider.Settings.Global.DEVICE_NAME)?.takeIf { it.isNotBlank() }
+        ?: android.os.Build.MODEL
+
+    fun setNearbyName(name: String) {
+        prefs.nearbyName = name
     }
 
     // ---------------------------------------------------------------- copy, move, paste, delete

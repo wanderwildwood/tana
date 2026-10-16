@@ -55,6 +55,13 @@ as places like any other.
   phone; when it closes the file, the copy goes up under a name of its own and then takes the old
   one's place in one step, and only if nobody else saved the file on the server meanwhile.
   If someone did, theirs is left as it is and the app is told on its next read.
+- **Nearby: send and receive with [LocalSend](https://localsend.org).** Choose files or folders,
+  *More → Send nearby*, and tap a computer or phone on the same Wi-Fi that has LocalSend open;
+  its owner is asked to accept. To receive, open *Nearby* on the start page and choose this
+  phone in LocalSend on the other device: you are asked first, with the names and the size, and
+  what you accept lands in Downloads. Only while that page is open is the phone findable or
+  listening; close it and nothing is. Transfers go over HTTPS, and each device is known by its
+  certificate, so a file is sent only to the device that announced itself.
 - **Zip files.** Open one like a folder and copy out what you want, or *Extract here* for all of
   it. *Compress* makes one of whatever is chosen. It works the same for a zip on a server.
 - **Folders from other apps.** Anything Android's own folder picker can reach that no path can —
@@ -82,7 +89,7 @@ as places like any other.
 No thumbnails: a photograph at the size of a list row is a grey smudge on this screen. No
 `Android/data`: Android 12 lets no app into another app's private folders. A zip is read, never
 rewritten: to change what is in one, extract it, change that, and compress it again. Nothing is
-sent anywhere but to the servers you add.
+sent anywhere but to the servers you add and the nearby devices you send to.
 
 ## Where this is up to
 
@@ -96,6 +103,11 @@ nothing on the server, a connection left idle for ninety seconds still answering
 Every screen has been driven on an Android 12 emulator the size of a Kompakt, against a real
 server: the checksum the app worked out for a file on the server matched the server's own. What
 has not happened yet is anybody using it on the phone for a week.
+
+Nearby has been run against LocalSend's own command-line client, 1.18.2, in both directions:
+a file, a folder and three hundred megabytes received and sent byte for byte, a decline from
+either side, and a transfer stopped half way from either end, leaving nothing half-written in
+Downloads.
 
 ## Building
 
@@ -142,5 +154,7 @@ Copyleft means nobody can ship this code with something added that they will not
 
 Samba servers are reached through [smbj](https://github.com/hierynomus/smbj) (Apache-2.0) and
 [Bouncy Castle](https://www.bouncycastle.org/) (MIT), WebDAV ones through
-[OkHttp](https://square.github.io/okhttp/) (Apache-2.0). Icons are from Material Symbols,
+[OkHttp](https://square.github.io/okhttp/) (Apache-2.0). Nearby speaks the
+[LocalSend protocol](https://github.com/localsend/protocol) (MIT), written here from its
+published description; none of LocalSend's code is in this app. Icons are from Material Symbols,
 Apache 2.0.
