@@ -24,6 +24,19 @@
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
+    <!-- Away from Wi-Fi: a Wi-Fi Direct network of the phone's own, joined by holding two phones
+         together. Android 12 will not start or join one for an app without the location
+         permission, and location on, though neither reads a location. Asked for only when a
+         network is started or joined. NFC carries the tap. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.NFC" />
+    <uses-feature android:name="android.hardware.wifi.direct" android:required="false" />
+    <uses-feature android:name="android.hardware.nfc" android:required="false" />
+    <uses-feature android:name="android.hardware.nfc.hce" android:required="false" />
+
     <!-- A long copy keeps going with the screen off or the app put away. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
@@ -131,6 +144,20 @@
             android:name=".work.TransferService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
+
+        <!-- This phone, answering as a card when another is held to it: only while it has a
+             Wi-Fi Direct network up and the Nearby page open. See nearby/Tap.kt. -->
+        <service
+            android:name=".nearby.TapService"
+            android:exported="true"
+            android:permission="android.permission.BIND_NFC_SERVICE">
+            <intent-filter>
+                <action android:name="android.nfc.cardemulation.action.HOST_APDU_SERVICE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.nfc.cardemulation.host_apdu_service"
+                android:resource="@xml/tap_service" />
+        </service>
 
         <!-- The servers, inside Android's own file picker. See ServersProvider. -->
         <provider

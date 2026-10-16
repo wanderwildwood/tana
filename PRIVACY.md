@@ -8,7 +8,7 @@ policy that cannot be checked is just a promise.
 
 ## What it asks for, and why
 
-`app/src/main/AndroidManifest.xml` declares six permissions.
+`app/src/main/AndroidManifest.xml` declares eleven permissions.
 
 - **All files access** (`MANAGE_EXTERNAL_STORAGE`) — to see and change what is on the phone's
   storage and SD card, which is what a file manager is for. Android asks you for this on a page
@@ -26,6 +26,17 @@ policy that cannot be checked is just a promise.
   app asks only while that page is open.
 - **Keep awake** (`WAKE_LOCK`) — so a Nearby transfer is not cut off when the screen goes dark.
   Held only while one is under way.
+- **Location** (`ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION`) — only for *Start a network
+  here* and joining one by a tap. Android 12 will not let an app start or join a Wi-Fi Direct
+  network without it, and without location being on. **Files never asks where the phone is**:
+  nothing in it calls Android's location services, and the permission is asked for only when
+  you press that row or tap to join, never before. You can refuse it and everything else works.
+- **Wi-Fi state** (`ACCESS_WIFI_STATE`, `CHANGE_WIFI_STATE`) — to start and join that network,
+  and to say when Wi-Fi is off.
+- **NFC** (`NFC`) — for the tap that joins one. While a phone has a network up and the Nearby
+  page open, it answers a tap with the network's name and password, its own name, and its
+  certificate's fingerprint; at any other time it answers nothing. A phone with the Nearby page
+  open listens for that tap and reads nothing else.
 
 ## Server passwords
 
@@ -62,6 +73,13 @@ app's private storage; LocalSend devices know each other by the SHA-256 of their
 a send goes only to the device whose certificate matches the one it announced. A device on the
 same Wi-Fi learns this phone's name and model while the page is open, as it would of any
 LocalSend device.
+
+### Away from Wi-Fi
+
+A network started here is a Wi-Fi Direct network, with a fresh name and an eight-character
+password each time, and it is taken down when the Nearby page closes. Anyone within Wi-Fi range
+who has the name and password can join it, as with any Wi-Fi network, and can then offer files
+like any device on your home Wi-Fi: every offer still asks Accept or Decline.
 
 ## The one other address in the app
 

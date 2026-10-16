@@ -62,6 +62,13 @@ as places like any other.
   what you accept lands in Downloads. Only while that page is open is the phone findable or
   listening; close it and nothing is. Transfers go over HTTPS, and each device is known by its
   certificate, so a file is sent only to the device that announced itself.
+- **Away from Wi-Fi**, two phones with Files make a network of their own. *Start a network here*
+  on one (Wi-Fi Direct), then hold the other against it with its Nearby page open: the tap
+  (NFC) hands over the network's name and password and who the phone is, and the second joins
+  and sends as it would at home. A laptop can join the same network from its Wi-Fi settings,
+  with the name and password the page shows, and use LocalSend. Android asks for the location
+  permission, and for location to be on, to start or join one; Files never reads a location, and
+  location can go off again once the phones are connected.
 - **Zip files.** Open one like a folder and copy out what you want, or *Extract here* for all of
   it. *Compress* makes one of whatever is chosen. It works the same for a zip on a server.
 - **Folders from other apps.** Anything Android's own folder picker can reach that no path can —

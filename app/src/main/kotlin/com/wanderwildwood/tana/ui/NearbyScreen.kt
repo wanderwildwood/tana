@@ -43,9 +43,12 @@ import com.mudita.mmd.components.text.TextMMD
 import com.mudita.mmd.components.text_field.TextFieldMMD
 import com.mudita.mmd.components.top_app_bar.TopAppBarMMD
 import com.wanderwildwood.tana.R
+import com.wanderwildwood.tana.nearby.Away
+import com.wanderwildwood.tana.nearby.AwayWhy
 import com.wanderwildwood.tana.nearby.Errand
 import com.wanderwildwood.tana.nearby.Incoming
 import com.wanderwildwood.tana.nearby.Nearby
+import com.wanderwildwood.tana.nearby.Tap
 import com.wanderwildwood.tana.nearby.Why
 import com.wanderwildwood.tana.store.Entry
 import com.wanderwildwood.tana.work.Volumes
@@ -74,6 +77,53 @@ fun NearbyScreen(sending: List<Entry>, vm: BrowserViewModel) {
         waited = true
     }
     val count = sending.size
+    val activity = context as? android.app.Activity
+    val nfc = remember { android.nfc.NfcAdapter.getDefaultAdapter(context) }
+    val hosting = state.away is Away.Hosting || state.away is Away.Starting
+    // Joining by a tap: while this page is open and this phone is not the one with a network, it
+    // listens for another held against it. A phone that listens cannot be read itself, so the
+    // one with the network does not.
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycle, hosting) {
+        fun listen() {
+            if (activity == null || nfc == null || hosting) return
+            runCatching {
+                nfc.enableReaderMode(
+                    activity,
+                    { tag -> Tap.readFrom(tag)?.let(Nearby::tapped) },
+                    android.nfc.NfcAdapter.FLAG_READER_NFC_A or android.nfc.NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK,
+                    null,
+                )
+            }
+        }
+        fun quiet() {
+            if (activity != null && nfc != null) runCatching { nfc.disableReaderMode(activity) }
+        }
+        val watcher = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            when (event) {
+                androidx.lifecycle.Lifecycle.Event.ON_RESUME -> listen()
+                androidx.lifecycle.Lifecycle.Event.ON_PAUSE -> quiet()
+                else -> Unit
+            }
+        }
+        if (lifecycle.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) listen()
+        lifecycle.lifecycle.addObserver(watcher)
+        onDispose {
+            lifecycle.lifecycle.removeObserver(watcher)
+            quiet()
+        }
+    }
+    val locationGranted = {
+        context.checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED
+    }
+    val askToStart = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions(),
+    ) { if (locationGranted()) Nearby.startNetwork() }
+    val askToJoin = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions(),
+    ) { Nearby.permissionAnswered(locationGranted()) }
+    val location = arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.ACCESS_COARSE_LOCATION)
+    LaunchedEffect(state.wantsPermission) { if (state.wantsPermission) askToJoin.launch(location) }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
@@ -98,6 +148,8 @@ fun NearbyScreen(sending: List<Entry>, vm: BrowserViewModel) {
         LazyColumnMMD(Modifier.fillMaxSize().padding(padding).background(MaterialTheme.colorScheme.surface), isScrollbarVisible = false) {
             item {
                 val line = when {
+                    state.address == null && state.away is Away.Hosting -> stringResource(R.string.nearby_visible_as, state.alias)
+                    state.address == null && state.away is Away.Joined -> stringResource(R.string.nearby_visible_as, state.alias)
                     state.address == null -> stringResource(R.string.nearby_no_wifi)
                     state.portTaken -> stringResource(R.string.nearby_port_taken, state.alias)
                     else -> stringResource(R.string.nearby_visible_as, state.alias)
@@ -111,7 +163,7 @@ fun NearbyScreen(sending: List<Entry>, vm: BrowserViewModel) {
             if (state.peers.isEmpty()) {
                 item {
                     TextMMD(
-                        text = stringResource(if (state.address == null || !waited) R.string.nearby_looking else R.string.nearby_none),
+                        text = stringResource(if (!waited) R.string.nearby_looking else R.string.nearby_none),
                         style = MaterialTheme.typography.labelSmall,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
                     )
@@ -120,13 +172,61 @@ fun NearbyScreen(sending: List<Entry>, vm: BrowserViewModel) {
             items(state.peers, key = { it.fingerprint }) { peer ->
                 PlaceRow(peer.alias, peer.note, onPress = { if (count > 0) Nearby.send(peer.fingerprint, sending) })
             }
-            if (state.address != null) item { PlaceRow(stringResource(R.string.nearby_look_again), null, Nearby::lookAgain) }
+            item { PlaceRow(stringResource(R.string.nearby_look_again), null, Nearby::lookAgain) }
             item {
                 TextMMD(
                     text = stringResource(if (count > 0) R.string.nearby_send_note else R.string.nearby_receive_note),
                     style = MaterialTheme.typography.labelSmall,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
                 )
+            }
+
+            // Away from Wi-Fi: a network of the phone's own, joined by holding the phones together.
+            item { Heading(stringResource(R.string.nearby_section_away)) }
+            item {
+                when (val away = state.away) {
+                    Away.Starting -> Note(stringResource(R.string.nearby_away_starting))
+                    is Away.Hosting -> {
+                        Note(stringResource(R.string.nearby_away_hosting, away.network, away.passphrase))
+                        PlaceRow(stringResource(R.string.nearby_away_stop), null, Nearby::stopNetwork)
+                    }
+                    is Away.Joining -> Note(stringResource(R.string.nearby_away_joining, away.to))
+                    is Away.Joined -> {
+                        Note(stringResource(R.string.nearby_away_joined, away.to))
+                        PlaceRow(stringResource(R.string.nearby_away_leave), null, Nearby::stopNetwork)
+                    }
+                    else -> {
+                        if (away is Away.Failed) {
+                            Note(
+                                stringResource(
+                                    when (away.why) {
+                                        AwayWhy.WIFI_OFF -> R.string.nearby_away_wifi_off
+                                        AwayWhy.LOCATION_OFF -> R.string.nearby_away_location_off
+                                        AwayWhy.UNSUPPORTED -> R.string.nearby_away_unsupported
+                                        AwayWhy.BUSY -> R.string.nearby_away_busy
+                                        AwayWhy.NO_ANSWER -> R.string.nearby_away_no_answer
+                                        AwayWhy.OTHER -> R.string.nearby_away_other
+                                    },
+                                ),
+                                bold = true,
+                            )
+                        }
+                        PlaceRow(
+                            stringResource(R.string.nearby_away_start),
+                            stringResource(R.string.nearby_away_start_note),
+                            { if (locationGranted()) Nearby.startNetwork() else askToStart.launch(location) },
+                        )
+                        Note(
+                            stringResource(
+                                when {
+                                    nfc == null -> R.string.nearby_away_join_no_nfc
+                                    !nfc.isEnabled -> R.string.nearby_away_join_nfc_off
+                                    else -> R.string.nearby_away_join
+                                },
+                            ),
+                        )
+                    }
+                }
             }
         }
     }
@@ -142,6 +242,16 @@ fun NearbyScreen(sending: List<Entry>, vm: BrowserViewModel) {
             }
         }) { renaming = false }
     }
+}
+
+@Composable
+private fun Note(text: String, bold: Boolean = false) {
+    TextMMD(
+        text = text,
+        style = MaterialTheme.typography.labelSmall,
+        fontWeight = if (bold) FontWeight.Bold else null,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+    )
 }
 
 /** How the send or receive is going, along the foot, in words and a percentage. */

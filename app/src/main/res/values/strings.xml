@@ -356,4 +356,24 @@
     <string name="nearby_pin_title">%1$s asks for its PIN</string>
     <string name="nearby_pin_wrong">Not the right PIN for %1$s. Try again</string>
     <string name="nearby_pin_send">Send</string>
+    <!-- Away from Wi-Fi: a Wi-Fi Direct network of the phone's own, joined by an NFC tap -->
+    <string name="nearby_section_away">Away from Wi-Fi</string>
+    <string name="nearby_away_start">Start a network here</string>
+    <string name="nearby_away_start_note">Android wants location on and allowed for this. Files never reads where you are.</string>
+    <string name="nearby_away_join">To join another phone’s, hold this one against it.</string>
+    <string name="nearby_away_join_nfc_off">To join another phone’s with a tap, turn NFC on in Settings.</string>
+    <string name="nearby_away_join_no_nfc">This phone has no NFC to join another’s with a tap. Join its network in Wi-Fi settings instead.</string>
+    <string name="nearby_away_starting">Starting a network…</string>
+    <!-- %1$s is the network's name, %2$s its password -->
+    <string name="nearby_away_hosting">Network %1$s is up, password %2$s. Hold another phone with Files on its Nearby page against this one. A laptop can join the network in its Wi-Fi settings and open LocalSend.</string>
+    <string name="nearby_away_stop">Stop the network</string>
+    <string name="nearby_away_joining">Joining %1$s’s network…</string>
+    <string name="nearby_away_joined">On %1$s’s network. It is in the list above.</string>
+    <string name="nearby_away_leave">Leave the network</string>
+    <string name="nearby_away_wifi_off">Turn Wi-Fi on first. It does not need to be connected to anything.</string>
+    <string name="nearby_away_location_off">Turn location on first: Android will not start or join one without it. It can go off again once connected.</string>
+    <string name="nearby_away_unsupported">This phone cannot make a Wi-Fi Direct network.</string>
+    <string name="nearby_away_busy">Wi-Fi Direct is busy. Try again in a moment.</string>
+    <string name="nearby_away_no_answer">Could not join. Hold the phones together again.</string>
+    <string name="nearby_away_other">That did not work. Try again.</string>
 </resources>

@@ -3,6 +3,7 @@ package com.wanderwildwood.tana.nearby
 import android.content.Context
 import android.media.MediaScannerConnection
 import android.net.wifi.WifiManager
+import android.net.wifi.p2p.WifiP2pManager
 import android.os.Environment
 import android.os.PowerManager
 import android.os.StatFs
@@ -66,6 +67,17 @@ sealed interface Errand {
 
 enum class Why { UNREACHABLE, BUSY, STOPPED_THERE, NOT_READABLE, OTHER }
 
+/** A Wi-Fi Direct network, for when there is no Wi-Fi: this phone's, or another's it joined. */
+sealed interface Away {
+    data object Starting : Away
+    data class Hosting(val network: String, val passphrase: String) : Away
+    data class Joining(val to: String) : Away
+    data class Joined(val to: String) : Away
+    data class Failed(val why: AwayWhy) : Away
+}
+
+enum class AwayWhy { WIFI_OFF, LOCATION_OFF, UNSUPPORTED, BUSY, NO_ANSWER, OTHER }
+
 data class NearbyState(
     val running: Boolean = false,
     val alias: String = "",
@@ -76,6 +88,9 @@ data class NearbyState(
     val peers: List<Peer> = emptyList(),
     val incoming: Incoming? = null,
     val errand: Errand? = null,
+    val away: Away? = null,
+    /** A tap handed over an invite, and joining it waits on the location permission. */
+    val wantsPermission: Boolean = false,
 )
 
 /**
@@ -115,13 +130,6 @@ object Nearby {
         _state.value = NearbyState(running = true, alias = alias)
         sc.launch {
             val id = identity ?: runCatching { Identity.load(app) }.getOrNull()?.also { identity = it } ?: return@launch
-            // Off Wi-Fi, it waits for one rather than giving up: the reader may be joining it now.
-            var wifi = Discovery.wifiInterface()
-            while (wifi == null && isActive) {
-                delay(5000)
-                wifi = Discovery.wifiInterface()
-            }
-            val (network, address) = wifi ?: return@launch
             val s = HttpServer(id.serverContext(), ::handle)
             val port = runCatching { s.start(Wire.PORT) }.getOrNull() ?: return@launch
             server = s
@@ -134,10 +142,18 @@ object Nearby {
                 https = true,
             )
             val d = Discovery(app.getSystemService(WifiManager::class.java), ::heard)
-            val heard = d.start(network)
+            val heard = d.open()
             discovery = d
-            _state.update { it.copy(address = address.hostAddress, portTaken = !heard) }
-            announce()
+            _state.update { it.copy(portTaken = !heard) }
+            // The networks are looked at again every few seconds: the reader may be joining the
+            // Wi-Fi now, and a Wi-Fi Direct network comes and goes. A new one is announced on.
+            while (isActive) {
+                val networks = Discovery.networks()
+                if (d.follow(networks.map { it.first })) announce()
+                val wifi = networks.firstOrNull { !Discovery.isDirect(it.first) }?.second?.hostAddress
+                _state.update { it.copy(address = wifi) }
+                delay(5000)
+            }
         }
     }
 
@@ -148,6 +164,14 @@ object Nearby {
         }
         sending?.cancel()
         current?.cancel()
+        direct?.let { d ->
+            direct = null
+            CoroutineScope(Dispatchers.IO).launch {
+                d.leave()
+                d.close()
+            }
+        }
+        waitingToJoin = null
         server?.stop()
         server = null
         discovery?.stop()
@@ -597,6 +621,103 @@ object Nearby {
     }
 
     private fun enc(s: String) = URLEncoder.encode(s, "UTF-8")
+
+    // ---------------------------------------------------------------- away from Wi-Fi
+
+    private var direct: Direct? = null
+    @Volatile private var offered: ByteArray? = null
+    @Volatile private var waitingToJoin: Invite? = null
+
+    /** What a tap hands over: null unless this phone has a network up and the page open. */
+    fun invite(): ByteArray? = offered
+
+    private fun direct(): Direct = direct ?: Direct(app).also { direct = it }
+
+    private fun wifiOn(): Boolean = app.getSystemService(WifiManager::class.java)?.isWifiEnabled == true
+
+    /**
+     * Android 12 refuses to start or join a network while location is off, permission or no: its
+     * check notes a location access, and that note fails with location off. Once the network is
+     * up, location can go off again and the network stays.
+     */
+    private fun locationOn(): Boolean = app.getSystemService(android.location.LocationManager::class.java)?.isLocationEnabled == true
+
+    /** What stands in the way of starting or joining, or null when nothing does. */
+    private fun blocked(): AwayWhy? = when {
+        !wifiOn() -> AwayWhy.WIFI_OFF
+        !locationOn() -> AwayWhy.LOCATION_OFF
+        else -> null
+    }
+
+    /** A Wi-Fi Direct network of this phone's own. The location permission is already granted. */
+    fun startNetwork() {
+        val sc = scope ?: return
+        val m = me ?: return
+        if (_state.value.away.let { it is Away.Starting || it is Away.Hosting || it is Away.Joining }) return
+        blocked()?.let { why -> return _state.update { it.copy(away = Away.Failed(why)) } }
+        _state.update { it.copy(away = Away.Starting) }
+        sc.launch {
+            val name = Direct.networkName(m.alias)
+            val passphrase = Direct.passphrase()
+            try {
+                val frequency = direct().host(name, passphrase)
+                offered = Invite(name, passphrase, frequency, m.alias, m.port, m.fingerprint).bytes()
+                _state.update { it.copy(away = Away.Hosting(name, passphrase)) }
+            } catch (e: Direct.Failed) {
+                _state.update { it.copy(away = Away.Failed(why(e.reason))) }
+            }
+        }
+    }
+
+    fun stopNetwork() {
+        offered = null
+        val d = direct
+        _state.update { it.copy(away = null) }
+        scope?.launch { d?.leave() }
+    }
+
+    /** Another phone's invite, read by a tap. Called on NFC's own thread. */
+    internal fun tapped(invite: Invite) {
+        if (scope == null || _state.value.away is Away.Hosting || _state.value.away is Away.Starting) return
+        if (invite.fingerprint.equals(me?.fingerprint, ignoreCase = true)) return
+        if (app.checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            waitingToJoin = invite
+            _state.update { it.copy(wantsPermission = true) }
+            return
+        }
+        join(invite)
+    }
+
+    fun permissionAnswered(granted: Boolean) {
+        _state.update { it.copy(wantsPermission = false) }
+        val invite = waitingToJoin ?: return
+        waitingToJoin = null
+        if (granted) join(invite)
+    }
+
+    private fun join(invite: Invite) {
+        val sc = scope ?: return
+        blocked()?.let { why -> return _state.update { it.copy(away = Away.Failed(why)) } }
+        _state.update { it.copy(away = Away.Joining(invite.alias)) }
+        sc.launch {
+            try {
+                val host = direct().join(invite)
+                val d = Device(invite.alias, null, "mobile", invite.fingerprint, invite.port, https = true, address = host.hostAddress ?: return@launch)
+                put(d)
+                _state.update { it.copy(away = Away.Joined(invite.alias)) }
+                // So the other phone lists this one too, without waiting on an announcement.
+                register(d)
+            } catch (e: Direct.Failed) {
+                _state.update { it.copy(away = Away.Failed(if (e.reason == WifiP2pManager.BUSY) AwayWhy.NO_ANSWER else why(e.reason))) }
+            }
+        }
+    }
+
+    private fun why(reason: Int) = when (reason) {
+        WifiP2pManager.P2P_UNSUPPORTED -> AwayWhy.UNSUPPORTED
+        WifiP2pManager.BUSY -> AwayWhy.BUSY
+        else -> AwayWhy.OTHER
+    }
 
     // ---------------------------------------------------------------- either way
 

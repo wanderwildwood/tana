@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The one AID this app answers as a card: F0 (proprietary) "tana" 01. Must match Tap.AID. -->
+<host-apdu-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/nearby_section_away"
+    android:requireDeviceUnlock="true">
+    <aid-group android:category="other" android:description="@string/nearby_section_away">
+        <aid-filter android:name="F074616E6101" />
+    </aid-group>
+</host-apdu-service>
