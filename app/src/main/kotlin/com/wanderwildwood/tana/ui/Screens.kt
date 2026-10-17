@@ -13,7 +13,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -48,6 +50,7 @@ import com.mudita.mmd.components.text.TextMMD
 import com.mudita.mmd.components.text_field.TextFieldMMD
 import com.mudita.mmd.components.top_app_bar.TopAppBarMMD
 import com.wanderwildwood.tana.R
+import com.wanderwildwood.tana.work.SortBy
 import com.wanderwildwood.tana.store.Server
 import com.wanderwildwood.tana.work.Kind
 import com.wanderwildwood.tana.work.Volumes
@@ -249,16 +252,18 @@ fun FolderScreen(state: UiState, work: com.wanderwildwood.tana.work.Work, vm: Br
                         style = MaterialTheme.typography.labelSmall,
                         modifier = Modifier.padding(16.dp),
                     )
-                    else -> LazyColumnMMD(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface), isScrollbarVisible = false) {
-                        items(vm.shown(state.entries), key = { it.loc.path }) { entry ->
-                            EntryRow(
-                                entry = entry,
-                                selecting = state.selecting,
-                                selected = entry.loc in state.selection,
-                                showFolder = if (state.place == Place.Recent) vm.folderLabel(entry.loc) else null,
-                                onPress = { vm.press(entry) },
-                                onLongPress = { vm.toggle(entry) },
-                            )
+                    else -> FolderList(state, vm) { shown, listState ->
+                        LazyColumnMMD(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface), state = listState, isScrollbarVisible = false) {
+                            items(shown, key = { it.loc.path }) { entry ->
+                                EntryRow(
+                                    entry = entry,
+                                    selecting = state.selecting,
+                                    selected = entry.loc in state.selection,
+                                    showFolder = if (state.place == Place.Recent) vm.folderLabel(entry.loc) else null,
+                                    onPress = { vm.press(entry) },
+                                    onLongPress = { vm.toggle(entry) },
+                                )
+                            }
                         }
                     }
                 }
@@ -293,6 +298,31 @@ fun FolderScreen(state: UiState, work: com.wanderwildwood.tana.work.Work, vm: Br
 }
 
 /**
+ * A folder's entries with the jump down their edge. Folders come first in every order, so by
+ * name the list is two runs from A to Z, and the letters follow the longer of them: the files,
+ * in a folder of files, or the folders where those are most of it. Any other order has dots.
+ */
+@Composable
+private fun FolderList(state: UiState, vm: BrowserViewModel, list: @Composable (List<com.wanderwildwood.tana.store.Entry>, LazyListState) -> Unit) {
+    val shown = vm.shown(state.entries)
+    // Each folder opens at its top: one state shared by every folder kept the row number of the
+    // last, and a folder opened from far down another came up already scrolled.
+    val listState = remember(state.place) { LazyListState() }
+    val byName = state.place != Place.Recent && state.sort.by == SortBy.NAME && !state.sort.reversed
+    val jump = remember(shown, byName) {
+        if (!byName) {
+            ListJump.Pages
+        } else {
+            val folders = shown.takeWhile { it.isFolder }
+            val files = shown.drop(folders.size)
+            if (folders.size > files.size) ListJump.Letters(folders.map { it.name })
+            else ListJump.Letters(files.map { it.name }, firstIndex = folders.size)
+        }
+    }
+    ListJumpBox(listState, jump) { list(shown, listState) }
+}
+
+/**
  * Finding by name below where you were. The kinds are the ones a person looks for on a
  * phone; results arrive as they are found, a batch per folder, and a press opens one.
  */
@@ -303,6 +333,7 @@ fun SearchScreen(search: SearchState, vm: BrowserViewModel) {
     var kind by remember { mutableStateOf(search.kind) }
     val focus = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
+    val resultsState = rememberLazyListState()
     LaunchedEffect(Unit) { if (!search.ran) focus.requestFocus() }
     val go = {
         focusManager.clearFocus()
@@ -354,18 +385,20 @@ fun SearchScreen(search: SearchState, vm: BrowserViewModel) {
                         onClick = go,
                         modifier = Modifier.fillMaxWidth().padding(16.dp).height(48.dp),
                     ) { TextMMD(text = stringResource(R.string.search_go), style = MaterialTheme.typography.bodySmall) }
-                    else -> LazyColumnMMD(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface), isScrollbarVisible = false) {
-                        items(search.results, key = { it.loc.store + it.loc.path }) { entry ->
-                            EntryRow(
-                                entry = entry,
-                                selecting = false,
-                                selected = false,
-                                showFolder = vm.folderLabel(entry.loc),
-                                onPress = { vm.pressResult(entry) },
-                                onLongPress = { vm.pressResult(entry) },
-                            )
+                    else -> ListJumpBox(resultsState, ListJump.Pages) {
+                        LazyColumnMMD(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface), state = resultsState, isScrollbarVisible = false) {
+                            items(search.results, key = { it.loc.store + it.loc.path }) { entry ->
+                                EntryRow(
+                                    entry = entry,
+                                    selecting = false,
+                                    selected = false,
+                                    showFolder = vm.folderLabel(entry.loc),
+                                    onPress = { vm.pressResult(entry) },
+                                    onLongPress = { vm.pressResult(entry) },
+                                )
+                            }
+                            if (search.running) item { Status(stringResource(R.string.search_running)) }
                         }
-                        if (search.running) item { Status(stringResource(R.string.search_running)) }
                     }
                 }
             }
