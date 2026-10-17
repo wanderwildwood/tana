@@ -52,13 +52,14 @@ import com.mudita.mmd.components.top_app_bar.TopAppBarMMD
 import com.wanderwildwood.tana.R
 import com.wanderwildwood.tana.work.SortBy
 import com.wanderwildwood.tana.store.Server
+import com.wanderwildwood.tana.store.Stores
 import com.wanderwildwood.tana.work.Kind
 import com.wanderwildwood.tana.work.Volumes
 import kotlinx.coroutines.launch
 
 /** Everything along the foot of a screen, in the order it stacks. */
 @Composable
-private fun Foot(state: UiState, work: com.wanderwildwood.tana.work.Work, vm: BrowserViewModel, onMore: () -> Unit) {
+private fun Foot(state: UiState, work: com.wanderwildwood.tana.work.Work, vm: BrowserViewModel, inSearch: Boolean = false, onMore: () -> Unit) {
     val picking = vm.picking
     if (picking != null) {
         // Choosing for another app: nothing here copies, moves or deletes.
@@ -66,13 +67,13 @@ private fun Foot(state: UiState, work: com.wanderwildwood.tana.work.Work, vm: Br
     } else if (state.selecting) {
         SelectionBar(
             count = state.selection.size,
-            readOnly = state.readOnly,
+            readOnly = if (inSearch) state.selected().any { Stores.isReadOnly(it.loc.store) } else state.readOnly,
             onCopy = { vm.pickUp(com.wanderwildwood.tana.work.Mode.COPY) },
             onMove = { vm.pickUp(com.wanderwildwood.tana.work.Mode.MOVE) },
             onDelete = vm::delete,
             onMore = onMore,
         )
-    } else {
+    } else if (!inSearch) {
         state.carry?.let { CarryStrip(it, canPaste = state.folder != null && !state.readOnly, onPaste = vm::paste, onCancel = vm::putDown) }
     }
     WorkStrip(work)
@@ -328,7 +329,8 @@ private fun FolderList(state: UiState, vm: BrowserViewModel, list: @Composable (
  */
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-fun SearchScreen(search: SearchState, vm: BrowserViewModel) {
+fun SearchScreen(search: SearchState, state: UiState, work: com.wanderwildwood.tana.work.Work, vm: BrowserViewModel) {
+    var more by remember { mutableStateOf(false) }
     var words by remember { mutableStateOf(search.words) }
     var kind by remember { mutableStateOf(search.kind) }
     val focus = remember { FocusRequester() }
@@ -339,16 +341,36 @@ fun SearchScreen(search: SearchState, vm: BrowserViewModel) {
         focusManager.clearFocus()
         vm.searchFor(words, kind)
     }
-    KeyboardFirst(vm::closeSearch)
+    KeyboardFirst { if (state.selecting) vm.clearSelection() else vm.closeSearch() }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
+            // Chosen results look and act as chosen files in a folder do.
             TopAppBarMMD(
-                title = { TextMMD(text = search.within, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
-                navigationIcon = { BarButton(Icons.Back, stringResource(R.string.cd_back), vm::closeSearch) },
+                title = {
+                    TextMMD(
+                        text = if (state.selecting) pluralStringResource(R.plurals.selected, state.selection.size, state.selection.size) else search.within,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    )
+                },
+                navigationIcon = {
+                    if (state.selecting) BarButton(Icons.Close, stringResource(R.string.cd_clear_selection), vm::clearSelection)
+                    else BarButton(Icons.Back, stringResource(R.string.cd_back), vm::closeSearch)
+                },
+                actions = {
+                    if (state.selecting) {
+                        TextMMD(
+                            text = stringResource(R.string.select_all),
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.clickable(onClick = vm::selectAll).padding(horizontal = 14.dp, vertical = 12.dp),
+                        )
+                    }
+                },
             )
         },
+        bottomBar = { Column { Foot(state, work, vm, inSearch = true) { more = true } } },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).imePadding()) {
             TextFieldMMD(
@@ -390,11 +412,11 @@ fun SearchScreen(search: SearchState, vm: BrowserViewModel) {
                             items(search.results, key = { it.loc.store + it.loc.path }) { entry ->
                                 EntryRow(
                                     entry = entry,
-                                    selecting = false,
-                                    selected = false,
+                                    selecting = state.selecting,
+                                    selected = entry.loc in state.selection,
                                     showFolder = vm.folderLabel(entry.loc),
-                                    onPress = { vm.pressResult(entry) },
-                                    onLongPress = { vm.pressResult(entry) },
+                                    onPress = { if (state.selecting) vm.toggle(entry) else vm.pressResult(entry) },
+                                    onLongPress = { vm.toggle(entry) },
                                 )
                             }
                             if (search.running) item { Status(stringResource(R.string.search_running)) }
@@ -403,6 +425,25 @@ fun SearchScreen(search: SearchState, vm: BrowserViewModel) {
                 }
             }
         }
+    }
+
+    if (more) {
+        val chosen = state.selected()
+        val one = chosen.singleOrNull()
+        MoreDialog(
+            chosen = chosen,
+            readOnly = chosen.any { Stores.isReadOnly(it.loc.store) },
+            onShare = { more = false; vm.share() },
+            onSendNearby = { more = false; vm.openNearby(chosen) },
+            onCompress = { more = false },
+            onExtract = { more = false },
+            onOpenWith = { more = false; one?.let { vm.open(it, com.wanderwildwood.tana.work.Purpose.OPEN_WITH) }; vm.clearSelection() },
+            onRename = { more = false },
+            onInfo = { more = false; one?.let(vm::info) },
+            onPin = { more = false; one?.let(vm::pin); vm.clearSelection() },
+            onDismiss = { more = false },
+            fromSearch = true,
+        )
     }
 }
 

@@ -174,17 +174,19 @@ fun MoreDialog(
     onInfo: () -> Unit,
     onPin: () -> Unit,
     onDismiss: () -> Unit,
+    /** From search results, which come from many folders: nothing that makes a file "here". */
+    fromSearch: Boolean = false,
 ) {
     val one = chosen.singleOrNull()
     EInkDialog(onDismiss = onDismiss) {
         if (chosen.any { !it.isFolder }) DialogRow(stringResource(R.string.action_share), onClick = onShare)
         DialogRow(stringResource(R.string.action_send_nearby), onClick = onSendNearby)
         if (one != null && !one.isFolder) DialogRow(stringResource(R.string.action_open_with), onClick = onOpenWith)
-        if (one != null && !readOnly && !one.isFolder && Names.extension(one.name) == "zip") {
+        if (one != null && !readOnly && !fromSearch && !one.isFolder && Names.extension(one.name) == "zip") {
             DialogRow(stringResource(R.string.action_extract), onClick = onExtract)
         }
-        if (!readOnly) DialogRow(stringResource(R.string.action_compress), onClick = onCompress)
-        if (one != null && !readOnly) DialogRow(stringResource(R.string.action_rename), onClick = onRename)
+        if (!readOnly && !fromSearch) DialogRow(stringResource(R.string.action_compress), onClick = onCompress)
+        if (one != null && !readOnly && !fromSearch) DialogRow(stringResource(R.string.action_rename), onClick = onRename)
         if (one != null) DialogRow(stringResource(R.string.action_info), onClick = onInfo)
         if (one != null && one.isFolder && !readOnly) DialogRow(stringResource(R.string.action_pin), onClick = onPin)
         Spacer(Modifier.height(14.dp))

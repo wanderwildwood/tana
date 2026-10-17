@@ -10,7 +10,10 @@ class TapTest {
     private val ok = byteArrayOf(0x90.toByte(), 0x00)
 
     /** Both ends of a tap, joined: what the reader would collect from the card. */
-    private fun readAll(payload: ByteArray?): ByteArray? {
+    private fun readAll(payload: ByteArray?): ByteArray? = readAll(payload?.let { TapOffer.Ready(it) } ?: TapOffer.None)
+
+    private fun readAll(offer: TapOffer): ByteArray? {
+        val payload = offer
         var selected = false
         val (sel, now) = Tap.answer(Tap.select(), selected, payload)
         selected = now
@@ -34,7 +37,7 @@ class TapTest {
     @Test
     fun withNothingOfferedTheAppIsNotFound() {
         assertEquals(null, readAll(null))
-        val (reply, selected) = Tap.answer(Tap.select(), false, null)
+        val (reply, selected) = Tap.answer(Tap.select(), false, TapOffer.None)
         assertArrayEquals(byteArrayOf(0x6A, 0x82.toByte()), reply)
         assertFalse(selected)
     }
@@ -42,20 +45,36 @@ class TapTest {
     @Test
     fun anotherAppsAidIsNotAnswered() {
         val other = byteArrayOf(0x00, 0xA4.toByte(), 0x04, 0x00, 0x07, 0xA0.toByte(), 0, 0, 0, 0x03, 0x10, 0x10, 0x00)
-        val (reply, selected) = Tap.answer(other, false, byteArrayOf(1, 2, 3))
+        val (reply, selected) = Tap.answer(other, false, TapOffer.Ready(byteArrayOf(1, 2, 3)))
         assertArrayEquals(byteArrayOf(0x6A, 0x82.toByte()), reply)
         assertFalse(selected)
     }
 
     @Test
     fun readingBeforeSelectingIsRefused() {
-        val (reply, selected) = Tap.answer(Tap.read(0), false, byteArrayOf(1, 2, 3))
+        val (reply, selected) = Tap.answer(Tap.read(0), false, TapOffer.Ready(byteArrayOf(1, 2, 3)))
         assertArrayEquals(byteArrayOf(0x69, 0x86.toByte()), reply)
         assertFalse(selected)
     }
 
     @Test
     fun selectingOursSelects() {
-        assertTrue(Tap.answer(Tap.select(), false, byteArrayOf(1)).second)
+        assertTrue(Tap.answer(Tap.select(), false, TapOffer.Ready(byteArrayOf(1))).second)
+    }
+
+    @Test
+    fun whileTheNetworkStartsTheAnswerIsNotReady() {
+        val (reply, selected) = Tap.answer(Tap.select(), false, TapOffer.NotReady)
+        assertFalse(selected)
+        assertEquals(TapRead.NotReady, Tap.selectAnswered(reply))
+        // Nor can anything be read: a reader that skipped the SELECT gets no stale invite.
+        assertArrayEquals(byteArrayOf(0x69, 0x86.toByte()), Tap.answer(Tap.read(0), true, TapOffer.NotReady).first)
+        assertEquals(null, readAll(TapOffer.NotReady))
+    }
+
+    @Test
+    fun aReaderTellsNotReadyFromNothing() {
+        assertEquals(TapRead.Nothing, Tap.selectAnswered(Tap.answer(Tap.select(), false, TapOffer.None).first))
+        assertEquals(null, Tap.selectAnswered(Tap.answer(Tap.select(), false, TapOffer.Ready(byteArrayOf(1))).first))
     }
 }

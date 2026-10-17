@@ -51,6 +51,11 @@ class Prefs(context: Context) {
         get() = prefs.getString("nearby_name", null)
         set(value) = prefs.edit().putString("nearby_name", value).apply()
 
+    /** Three random letters, made once, that tell this phone's default name from another's. */
+    var nearbyTag: String?
+        get() = prefs.getString("nearby_tag", null)
+        set(value) = prefs.edit().putString("nearby_tag", value).apply()
+
     var others: List<SafRoot>
         get() {
             val array = runCatching { JSONArray(prefs.getString("others", "[]")) }.getOrNull() ?: return emptyList()

@@ -140,7 +140,8 @@ data class UiState(
     val folder: Loc? get() = (place as? Place.Folder)?.loc
     /** Inside a zip: things can be copied out, nothing can be changed. */
     val readOnly: Boolean get() = folder?.let { Stores.isReadOnly(it.store) } == true
-    fun selected(): List<Entry> = entries.filter { it.loc in selection }
+    /** What is chosen: among the search's results while a search is open, else in the folder. */
+    fun selected(): List<Entry> = (search?.results ?: entries).filter { it.loc in selection }
 }
 
 class BrowserViewModel(application: Application) : AndroidViewModel(application) {
@@ -236,6 +237,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
             s.sheet != null -> closeSheet()
             s.preview != null -> closePreview()
             s.info != null -> _state.update { it.copy(info = null) }
+            s.search != null && s.selecting -> clearSelection()
             s.search != null -> closeSearch()
             s.selecting -> clearSelection()
             s.place == Place.Home -> return false
@@ -393,7 +395,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun selectAll() = _state.update { s -> s.copy(selection = s.entries.map { it.loc }.toSet()) }
+    fun selectAll() = _state.update { s -> s.copy(selection = (s.search?.results ?: s.entries).map { it.loc }.toSet()) }
 
     fun clearSelection() = _state.update { it.copy(selection = emptySet()) }
 
@@ -427,10 +429,17 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
     fun closeNearby() = _state.update { it.copy(nearby = null) }
 
-    /** What other devices see this phone called: the reader's choice, or the phone's own name. */
-    fun nearbyName(): String = prefs.nearbyName
-        ?: android.provider.Settings.Global.getString(app.contentResolver, android.provider.Settings.Global.DEVICE_NAME)?.takeIf { it.isNotBlank() }
-        ?: android.os.Build.MODEL
+    /**
+     * What other devices see this phone called: the reader's choice, else the name they gave the
+     * phone in Settings, else the maker's name with three letters of this phone's own after it.
+     */
+    fun nearbyName(): String = prefs.nearbyName ?: com.wanderwildwood.tana.nearby.Alias.default(
+        android.provider.Settings.Global.getString(app.contentResolver, android.provider.Settings.Global.DEVICE_NAME),
+        android.os.Build.MODEL,
+        android.os.Build.DEVICE,
+        android.os.Build.PRODUCT,
+        prefs.nearbyTag ?: com.wanderwildwood.tana.nearby.Alias.newTag().also { prefs.nearbyTag = it },
+    )
 
     fun setNearbyName(name: String) {
         prefs.nearbyName = name
@@ -441,6 +450,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     fun pickUp(mode: Mode) {
         val picked = _state.value.selected()
         if (picked.isEmpty()) return
+        if (_state.value.search != null) closeSearch()
         _state.update { it.copy(carry = Carry(picked, mode), selection = emptySet()) }
     }
 
@@ -480,7 +490,12 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     fun delete() {
         val picked = _state.value.selected()
         if (picked.isEmpty()) return
-        if (start(Job.Delete(picked))) clearSelection()
+        if (start(Job.Delete(picked))) {
+            // Results are not looked for again, so what is going goes from them now.
+            val gone = picked.map { it.loc }.toSet()
+            _state.update { s -> s.copy(search = s.search?.let { it.copy(results = it.results.filterNot { e -> e.loc in gone }) }) }
+            clearSelection()
+        }
     }
 
     private fun start(job: Job): Boolean {
@@ -853,14 +868,14 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     fun closeSearch() {
         searchCancelled = true
         searching?.cancel()
-        _state.update { it.copy(search = null) }
+        _state.update { it.copy(search = null, selection = emptySet()) }
     }
 
     fun searchFor(words: String, kind: Kind) {
         val search = _state.value.search ?: return
         searchCancelled = true
         searching?.cancel()
-        _state.update { it.copy(search = search.copy(words = words, kind = kind, results = emptyList(), running = true, ran = true)) }
+        _state.update { it.copy(search = search.copy(words = words, kind = kind, results = emptyList(), running = true, ran = true), selection = emptySet()) }
         searchCancelled = false
         val hidden = _state.value.showHidden
         searching = viewModelScope.launch(Dispatchers.IO) {

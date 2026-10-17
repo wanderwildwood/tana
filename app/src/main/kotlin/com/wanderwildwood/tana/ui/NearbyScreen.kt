@@ -90,7 +90,7 @@ fun NearbyScreen(sending: List<Entry>, vm: BrowserViewModel) {
             runCatching {
                 nfc.enableReaderMode(
                     activity,
-                    { tag -> Tap.readFrom(tag)?.let(Nearby::tapped) },
+                    { tag -> Nearby.held(tag, Tap.readFrom(tag)) },
                     android.nfc.NfcAdapter.FLAG_READER_NFC_A or android.nfc.NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK,
                     null,
                 )
@@ -187,10 +187,10 @@ fun NearbyScreen(sending: List<Entry>, vm: BrowserViewModel) {
                 when (val away = state.away) {
                     Away.Starting -> Note(stringResource(R.string.nearby_away_starting))
                     is Away.Hosting -> {
-                        Note(stringResource(R.string.nearby_away_hosting, away.network, away.passphrase))
+                        Note(stringResource(if (away.up) R.string.nearby_away_hosting else R.string.nearby_away_restarting, away.network, away.passphrase))
                         PlaceRow(stringResource(R.string.nearby_away_stop), null, Nearby::stopNetwork)
                     }
-                    is Away.Joining -> Note(stringResource(R.string.nearby_away_joining, away.to))
+                    is Away.Joining -> Note(away.to?.let { stringResource(R.string.nearby_away_joining, it) } ?: stringResource(R.string.nearby_away_waiting))
                     is Away.Joined -> {
                         Note(stringResource(R.string.nearby_away_joined, away.to))
                         PlaceRow(stringResource(R.string.nearby_away_leave), null, Nearby::stopNetwork)

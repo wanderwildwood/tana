@@ -166,7 +166,7 @@ private fun Browser(
         nearby != null -> NearbyScreen(nearby, vm)
         sheet != null -> SheetScreen(sheet, vm)
         preview != null -> PreviewScreen(preview, preview.entry.loc in state.selection, picking?.several == true, vm)
-        search != null -> SearchScreen(search, vm)
+        search != null -> SearchScreen(search, state, work, vm)
         state.place == Place.Home -> HomeScreen(
             state = state,
             work = work,

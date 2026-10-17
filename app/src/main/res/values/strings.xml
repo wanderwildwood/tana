@@ -383,13 +383,15 @@
     <!-- %1$s is the network's name, %2$s its password -->
     <string name="nearby_away_hosting">Network %1$s is up, password %2$s. Hold another phone with Files on its Nearby page against this one. A laptop can join the network in its Wi-Fi settings and open LocalSend.</string>
     <string name="nearby_away_stop">Stop the network</string>
+    <string name="nearby_away_restarting">Network %1$s dropped. Starting it again with the same name and password %2$s…</string>
     <string name="nearby_away_joining">Joining %1$s’s network…</string>
+    <string name="nearby_away_waiting">Joining… waiting for the other phone’s network to be up. Keep the phones together.</string>
     <string name="nearby_away_joined">On %1$s’s network. It is in the list above.</string>
     <string name="nearby_away_leave">Leave the network</string>
     <string name="nearby_away_wifi_off">Turn Wi-Fi on first. It does not need to be connected to anything.</string>
     <string name="nearby_away_location_off">Turn location on first: Android will not start or join one without it. It can go off again once connected.</string>
     <string name="nearby_away_unsupported">This phone cannot make a Wi-Fi Direct network.</string>
     <string name="nearby_away_busy">Wi-Fi Direct is busy. Try again in a moment.</string>
-    <string name="nearby_away_no_answer">Could not join. Hold the phones together again.</string>
+    <string name="nearby_away_no_answer">Could not join in half a minute. Check the other phone still shows its network, then hold the phones together again.</string>
     <string name="nearby_away_other">That did not work. Try again.</string>
 </resources>

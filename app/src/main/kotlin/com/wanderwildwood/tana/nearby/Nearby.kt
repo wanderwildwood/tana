@@ -70,8 +70,10 @@ enum class Why { UNREACHABLE, BUSY, STOPPED_THERE, NOT_READABLE, OTHER }
 /** A Wi-Fi Direct network, for when there is no Wi-Fi: this phone's, or another's it joined. */
 sealed interface Away {
     data object Starting : Away
-    data class Hosting(val network: String, val passphrase: String) : Away
-    data class Joining(val to: String) : Away
+    /** [up] false: Android took it down, and it is being started again under the same name. */
+    data class Hosting(val network: String, val passphrase: String, val up: Boolean = true) : Away
+    /** [to] null: the other phone's network is not up yet, and this one is waiting for it. */
+    data class Joining(val to: String?) : Away
     data class Joined(val to: String) : Away
     data class Failed(val why: AwayWhy) : Away
 }
@@ -128,6 +130,7 @@ object Nearby {
         val sc = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         scope = sc
         _state.value = NearbyState(running = true, alias = alias)
+        watchDirect()
         sc.launch {
             val id = identity ?: runCatching { Identity.load(app) }.getOrNull()?.also { identity = it } ?: return@launch
             val s = HttpServer(id.serverContext(), ::handle)
@@ -164,6 +167,15 @@ object Nearby {
         }
         sending?.cancel()
         current?.cancel()
+        unwatchDirect()
+        keeping?.cancel()
+        keeping = null
+        keeper = null
+        joining?.cancel()
+        joining = null
+        tapOffer = TapOffer.None
+        held = null
+        joinedWith = null
         direct?.let { d ->
             direct = null
             CoroutineScope(Dispatchers.IO).launch {
@@ -171,7 +183,8 @@ object Nearby {
                 d.close()
             }
         }
-        waitingToJoin = null
+        waitingToJoin = false
+        pendingInvite = null
         server?.stop()
         server = null
         discovery?.stop()
@@ -625,11 +638,21 @@ object Nearby {
     // ---------------------------------------------------------------- away from Wi-Fi
 
     private var direct: Direct? = null
-    @Volatile private var offered: ByteArray? = null
-    @Volatile private var waitingToJoin: Invite? = null
+    @Volatile private var tapOffer: TapOffer = TapOffer.None
+    @Volatile private var keeper: Keeper? = null
+    private var keeping: Job? = null
+    private var dropShown: Job? = null
+    private var joining: Job? = null
+    /** The phone last held against this one, read again while joining it. */
+    @Volatile private var held: android.nfc.Tag? = null
+    @Volatile private var pendingInvite: Invite? = null
+    @Volatile private var waitingToJoin = false
+    /** The network this phone joined, joined again if it drops. */
+    @Volatile private var joinedWith: Invite? = null
+    private var p2pWatcher: android.content.BroadcastReceiver? = null
 
-    /** What a tap hands over: null unless this phone has a network up and the page open. */
-    fun invite(): ByteArray? = offered
+    /** What a tap is answered with: an invite only while the page is open and a network is up. */
+    internal fun invite(): TapOffer = if (scope == null) TapOffer.None else tapOffer
 
     private fun direct(): Direct = direct ?: Direct(app).also { direct = it }
 
@@ -649,64 +672,191 @@ object Nearby {
         else -> null
     }
 
-    /** A Wi-Fi Direct network of this phone's own. The location permission is already granted. */
+    /**
+     * Android's word on Wi-Fi Direct: a network up or gone. Gone, a network of this phone's is
+     * started again (see [Keeper]); one it had joined is joined again.
+     */
+    private fun watchDirect() {
+        val w = object : android.content.BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: android.content.Intent) {
+                if (intent.action != WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION) return
+                @Suppress("DEPRECATION")
+                val info = intent.getParcelableExtra<android.net.NetworkInfo>(WifiP2pManager.EXTRA_NETWORK_INFO)
+                val group = intent.getParcelableExtra<android.net.wifi.p2p.WifiP2pGroup>(WifiP2pManager.EXTRA_WIFI_P2P_GROUP)
+                val connected = info?.isConnected == true && group != null
+                android.util.Log.i(TAG, "p2p connection changed: connected=$connected group=${group?.networkName}")
+                if (connected) return
+                val away = _state.value.away
+                if (away is Away.Hosting && away.up) keeper?.groupRemoved()
+                if (away is Away.Joined) dropped()
+            }
+        }
+        p2pWatcher = w
+        runCatching { app.registerReceiver(w, android.content.IntentFilter(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION)) }
+    }
+
+    private fun unwatchDirect() {
+        p2pWatcher?.let { runCatching { app.unregisterReceiver(it) } }
+        p2pWatcher = null
+    }
+
+    /**
+     * A Wi-Fi Direct network of this phone's own, kept up while the page is open. The location
+     * permission is already granted.
+     */
     fun startNetwork() {
         val sc = scope ?: return
         val m = me ?: return
         if (_state.value.away.let { it is Away.Starting || it is Away.Hosting || it is Away.Joining }) return
         blocked()?.let { why -> return _state.update { it.copy(away = Away.Failed(why)) } }
         _state.update { it.copy(away = Away.Starting) }
-        sc.launch {
-            val name = Direct.networkName(m.alias)
-            val passphrase = Direct.passphrase()
-            try {
-                val frequency = direct().host(name, passphrase)
-                offered = Invite(name, passphrase, frequency, m.alias, m.port, m.fingerprint).bytes()
-                _state.update { it.copy(away = Away.Hosting(name, passphrase)) }
-            } catch (e: Direct.Failed) {
-                _state.update { it.copy(away = Away.Failed(why(e.reason))) }
+        tapOffer = TapOffer.NotReady
+        val k = Keeper(direct(), Direct.networkName(m.alias), Direct.passphrase(), ::kept)
+        keeper = k
+        keeping = sc.launch { k.run() }
+    }
+
+    private fun kept(k: Kept) {
+        android.util.Log.i(TAG, "network: " + when (k) {
+            is Kept.Up -> "up ${k.group.network} ${k.group.frequency} MHz"
+            is Kept.Down -> "gone, starting ${k.network} again"
+            else -> k.toString()
+        })
+        if (keeper == null) return
+        when (k) {
+            Kept.Starting -> {
+                tapOffer = TapOffer.NotReady
+                _state.update { it.copy(away = Away.Starting) }
+            }
+            is Kept.Up -> {
+                dropShown?.cancel()
+                val m = me ?: return
+                val g = k.group
+                tapOffer = TapOffer.Ready(Invite(g.network, g.passphrase, g.frequency, m.alias, m.port, m.fingerprint).bytes())
+                _state.update { it.copy(away = Away.Hosting(g.network, g.passphrase, up = true)) }
+            }
+            is Kept.Down -> {
+                // A tap now would hand over a network that is not there: "not ready" until it is.
+                tapOffer = TapOffer.NotReady
+                // It is usually back within a couple of seconds; said only if it is not, so the
+                // page does not flash every time.
+                if (dropShown?.isActive == true) return
+                dropShown = scope?.launch {
+                    delay(3000)
+                    if (tapOffer is TapOffer.NotReady) {
+                        _state.update { s -> if (s.away is Away.Hosting) s.copy(away = Away.Hosting(k.network, k.passphrase, up = false)) else s }
+                    }
+                }
+            }
+            is Kept.Failed -> {
+                tapOffer = TapOffer.None
+                keeper = null
+                _state.update { it.copy(away = Away.Failed(blocked() ?: why(k.reason))) }
             }
         }
     }
 
     fun stopNetwork() {
-        offered = null
+        keeper = null
+        keeping?.cancel()
+        keeping = null
+        dropShown?.cancel()
+        joining?.cancel()
+        joining = null
+        tapOffer = TapOffer.None
+        joinedWith = null
+        held = null
         val d = direct
         _state.update { it.copy(away = null) }
         scope?.launch { d?.leave() }
     }
 
-    /** Another phone's invite, read by a tap. Called on NFC's own thread. */
-    internal fun tapped(invite: Invite) {
-        if (scope == null || _state.value.away is Away.Hosting || _state.value.away is Away.Starting) return
-        if (invite.fingerprint.equals(me?.fingerprint, ignoreCase = true)) return
+    /**
+     * Another phone held against this one, and what reading it found. Called on NFC's own thread.
+     * Not ready yet is still worth waiting on: the joining is kept at, reading it again.
+     */
+    internal fun held(tag: android.nfc.Tag, read: TapRead) {
+        android.util.Log.i(TAG, "tap read: ${read::class.simpleName}")
+        if (scope == null || read is TapRead.Nothing) return
+        val away = _state.value.away
+        if (away is Away.Hosting || away is Away.Starting || away is Away.Joined) return
+        val invite = (read as? TapRead.Offered)?.invite
+        if (invite != null && invite.fingerprint.equals(me?.fingerprint, ignoreCase = true)) return
+        held = tag
+        if (invite != null) pendingInvite = invite
+        // Already at it: the newer invite is picked up on its next try.
+        if (joining?.isActive == true) return
         if (app.checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-            waitingToJoin = invite
+            waitingToJoin = true
             _state.update { it.copy(wantsPermission = true) }
             return
         }
-        join(invite)
+        join(pendingInvite)
     }
 
     fun permissionAnswered(granted: Boolean) {
         _state.update { it.copy(wantsPermission = false) }
-        val invite = waitingToJoin ?: return
-        waitingToJoin = null
-        if (granted) join(invite)
+        if (!waitingToJoin) return
+        waitingToJoin = false
+        if (granted) join(pendingInvite)
     }
 
-    private fun join(invite: Invite) {
+    /** The network joined went away. The other phone starts it again, so it is joined again. */
+    private fun dropped() {
+        val invite = joinedWith ?: return
+        if (joining?.isActive == true && _state.value.away !is Away.Joined) return
+        joining?.cancel()
+        android.util.Log.i(TAG, "joined network dropped; joining again")
+        pendingInvite = invite
+        join(invite)
+    }
+
+    private fun join(first: Invite?) {
         val sc = scope ?: return
         blocked()?.let { why -> return _state.update { it.copy(away = Away.Failed(why)) } }
-        _state.update { it.copy(away = Away.Joining(invite.alias)) }
-        sc.launch {
+        _state.update { it.copy(away = Away.Joining(first?.alias)) }
+        joining = sc.launch {
+            var used: Invite? = null
+            val joiner = Joiner(
+                join = { invite ->
+                    used = invite
+                    _state.update { s -> if (s.away is Away.Joining) s.copy(away = Away.Joining(invite.alias)) else s }
+                    direct().join(invite)
+                },
+                reread = {
+                    val tag = held
+                    val r = if (tag == null) TapRead.Nothing else Tap.readFrom(tag)
+                    if (r is TapRead.Nothing) held = null
+                    (r as? TapRead.Offered)?.let { pendingInvite = it.invite }
+                    // A tap read again by NFC itself may have brought a newer one meanwhile.
+                    if (r is TapRead.Nothing) pendingInvite?.let { TapRead.Offered(it) } ?: r else r
+                },
+            )
             try {
-                val host = direct().join(invite)
+                val host = joiner.run(first)
+                val invite = used
+                if (host == null || invite == null) {
+                    joinedWith = null
+                    _state.update { it.copy(away = Away.Failed(AwayWhy.NO_ANSWER)) }
+                    return@launch
+                }
                 val d = Device(invite.alias, null, "mobile", invite.fingerprint, invite.port, https = true, address = host.hostAddress ?: return@launch)
                 put(d)
+                joinedWith = invite
+                held = null
                 _state.update { it.copy(away = Away.Joined(invite.alias)) }
                 // So the other phone lists this one too, without waiting on an announcement.
                 register(d)
+                // Asked now and then too, in case Android's word that it dropped never comes.
+                while (isActive) {
+                    delay(5000)
+                    if (_state.value.away !is Away.Joined) break
+                    if (!direct().stillJoined()) {
+                        joining = null
+                        dropped()
+                        break
+                    }
+                }
             } catch (e: Direct.Failed) {
                 _state.update { it.copy(away = Away.Failed(if (e.reason == WifiP2pManager.BUSY) AwayWhy.NO_ANSWER else why(e.reason))) }
             }

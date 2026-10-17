@@ -97,3 +97,31 @@ internal data class Offer(
         }
     }
 }
+
+/**
+ * What this phone is called to others before its owner names it. A name the owner gave the phone
+ * in Settings is used as it is. The maker's own name, which every phone of the kind shares (two
+ * Kompakts both said "Kompakt"), gets three letters of [tag] after it, so two side by side can be
+ * told apart. [tag] is random, made once on this phone, and means nothing else.
+ */
+internal object Alias {
+    fun default(deviceName: String?, model: String, device: String, product: String, tag: String): String {
+        val given = deviceName?.trim().orEmpty()
+        val makers = listOf(model, device, product).map { it.trim() }.filter { it.length >= 3 }
+        val factory = given.isEmpty() || given.lowercase() in SHARED ||
+            makers.any { m -> m.contains(given, ignoreCase = true) || given.contains(m, ignoreCase = true) }
+        if (!factory) return given
+        val base = given.ifEmpty { model.trim() }.ifEmpty { "Phone" }
+        return "$base ${tag.take(3).uppercase()}"
+    }
+
+    /** Names a maker gives every phone it sells, which its build names may not contain. */
+    private val SHARED = setOf("kompakt", "mudita kompakt")
+
+    private const val LETTERS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
+
+    fun newTag(): String {
+        val r = java.security.SecureRandom()
+        return (1..3).map { LETTERS[r.nextInt(LETTERS.length)] }.joinToString("")
+    }
+}

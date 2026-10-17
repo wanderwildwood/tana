@@ -21,14 +21,14 @@ import kotlin.coroutines.resume
  * a location.
  */
 @SuppressLint("MissingPermission")
-internal class Direct(context: Context) {
+internal class Direct(context: Context) : Groups {
     private val manager = context.getSystemService(WifiP2pManager::class.java)
     private val channel = manager?.initialize(context, context.mainLooper, null)
 
     class Failed(val reason: Int) : Exception("Wi-Fi Direct failed: $reason")
 
-    /** The network started, under [name] with [passphrase]; its frequency, for the one joining. */
-    suspend fun host(name: String, passphrase: String): Int {
+    /** The network started, under [name] with [passphrase], as Android reports it once up. */
+    override suspend fun create(name: String, passphrase: String): Group {
         val m = manager ?: throw Failed(WifiP2pManager.P2P_UNSUPPORTED)
         val c = channel ?: throw Failed(WifiP2pManager.P2P_UNSUPPORTED)
         // One left over from an earlier start is taken down first: only one can be up.
@@ -40,15 +40,23 @@ internal class Direct(context: Context) {
             .build()
         call { m.createGroup(c, config, it) }
         repeat(20) {
-            val g = group()
-            if (g != null && g.isGroupOwner) return g.frequency
+            current()?.let { return it }
             delay(500)
         }
         throw Failed(WifiP2pManager.ERROR)
     }
 
-    /** Joins the network an invite names; the address of the phone that started it. */
-    suspend fun join(invite: Invite): InetAddress {
+    override suspend fun current(): Group? {
+        val g = group() ?: return null
+        if (!g.isGroupOwner) return null
+        return Group(g.networkName ?: return null, g.passphrase.orEmpty(), g.frequency)
+    }
+
+    /**
+     * One try at joining the network an invite names; the address of the phone that started it.
+     * [Joiner] makes as many as there is time for.
+     */
+    suspend fun join(invite: Invite, seconds: Int = 12): InetAddress {
         val m = manager ?: throw Failed(WifiP2pManager.P2P_UNSUPPORTED)
         val c = channel ?: throw Failed(WifiP2pManager.P2P_UNSUPPORTED)
         val config = WifiP2pConfig.Builder()
@@ -57,9 +65,11 @@ internal class Direct(context: Context) {
             .apply { if (invite.frequency > 0) setGroupOperatingFrequency(invite.frequency) }
             .enablePersistentMode(false)
             .build()
+        // A try left half done would make the next one fail as busy.
+        runCatching { call { m.cancelConnect(c, it) } }
         call { m.connect(c, config, it) }
         // Joining is a scan, an association and an address: some seconds, rarely more than ten.
-        repeat(40) {
+        repeat(seconds) {
             val info = info()
             if (info?.groupFormed == true && !info.isGroupOwner) info.groupOwnerAddress?.let { return it }
             delay(1000)
@@ -67,6 +77,9 @@ internal class Direct(context: Context) {
         runCatching { call { m.cancelConnect(c, it) } }
         throw Failed(WifiP2pManager.BUSY)
     }
+
+    /** Whether this phone is still on the network it joined. */
+    suspend fun stillJoined(): Boolean = info()?.let { it.groupFormed && !it.isGroupOwner } == true
 
     /** Whatever network this phone started or joined, taken down. */
     suspend fun leave() {
@@ -108,7 +121,7 @@ internal class Direct(context: Context) {
          */
         fun networkName(alias: String): String {
             val two = (1..2).map { LETTERS[random.nextInt(LETTERS.length)] }.joinToString("")
-            val plain = alias.filter { it.code in 0x21..0x7e || it == ' ' }.trim().replace(' ', '-').take(20)
+            val plain = alias.filter { it.code in 0x21..0x7e || it == ' ' }.trim().replace(' ', '-').take(20).trimEnd('-')
             return "DIRECT-$two" + if (plain.isEmpty()) "" else "-$plain"
         }
 
