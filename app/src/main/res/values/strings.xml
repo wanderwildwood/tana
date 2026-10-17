@@ -71,6 +71,22 @@
     <string name="preview_choose">Choose</string>
     <string name="preview_unchoose">Leave out</string>
     <string name="preview_failed">This picture cannot be shown. It can still be attached.</string>
+    <!-- A spreadsheet opened in this app, to be looked through -->
+    <string name="sheet_find">Find</string>
+    <string name="sheet_finding">Finding…</string>
+    <plurals name="sheet_rows">
+        <item quantity="one">%1$s row</item>
+        <item quantity="other">%1$s rows</item>
+    </plurals>
+    <plurals name="sheet_found">
+        <item quantity="one">%1$s of %2$s row</item>
+        <item quantity="other">%1$s of %2$s rows</item>
+    </plurals>
+    <string name="sheet_cut">Too big to read all of: only the first %1$s rows are here.</string>
+    <string name="sheet_failed">This spreadsheet cannot be read here. Open with, under More, hands it to another app.</string>
+    <string name="sheet_empty">Nothing in this sheet.</string>
+    <!-- On a row opened from a spreadsheet, for a cell whose column has no heading -->
+    <string name="sheet_column">Column %1$s</string>
     <plurals name="selected">
         <item quantity="one">%d selected</item>
         <item quantity="other">%d selected</item>

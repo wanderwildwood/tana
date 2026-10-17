@@ -71,6 +71,10 @@ as places like any other.
   location can go off again once the phones are connected.
 - **Zip files.** Open one like a folder and copy out what you want, or *Extract here* for all of
   it. *Compress* makes one of whatever is chosen. It works the same for a zip on a server.
+- **Spreadsheets, to look things up in.** A CSV, TSV, Excel (xlsx) or LibreOffice (ods) file
+  opens as a list of its rows with *Find* at the top: type a few words and only the rows holding
+  all of them stay. Tap a row to see it whole, each heading beside its value. Read only; *Open
+  with* still hands the file to a spreadsheet app.
 - **Folders from other apps.** Anything Android's own folder picker can reach that no path can —
   Termux's home, for one — can be added to the start page, and then works like any other place.
 - **Search** by name below the folder you are in, or everywhere on the phone: every word you type
@@ -95,7 +99,8 @@ as places like any other.
 
 No thumbnails: a photograph at the size of a list row is a grey smudge on this screen. No
 `Android/data`: Android 12 lets no app into another app's private folders. A zip is read, never
-rewritten: to change what is in one, extract it, change that, and compress it again. Nothing is
+rewritten: to change what is in one, extract it, change that, and compress it again. A
+spreadsheet is read, never edited, and the old Excel format (xls) is not read at all. Nothing is
 sent anywhere but to the servers you add and the nearby devices you send to.
 
 ## Where this is up to

@@ -27,6 +27,7 @@ import com.wanderwildwood.tana.work.Previews
 import com.wanderwildwood.tana.work.Purpose
 import com.wanderwildwood.tana.work.Recent
 import com.wanderwildwood.tana.work.Search
+import com.wanderwildwood.tana.work.Sheets
 import com.wanderwildwood.tana.work.Sort
 import com.wanderwildwood.tana.work.SortBy
 import com.wanderwildwood.tana.work.Transfer
@@ -39,6 +40,8 @@ import kotlinx.coroutines.Job as CoroutineJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -85,6 +88,22 @@ data class Preview(
     val failure: Throwable? = null,
 )
 
+/**
+ * A spreadsheet open to be looked through. [sheets] arrive once it has been read; [found] is
+ * which rows of the sheet on screen hold every word looked for, or null when nothing is.
+ */
+data class SheetView(
+    val entry: Entry,
+    val sheets: List<com.wanderwildwood.tana.work.Sheet>? = null,
+    val failure: Throwable? = null,
+    val at: Int = 0,
+    val words: String = "",
+    val found: List<Int>? = null,
+    val finding: Boolean = false,
+) {
+    val sheet: com.wanderwildwood.tana.work.Sheet? get() = sheets?.getOrNull(at)
+}
+
 data class SearchState(
     val roots: List<Loc>,
     val within: String,
@@ -113,6 +132,7 @@ data class UiState(
     val info: Info? = null,
     val search: SearchState? = null,
     val preview: Preview? = null,
+    val sheet: SheetView? = null,
     /** The Nearby page, open: what is to be sent from it, or nothing when it was opened to receive. */
     val nearby: List<Entry>? = null,
 ) {
@@ -213,6 +233,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         val s = _state.value
         when {
             s.nearby != null -> closeNearby()
+            s.sheet != null -> closeSheet()
             s.preview != null -> closePreview()
             s.info != null -> _state.update { it.copy(info = null) }
             s.search != null -> closeSearch()
@@ -314,6 +335,8 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
             if (p.several) toggle(entry) else hand(listOf(entry), Purpose.PICK)
         } else if (Names.extension(entry.name) == "zip") {
             browse(entry)
+        } else if (Sheets.canView(entry.name)) {
+            view(entry)
         } else {
             open(entry, if (Names.extension(entry.name) == "apk") Purpose.INSTALL else Purpose.OPEN)
         }
@@ -470,7 +493,10 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         when (work) {
             is Work.Finished -> {
                 val job = work.job
-                if (job is Job.Fetch && job.purpose == Purpose.BROWSE) {
+                if (job is Job.Fetch && job.purpose == Purpose.VIEW) {
+                    work.fetched.firstOrNull()?.let { file -> _state.value.sheet?.let { readSheet(it.entry, file) } }
+                    Transfers.seen()
+                } else if (job is Job.Fetch && job.purpose == Purpose.BROWSE) {
                     work.fetched.firstOrNull()?.let { go(Place.Folder(Loc(ZipStore.idFor(it), ""))) }
                     Transfers.seen()
                 } else if (job is Job.Fetch && job.purpose == Purpose.PICK) {
@@ -486,9 +512,91 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
                     refresh()
                 }
             }
-            is Work.Failed, is Work.Stopped -> refresh()
+            is Work.Failed, is Work.Stopped -> {
+                // A spreadsheet still waiting on its fetch will never get it now; the page
+                // closes, and the trouble is said where every failed fetch says it.
+                _state.value.sheet?.takeIf { it.sheets == null && it.failure == null && it.entry.loc.store != LocalStore.ID }
+                    ?.let { closeSheet() }
+                refresh()
+            }
             else -> Unit
         }
+    }
+
+    // ---------------------------------------------------------------- spreadsheets
+
+    private var sheeting: CoroutineJob? = null
+    private var finding: CoroutineJob? = null
+    /** The sheet last looked in, each row's cells folded for Find and run together: made once, not per search. */
+    private var folded: Pair<com.wanderwildwood.tana.work.Sheet, List<String>>? = null
+
+    /** A spreadsheet opened here, to be looked through. One not on the phone is fetched first. */
+    fun view(entry: Entry) {
+        _state.update { it.copy(sheet = SheetView(entry), selection = emptySet()) }
+        if (entry.loc.store == LocalStore.ID) {
+            readSheet(entry, Stores.phone.file(entry.loc.path))
+        } else if (!start(Job.Fetch(listOf(entry), Purpose.VIEW))) {
+            _state.update { it.copy(sheet = null) }
+        }
+    }
+
+    private fun readSheet(entry: Entry, file: java.io.File) {
+        sheeting?.cancel()
+        sheeting = viewModelScope.launch {
+            val result = withContext(Dispatchers.IO) { runCatching { Sheets.read(file) } }
+            if (!isActive || _state.value.sheet?.entry != entry) return@launch
+            _state.update { s ->
+                s.copy(sheet = s.sheet?.let { v -> result.fold({ v.copy(sheets = it) }, { v.copy(failure = it) }) })
+            }
+        }
+    }
+
+    fun showSheet(index: Int) {
+        _state.update { s -> s.sheet?.let { s.copy(sheet = it.copy(at = index, found = null)) } ?: s }
+        _state.value.sheet?.let { find(it.words) }
+    }
+
+    /**
+     * The rows holding every one of [words], in any cell, any case, with or without accents
+     * (creme finds crème, which a phone's keyboard makes slow to type). Worked out a moment
+     * after the typing stops, off the main thread: a big sheet is a lot of cells to look in.
+     */
+    fun find(words: String) {
+        finding?.cancel()
+        val wanted = Sheets.fold(words).split(Regex("\\s+")).filter { it.isNotEmpty() }
+        if (wanted.isEmpty()) {
+            _state.update { s -> s.sheet?.let { s.copy(sheet = it.copy(words = words, found = null, finding = false)) } ?: s }
+            return
+        }
+        _state.update { s -> s.sheet?.let { s.copy(sheet = it.copy(words = words, finding = true)) } ?: s }
+        finding = viewModelScope.launch {
+            delay(300)
+            val view = _state.value.sheet ?: return@launch
+            val sheet = view.sheet ?: return@launch
+            val found = withContext(Dispatchers.Default) {
+                // The cells of a row run together with a character no word can hold, so a word
+                // is found inside one cell and never across two.
+                val rows = folded?.takeIf { it.first === sheet }?.second
+                    ?: sheet.body.map { row -> row.joinToString("\u0000", transform = Sheets::fold) }
+                        .also { folded = sheet to it }
+                ensureActive()
+                rows.indices.filter { i ->
+                    if (i % 2000 == 0) ensureActive()
+                    wanted.all { rows[i].contains(it) }
+                }
+            }
+            if (!isActive) return@launch
+            _state.update { s ->
+                s.sheet?.takeIf { it.at == view.at && it.words == words }?.let { s.copy(sheet = it.copy(found = found, finding = false)) } ?: s
+            }
+        }
+    }
+
+    fun closeSheet() {
+        sheeting?.cancel()
+        finding?.cancel()
+        folded = null
+        _state.update { it.copy(sheet = null) }
     }
 
     // ---------------------------------------------------------------- zips
