@@ -155,6 +155,16 @@ fun SortDialog(sort: Sort, showHidden: Boolean, onSort: (SortBy) -> Unit, onHidd
             Spacer(Modifier.width(12.dp))
             SwitchMMD(checked = showHidden, onCheckedChange = null)
         }
+        val context = LocalContext.current
+        val jumpShown by rememberListJumpShown()
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().clickable { ListJumpPrefs.setShown(context, !jumpShown) }.padding(vertical = 8.dp),
+        ) {
+            TextMMD(text = stringResource(R.string.list_jump_setting), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+            Spacer(Modifier.width(12.dp))
+            SwitchMMD(checked = jumpShown, onCheckedChange = null)
+        }
         Spacer(Modifier.height(14.dp))
         WideButton(stringResource(R.string.close), onDismiss)
     }

@@ -394,4 +394,7 @@
     <string name="nearby_away_busy">Wi-Fi Direct is busy. Try again in a moment.</string>
     <string name="nearby_away_no_answer">Could not join in half a minute. Check the other phone still shows its network, then hold the phones together again.</string>
     <string name="nearby_away_other">That did not work. Try again.</string>
+    <string name="list_jump_setting">Letters and page dots</string>
+    <string name="list_jump_shown">Shown</string>
+    <string name="list_jump_hidden">Hidden</string>
 </resources>
