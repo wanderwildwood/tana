@@ -38,7 +38,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mudita.mmd.components.buttons.OutlinedButtonMMD
 import com.mudita.mmd.components.divider.HorizontalDividerMMD
-import com.mudita.mmd.components.lazy.LazyColumnMMD
 import com.mudita.mmd.components.text.TextMMD
 import com.mudita.mmd.components.text_field.TextFieldMMD
 import com.mudita.mmd.components.top_app_bar.TopAppBarMMD
@@ -145,7 +144,7 @@ fun NearbyScreen(sending: List<Entry>, vm: BrowserViewModel) {
             }
         },
     ) { padding ->
-        LazyColumnMMD(Modifier.fillMaxSize().padding(padding).background(MaterialTheme.colorScheme.surface), isScrollbarVisible = false) {
+        PagedColumn(Modifier.fillMaxSize().padding(padding).background(MaterialTheme.colorScheme.surface)) {
             item {
                 val line = when {
                     state.address == null && state.away is Away.Hosting -> stringResource(R.string.nearby_visible_as, state.alias)

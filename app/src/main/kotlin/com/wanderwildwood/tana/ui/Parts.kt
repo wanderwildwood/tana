@@ -109,7 +109,7 @@ internal fun EntryRow(
     ) {
         Box(Modifier.size(24.dp), contentAlignment = Alignment.Center) {
             if (selecting) {
-                CheckboxMMD(checked = selected, onCheckedChange = null)
+                CheckboxMMD(checked = selected, onCheckedChange = { onPress() })
             } else {
                 Icon(
                     imageVector = if (entry.isFolder) Icons.Folder else Icons.File,

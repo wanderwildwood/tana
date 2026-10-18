@@ -36,7 +36,6 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.mudita.mmd.components.divider.HorizontalDividerMMD
 import androidx.compose.foundation.lazy.rememberLazyListState
-import com.mudita.mmd.components.lazy.LazyColumnMMD
 import com.mudita.mmd.components.text.TextMMD
 import com.mudita.mmd.components.text_field.TextFieldMMD
 import com.mudita.mmd.components.top_app_bar.TopAppBarMMD
@@ -152,7 +151,7 @@ private fun androidx.compose.foundation.layout.ColumnScope.Rows(view: SheetView,
             body.isEmpty() -> Line(stringResource(R.string.sheet_empty))
             !view.finding && found?.isEmpty() == true -> Line(stringResource(R.string.search_none))
             else -> ListJumpBox(rowsState, ListJump.Pages) {
-                LazyColumnMMD(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface), state = rowsState, isScrollbarVisible = false) {
+                PagedColumn(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface), state = rowsState) {
                     items(shown, key = { it }) { i -> RowLines(body[i]) { onOpen(i) } }
                 }
             }
@@ -193,7 +192,7 @@ private fun WholeRow(headings: List<String>, cells: List<String>) {
     }
     val cellsState = rememberLazyListState()
     ListJumpBox(cellsState, ListJump.Pages) {
-        LazyColumnMMD(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface), state = cellsState, isScrollbarVisible = false) {
+        PagedColumn(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface), state = cellsState) {
             items(pairs.size) { i ->
                 val (heading, value) = pairs[i]
                 Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)) {

@@ -44,7 +44,6 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.mudita.mmd.components.buttons.OutlinedButtonMMD
 import com.mudita.mmd.components.divider.HorizontalDividerMMD
-import com.mudita.mmd.components.lazy.LazyColumnMMD
 import com.mudita.mmd.components.radio_button.RadioButtonMMD
 import com.mudita.mmd.components.text.TextMMD
 import com.mudita.mmd.components.text_field.TextFieldMMD
@@ -114,7 +113,7 @@ fun HomeScreen(
         },
         bottomBar = { Column { Foot(state, work, vm) {} } },
     ) { padding ->
-        LazyColumnMMD(Modifier.fillMaxSize().padding(padding).background(MaterialTheme.colorScheme.surface), isScrollbarVisible = false) {
+        PagedColumn(Modifier.fillMaxSize().padding(padding).background(MaterialTheme.colorScheme.surface)) {
             item { PlaceRow(stringResource(R.string.home_recent), stringResource(R.string.home_recent_note), { vm.go(Place.Recent) }) }
             item { PlaceRow(stringResource(R.string.home_downloads), null, { vm.go(Place.Folder(Volumes.downloads())) }) }
             // Not while choosing for another app: that errand is a file from here, not from elsewhere.
@@ -254,7 +253,7 @@ fun FolderScreen(state: UiState, work: com.wanderwildwood.tana.work.Work, vm: Br
                         modifier = Modifier.padding(16.dp),
                     )
                     else -> FolderList(state, vm) { shown, listState ->
-                        LazyColumnMMD(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface), state = listState, isScrollbarVisible = false) {
+                        PagedColumn(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface), state = listState) {
                             items(shown, key = { it.loc.path }) { entry ->
                                 EntryRow(
                                     entry = entry,
@@ -408,7 +407,7 @@ fun SearchScreen(search: SearchState, state: UiState, work: com.wanderwildwood.t
                         modifier = Modifier.fillMaxWidth().padding(16.dp).height(48.dp),
                     ) { TextMMD(text = stringResource(R.string.search_go), style = MaterialTheme.typography.bodySmall) }
                     else -> ListJumpBox(resultsState, ListJump.Pages) {
-                        LazyColumnMMD(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface), state = resultsState, isScrollbarVisible = false) {
+                        PagedColumn(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface), state = resultsState) {
                             items(search.results, key = { it.loc.store + it.loc.path }) { entry ->
                                 EntryRow(
                                     entry = entry,
@@ -553,7 +552,7 @@ fun ServerScreen(initial: Server, vm: BrowserViewModel, onDone: () -> Unit) {
             )
         },
     ) { padding ->
-        LazyColumnMMD(Modifier.fillMaxSize().padding(padding).imePadding().background(MaterialTheme.colorScheme.surface), isScrollbarVisible = false) {
+        PagedColumn(Modifier.fillMaxSize().padding(padding).imePadding().background(MaterialTheme.colorScheme.surface)) {
             // First, where it will be seen: the answer to Save is read from the top of the
             // screen, next to the word that was pressed.
             problem?.let {
