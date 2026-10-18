@@ -83,7 +83,9 @@ as places like any other.
 - **Sort** by name, date, size or type, and turn it round. Numbers sort as numbers, so chapter 2
   comes before chapter 10. Folders always come first.
 - **Opens a file in the app that handles it**, or asks which with Open with. **Installs an
-  APK** — the installer asks once whether to allow installs from here.
+  APK** — the installer asks once whether to allow installs from here. A contact card (.vcf)
+  opens in [Contacts](https://github.com/wanderwildwood/enishi) to be added, and a GPS track
+  (.gpx) in [Topo](https://github.com/wanderwildwood/chikei) to be imported.
 - **Info**: size, where, when, and — on request, because it means reading the whole file — its
   SHA-256, set out in fours so it can be read against a checksum posted somewhere else.
 - **Can be the phone's file manager.** It answers when something asks for "the files app",

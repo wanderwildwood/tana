@@ -47,11 +47,14 @@ object Names {
         if (ext == "apk") return APK_MIME
         // A KeePass file has no type of Android's own; this is the one KeePass apps answer to.
         if (ext == "kdbx") return KEEPASS_MIME
+        // A GPS track, missing from some phones' list of types; map apps such as Topo answer to this.
+        if (ext == "gpx") return GPX_MIME
         return MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext) ?: "*/*"
     }
 
     const val APK_MIME = "application/vnd.android.package-archive"
     const val KEEPASS_MIME = "application/x-keepass2"
+    const val GPX_MIME = "application/gpx+xml"
 }
 
 /**
