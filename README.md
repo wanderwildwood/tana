@@ -75,6 +75,14 @@ as places like any other.
   opens as a list of its rows with *Find* at the top: type a few words and only the rows holding
   all of them stay. Tap a row to see it whole, each heading beside its value. Read only; *Open
   with* still hands the file to a spreadsheet app.
+- **PDFs, read here.** A PDF opens a page to a screen, fitted whole. A swipe, or a tap near
+  either edge, turns the page, and nothing slides in between. Two fingers zoom in on small print
+  and one then moves the page about; turning the page puts it back to fit. *Page 12 of 80* at
+  the foot is a tap away from typing a page to go to, and each PDF opens again at the page it
+  was left at. PDFs from other apps — an email's attachment, a download — open here too, and
+  Back goes straight back to the app they came from. A PDF locked with a password is not opened;
+  it can be handed to another app from where it says so, and *Open with* still does that for
+  any PDF.
 - **Folders from other apps.** Anything Android's own folder picker can reach that no path can —
   Termux's home, for one — can be added to the start page, and then works like any other place.
 - **Search** by name below the folder you are in, or everywhere on the phone: every word you type
@@ -102,7 +110,8 @@ as places like any other.
 No thumbnails: a photograph at the size of a list row is a grey smudge on this screen. No
 `Android/data`: Android 12 lets no app into another app's private folders. A zip is read, never
 rewritten: to change what is in one, extract it, change that, and compress it again. A
-spreadsheet is read, never edited, and the old Excel format (xls) is not read at all. Nothing is
+spreadsheet is read, never edited, and the old Excel format (xls) is not read at all. A PDF is
+read, not searched, annotated or filled in. Nothing is
 sent anywhere but to the servers you add and the nearby devices you send to.
 
 ## Where this is up to

@@ -87,6 +87,17 @@
     <string name="sheet_empty">Nothing in this sheet.</string>
     <!-- On a row opened from a spreadsheet, for a cell whose column has no heading -->
     <string name="sheet_column">Column %1$s</string>
+
+    <!-- A PDF read in this app, a page to a screen -->
+    <!-- At the foot of the page; a tap on it asks for a page to go to. "Page 12 of 80" -->
+    <string name="pdf_page">Page %1$s of %2$s</string>
+    <string name="pdf_go_title">Go to page</string>
+    <!-- Under the box a page number is typed in. "1 to 80" -->
+    <string name="pdf_go_range">%1$s to %2$s</string>
+    <string name="pdf_go">Go</string>
+    <string name="pdf_locked">This PDF is locked with a password. Files cannot open a locked one; another app may.</string>
+    <string name="pdf_failed">This file cannot be read as a PDF here. Another app may manage it.</string>
+    <string name="pdf_hand_on">Open with another app</string>
     <plurals name="selected">
         <item quantity="one">%d selected</item>
         <item quantity="other">%d selected</item>

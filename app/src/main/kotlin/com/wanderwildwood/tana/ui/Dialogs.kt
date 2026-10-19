@@ -28,6 +28,7 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.mudita.mmd.components.buttons.OutlinedButtonMMD
@@ -40,6 +41,7 @@ import com.wanderwildwood.tana.R
 import com.wanderwildwood.tana.store.Entry
 import com.wanderwildwood.tana.work.Clash
 import com.wanderwildwood.tana.work.Names
+import com.wanderwildwood.tana.work.Pdfs
 import com.wanderwildwood.tana.work.Sort
 import com.wanderwildwood.tana.work.SortBy
 
@@ -106,6 +108,53 @@ fun NameDialog(title: String, confirm: String, initial: String, onDone: (String)
             Spacer(Modifier.width(10.dp))
             OutlinedButtonMMD(onClick = commit, enabled = ok, modifier = Modifier.weight(1f).height(48.dp)) {
                 TextMMD(text = confirm, style = MaterialTheme.typography.bodySmall)
+            }
+        }
+    }
+}
+
+/**
+ * A page of a PDF to go to, typed as its number. Go stays off until the number is one of the
+ * book's pages; [onGo] is handed its place from 0.
+ */
+@Composable
+fun PageDialog(pages: Int, onGo: (Int) -> Unit, onDismiss: () -> Unit) {
+    var typed by remember { mutableStateOf("") }
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focus.requestFocus() }
+    val page = Pdfs.pageFrom(typed, pages)
+    val count = java.text.NumberFormat.getIntegerInstance()
+    val commit = {
+        if (page != null) {
+            onGo(page)
+            onDismiss()
+        }
+    }
+    EInkDialog(onDismiss = onDismiss) {
+        Title(stringResource(R.string.pdf_go_title))
+        Spacer(Modifier.height(14.dp))
+        TextFieldMMD(
+            value = typed,
+            // Digits only: a keyboard's number pad still offers a comma and a point.
+            onValueChange = { typed = it.filter(Char::isDigit).take(6) },
+            modifier = Modifier.fillMaxWidth().focusRequester(focus),
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Go),
+            keyboardActions = KeyboardActions(onGo = { commit() }),
+        )
+        TextMMD(
+            text = stringResource(R.string.pdf_go_range, count.format(1), count.format(pages)),
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.padding(top = 6.dp),
+        )
+        Spacer(Modifier.height(18.dp))
+        Row(Modifier.fillMaxWidth()) {
+            OutlinedButtonMMD(onClick = onDismiss, modifier = Modifier.weight(1f).height(48.dp)) {
+                TextMMD(text = stringResource(R.string.cancel), style = MaterialTheme.typography.bodySmall)
+            }
+            Spacer(Modifier.width(10.dp))
+            OutlinedButtonMMD(onClick = commit, enabled = page != null, modifier = Modifier.weight(1f).height(48.dp)) {
+                TextMMD(text = stringResource(R.string.pdf_go), style = MaterialTheme.typography.bodySmall)
             }
         }
     }

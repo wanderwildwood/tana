@@ -2,10 +2,12 @@ package com.wanderwildwood.tana.work
 
 import android.content.ActivityNotFoundException
 import android.content.ClipData
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.core.content.FileProvider
+import com.wanderwildwood.tana.ReadActivity
 import java.io.File
 
 /**
@@ -18,8 +20,8 @@ object Opener {
 
     /** False when nothing on the phone can take it; the screen says so. */
     fun hand(context: Context, files: List<File>, purpose: Purpose): Boolean {
-        // A zip fetched to be looked inside, or a spreadsheet to be read, is opened by this
-        // app, not handed on.
+        // A zip fetched to be looked inside, or a spreadsheet or a PDF to be read, is opened
+        // by this app, not handed on.
         if (files.isEmpty() || purpose == Purpose.BROWSE || purpose == Purpose.VIEW) return true
         // Chosen for another app: the picking screen hands it back itself. See PickActivity.
         if (purpose == Purpose.PICK) return true
@@ -40,7 +42,8 @@ object Opener {
         val launched = when (purpose) {
             // A chooser every time for these two: "open with" is the whole point of the one,
             // and sharing without seeing where to would be a guess.
-            Purpose.OPEN_WITH, Purpose.SHARE -> Intent.createChooser(intent, null)
+            Purpose.OPEN_WITH -> chooser(context, intent)
+            Purpose.SHARE -> Intent.createChooser(intent, null)
             else -> intent
         }.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         return try {
@@ -50,6 +53,31 @@ object Opener {
             false
         }
     }
+
+    /**
+     * A PDF that the reader here could not open, handed to whatever else on the phone reads
+     * PDFs, by the address it came with. Another app's address is passed on with the read
+     * grant this app was given for it.
+     */
+    fun handOn(context: Context, uri: Uri): Boolean {
+        val intent = Intent(Intent.ACTION_VIEW)
+            .setDataAndType(uri, Pdfs.MIME)
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        return try {
+            context.startActivity(chooser(context, intent).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            true
+        } catch (e: ActivityNotFoundException) {
+            false
+        }
+    }
+
+    /**
+     * Android's "open with", without this app's own PDF reader in it: a file reaches here from
+     * that reader, or from a folder where a tap would have read it already.
+     */
+    private fun chooser(context: Context, intent: Intent): Intent =
+        Intent.createChooser(intent, null)
+            .putExtra(Intent.EXTRA_EXCLUDE_COMPONENTS, arrayOf(ComponentName(context, ReadActivity::class.java)))
 
     private fun share(files: List<File>, uris: List<Uri>): Intent {
         val mimes = files.map { Names.mime(it.name) }.distinct()

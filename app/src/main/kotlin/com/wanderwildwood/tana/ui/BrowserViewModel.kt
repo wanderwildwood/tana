@@ -20,6 +20,7 @@ import com.wanderwildwood.tana.work.Kind
 import com.wanderwildwood.tana.work.Mode
 import com.wanderwildwood.tana.work.Names
 import com.wanderwildwood.tana.work.Opener
+import com.wanderwildwood.tana.work.Pdfs
 import com.wanderwildwood.tana.work.Picking
 import com.wanderwildwood.tana.work.Pin
 import com.wanderwildwood.tana.work.Prefs
@@ -104,6 +105,9 @@ data class SheetView(
     val sheet: com.wanderwildwood.tana.work.Sheet? get() = sheets?.getOrNull(at)
 }
 
+/** A PDF open to be read. [file] is there from the start for one on the phone, and once it is fetched for one on a server. */
+data class PdfView(val entry: Entry, val file: java.io.File? = null)
+
 data class SearchState(
     val roots: List<Loc>,
     val within: String,
@@ -133,6 +137,7 @@ data class UiState(
     val search: SearchState? = null,
     val preview: Preview? = null,
     val sheet: SheetView? = null,
+    val pdf: PdfView? = null,
     /** The Nearby page, open: what is to be sent from it, or nothing when it was opened to receive. */
     val nearby: List<Entry>? = null,
 ) {
@@ -235,6 +240,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         when {
             s.nearby != null -> closeNearby()
             s.sheet != null -> closeSheet()
+            s.pdf != null -> closePdf()
             s.preview != null -> closePreview()
             s.info != null -> _state.update { it.copy(info = null) }
             s.search != null && s.selecting -> clearSelection()
@@ -337,6 +343,8 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
             if (p.several) toggle(entry) else hand(listOf(entry), Purpose.PICK)
         } else if (Names.extension(entry.name) == "zip") {
             browse(entry)
+        } else if (Pdfs.canRead(entry.name)) {
+            read(entry)
         } else if (Sheets.canView(entry.name)) {
             view(entry)
         } else {
@@ -510,6 +518,9 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
                 val job = work.job
                 if (job is Job.Fetch && job.purpose == Purpose.VIEW) {
                     work.fetched.firstOrNull()?.let { file -> _state.value.sheet?.let { readSheet(it.entry, file) } }
+                    work.fetched.firstOrNull()?.let { file ->
+                        _state.update { s -> s.pdf?.takeIf { it.file == null }?.let { s.copy(pdf = it.copy(file = file)) } ?: s }
+                    }
                     Transfers.seen()
                 } else if (job is Job.Fetch && job.purpose == Purpose.BROWSE) {
                     work.fetched.firstOrNull()?.let { go(Place.Folder(Loc(ZipStore.idFor(it), ""))) }
@@ -532,6 +543,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
                 // closes, and the trouble is said where every failed fetch says it.
                 _state.value.sheet?.takeIf { it.sheets == null && it.failure == null && it.entry.loc.store != LocalStore.ID }
                     ?.let { closeSheet() }
+                _state.value.pdf?.takeIf { it.file == null }?.let { closePdf() }
                 refresh()
             }
             else -> Unit
@@ -612,6 +624,27 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         finding?.cancel()
         folded = null
         _state.update { it.copy(sheet = null) }
+    }
+
+    // ---------------------------------------------------------------- PDFs
+
+    /** A PDF opened here, to be read. One not on the phone is fetched first, as a spreadsheet is. */
+    fun read(entry: Entry) {
+        if (entry.loc.store == LocalStore.ID) {
+            _state.update { it.copy(pdf = PdfView(entry, Stores.phone.file(entry.loc.path)), selection = emptySet()) }
+        } else {
+            _state.update { it.copy(pdf = PdfView(entry), selection = emptySet()) }
+            if (!start(Job.Fetch(listOf(entry), Purpose.VIEW))) _state.update { it.copy(pdf = null) }
+        }
+    }
+
+    fun closePdf() = _state.update { it.copy(pdf = null) }
+
+    /** The PDF on screen could not be read: put away, and handed to another app to try. */
+    fun handPdfOn() {
+        val shown = _state.value.pdf ?: return
+        closePdf()
+        open(shown.entry, Purpose.OPEN_WITH)
     }
 
     // ---------------------------------------------------------------- zips

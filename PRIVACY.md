@@ -59,6 +59,14 @@ To open or share a file that lives on a server, the app copies it into its own c
 phone first and hands the copy to the app that will open it. Those copies are deleted the next
 time the app starts, once they are a day old.
 
+## PDFs
+
+A PDF is read on the phone, by Android's own PDF reader; nothing about it goes anywhere. The
+page each one was left at is kept in the app's private storage, for the hundred read most
+lately, under a hash of the file's name and size rather than the name itself. A PDF another
+app hands over in a form that cannot be read in place is copied into the app's cache first, and
+the copy is deleted when it is closed, or a day later if the app was stopped before it could be.
+
 ## Nearby
 
 The Nearby page speaks [LocalSend](https://localsend.org)'s protocol, and does so only while it

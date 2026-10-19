@@ -34,6 +34,7 @@ import com.wanderwildwood.tana.ui.PreviewScreen
 import com.wanderwildwood.tana.ui.HomeScreen
 import com.wanderwildwood.tana.ui.InfoDialog
 import com.wanderwildwood.tana.ui.NearbyScreen
+import com.wanderwildwood.tana.ui.PdfScreen
 import com.wanderwildwood.tana.ui.Notice
 import com.wanderwildwood.tana.ui.Place
 import com.wanderwildwood.tana.ui.SearchScreen
@@ -43,6 +44,7 @@ import com.wanderwildwood.tana.ui.TroubleDialog
 import com.wanderwildwood.tana.ui.describe
 import com.wanderwildwood.tana.ui.monochrome
 import com.wanderwildwood.tana.work.Asked
+import com.wanderwildwood.tana.work.PdfSource
 import com.wanderwildwood.tana.work.Picking
 import com.wanderwildwood.tana.work.Transfers
 import com.wanderwildwood.tana.work.Work
@@ -161,10 +163,12 @@ private fun Browser(
     val preview = state.preview
     val nearby = state.nearby
     val sheet = state.sheet
+    val pdf = state.pdf
     when {
         server != null -> ServerScreen(server, vm) { editing = null }
         nearby != null -> NearbyScreen(nearby, vm)
         sheet != null -> SheetScreen(sheet, vm)
+        pdf != null -> PdfScreen(pdf.file?.let(PdfSource::OfFile), pdf.entry.name, vm::closePdf, vm::handPdfOn)
         preview != null -> PreviewScreen(preview, preview.entry.loc in state.selection, picking?.several == true, vm)
         search != null -> SearchScreen(search, state, work, vm)
         state.place == Place.Home -> HomeScreen(
