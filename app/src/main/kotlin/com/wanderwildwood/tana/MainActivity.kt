@@ -46,6 +46,7 @@ import com.wanderwildwood.tana.ui.monochrome
 import com.wanderwildwood.tana.work.Asked
 import com.wanderwildwood.tana.work.PdfSource
 import com.wanderwildwood.tana.work.Picking
+import com.wanderwildwood.tana.work.Printer
 import com.wanderwildwood.tana.work.Transfers
 import com.wanderwildwood.tana.work.Work
 
@@ -120,6 +121,7 @@ private fun Browser(
     // Before anything can be pressed: see BrowserViewModel.press.
     if (picking != null && vm.picking == null) vm.picking = picking
     LaunchedEffect(vm) { vm.picked.collect { onPicked(it) } }
+    LaunchedEffect(vm) { vm.printing.collect { if (!Printer.print(activity, it)) vm.cannotPrint() } }
     LaunchedEffect(asked) {
         if (asked != null) {
             Asked.place(asked)?.let(vm::openAt)

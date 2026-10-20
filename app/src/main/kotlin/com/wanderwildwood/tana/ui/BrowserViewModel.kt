@@ -67,6 +67,7 @@ data class Clashing(val carry: Carry, val dest: Loc, val names: List<String>)
 sealed interface Notice {
     data object Busy : Notice
     data object NothingOpens : Notice
+    data object NothingPrints : Notice
     data object FoldersNotShared : Notice
     data class Problem(val problem: Throwable) : Notice
 }
@@ -171,6 +172,12 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     private val _picked = kotlinx.coroutines.flow.MutableSharedFlow<List<java.io.File>>(extraBufferCapacity = 1)
     /** The files chosen for the app that asked, as files on the phone. */
     val picked: kotlinx.coroutines.flow.SharedFlow<List<java.io.File>> = _picked
+
+    /** A file to print. Android's print screen opens over a window, so the window does it. */
+    private val _printing = kotlinx.coroutines.flow.MutableSharedFlow<java.io.File>(extraBufferCapacity = 1)
+    val printing: kotlinx.coroutines.flow.SharedFlow<java.io.File> = _printing
+
+    fun cannotPrint() = notice(Notice.NothingPrints)
 
     /** What a folder shows: while choosing for another app, only what it will take. */
     fun shown(entries: List<Entry>): List<Entry> {
@@ -423,6 +430,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         if (entries.all { it.loc.store == LocalStore.ID }) {
             val files = entries.map { Stores.phone.file(it.loc.path) }
             if (purpose == Purpose.PICK) _picked.tryEmit(files)
+            else if (purpose == Purpose.PRINT) files.firstOrNull()?.let { _printing.tryEmit(it) }
             else if (!Opener.hand(app, files, purpose)) notice(Notice.NothingOpens)
         } else {
             start(Job.Fetch(entries, purpose))
@@ -531,6 +539,9 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
                         _picked.tryEmit(work.fetched)
                         Transfers.seen()
                     }
+                } else if (job is Job.Fetch && job.purpose == Purpose.PRINT) {
+                    work.fetched.firstOrNull()?.let { _printing.tryEmit(it) }
+                    Transfers.seen()
                 } else if (job is Job.Fetch) {
                     if (!Opener.hand(app, work.fetched, job.purpose)) notice(Notice.NothingOpens)
                     Transfers.seen()

@@ -80,6 +80,7 @@ private fun Foot(state: UiState, work: com.wanderwildwood.tana.work.Work, vm: Br
         null, is Notice.Problem -> Unit
         Notice.Busy -> NoticeStrip(stringResource(R.string.notice_busy), vm::noticeSeen)
         Notice.NothingOpens -> NoticeStrip(stringResource(R.string.notice_nothing_opens), vm::noticeSeen)
+        Notice.NothingPrints -> NoticeStrip(stringResource(R.string.notice_nothing_prints), vm::noticeSeen)
         Notice.FoldersNotShared -> NoticeStrip(stringResource(R.string.notice_folders_not_shared), vm::noticeSeen)
     }
 }
@@ -282,6 +283,7 @@ fun FolderScreen(state: UiState, work: com.wanderwildwood.tana.work.Work, vm: Br
             onCompress = { more = false; vm.compress() },
             onExtract = { more = false; one?.let(vm::extractHere) },
             onOpenWith = { more = false; one?.let { vm.open(it, com.wanderwildwood.tana.work.Purpose.OPEN_WITH) }; vm.clearSelection() },
+            onPrint = { more = false; one?.let { vm.open(it, com.wanderwildwood.tana.work.Purpose.PRINT) }; vm.clearSelection() },
             onRename = { more = false; renaming = one },
             onInfo = { more = false; one?.let(vm::info) },
             onPin = { more = false; one?.let(vm::pin) },
@@ -437,6 +439,7 @@ fun SearchScreen(search: SearchState, state: UiState, work: com.wanderwildwood.t
             onCompress = { more = false },
             onExtract = { more = false },
             onOpenWith = { more = false; one?.let { vm.open(it, com.wanderwildwood.tana.work.Purpose.OPEN_WITH) }; vm.clearSelection() },
+            onPrint = { more = false; one?.let { vm.open(it, com.wanderwildwood.tana.work.Purpose.PRINT) }; vm.clearSelection() },
             onRename = { more = false },
             onInfo = { more = false; one?.let(vm::info) },
             onPin = { more = false; one?.let(vm::pin); vm.clearSelection() },

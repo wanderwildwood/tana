@@ -42,6 +42,7 @@ import com.wanderwildwood.tana.store.Entry
 import com.wanderwildwood.tana.work.Clash
 import com.wanderwildwood.tana.work.Names
 import com.wanderwildwood.tana.work.Pdfs
+import com.wanderwildwood.tana.work.Printer
 import com.wanderwildwood.tana.work.Sort
 import com.wanderwildwood.tana.work.SortBy
 
@@ -229,6 +230,7 @@ fun MoreDialog(
     onCompress: () -> Unit,
     onExtract: () -> Unit,
     onOpenWith: () -> Unit,
+    onPrint: () -> Unit,
     onRename: () -> Unit,
     onInfo: () -> Unit,
     onPin: () -> Unit,
@@ -241,6 +243,7 @@ fun MoreDialog(
         if (chosen.any { !it.isFolder }) DialogRow(stringResource(R.string.action_share), onClick = onShare)
         DialogRow(stringResource(R.string.action_send_nearby), onClick = onSendNearby)
         if (one != null && !one.isFolder) DialogRow(stringResource(R.string.action_open_with), onClick = onOpenWith)
+        if (one != null && !one.isFolder && Printer.canPrint(one.name)) DialogRow(stringResource(R.string.action_print), onClick = onPrint)
         if (one != null && !readOnly && !fromSearch && !one.isFolder && Names.extension(one.name) == "zip") {
             DialogRow(stringResource(R.string.action_extract), onClick = onExtract)
         }

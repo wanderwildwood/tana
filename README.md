@@ -83,6 +83,9 @@ as places like any other.
   Back goes straight back to the app they came from. A PDF locked with a password is not opened;
   it can be handed to another app from where it says so, and *Open with* still does that for
   any PDF.
+- **Printing.** *More → Print…* on a PDF or a picture sends it through the phone's own print
+  service, which finds most Wi-Fi printers by itself; a picture goes as one page, as big as the
+  paper allows. Files on a server are fetched first.
 - **Folders from other apps.** Anything Android's own folder picker can reach that no path can —
   Termux's home, for one — can be added to the start page, and then works like any other place.
 - **Search** by name below the folder you are in, or everywhere on the phone: every word you type

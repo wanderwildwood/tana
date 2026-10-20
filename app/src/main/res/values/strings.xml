@@ -113,6 +113,7 @@
     <string name="action_share">Share</string>
     <string name="action_send_nearby">Send nearby</string>
     <string name="action_open_with">Open with…</string>
+    <string name="action_print">Print…</string>
     <string name="action_rename">Rename</string>
     <string name="action_info">Info</string>
     <string name="action_pin">Pin to the start page</string>
@@ -170,6 +171,7 @@
     <!-- One-line notices -->
     <string name="notice_busy">Wait for the one under way to finish first.</string>
     <string name="notice_nothing_opens">Nothing on the phone opens this kind of file.</string>
+    <string name="notice_nothing_prints">This phone has nothing to print with.</string>
     <string name="notice_folders_not_shared">A folder cannot be shared. Open it and choose the files.</string>
 
     <!-- ============================================================ -->

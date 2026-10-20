@@ -25,10 +25,12 @@ object Opener {
         if (files.isEmpty() || purpose == Purpose.BROWSE || purpose == Purpose.VIEW) return true
         // Chosen for another app: the picking screen hands it back itself. See PickActivity.
         if (purpose == Purpose.PICK) return true
+        // Printed from the app's own window, which Android's print screen needs. See Printer.
+        if (purpose == Purpose.PRINT) return true
         val uris = files.map { uri(context, it) }
         val intent = when (purpose) {
             Purpose.SHARE -> share(files, uris)
-            Purpose.OPEN, Purpose.OPEN_WITH, Purpose.INSTALL, Purpose.BROWSE, Purpose.VIEW, Purpose.PICK -> {
+            Purpose.OPEN, Purpose.OPEN_WITH, Purpose.INSTALL, Purpose.BROWSE, Purpose.VIEW, Purpose.PICK, Purpose.PRINT -> {
                 val file = files.first()
                 Intent(Intent.ACTION_VIEW)
                     .setDataAndType(uris.first(), Names.mime(file.name))
