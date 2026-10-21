@@ -54,6 +54,7 @@ import com.wanderwildwood.tana.store.Server
 import com.wanderwildwood.tana.store.Stores
 import com.wanderwildwood.tana.work.Kind
 import com.wanderwildwood.tana.work.Volumes
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /** Everything along the foot of a screen, in the order it stacks. */
@@ -231,6 +232,29 @@ fun FolderScreen(state: UiState, work: com.wanderwildwood.tana.work.Work, vm: Br
         Column(Modifier.fillMaxSize().padding(padding)) {
             // Not at the root itself, where it would only say the title again.
             if (folder != null && root != null && folder.path != root.path) PathLine(root, rootLabel, folder, onJump = { vm.go(Place.Folder(it)) })
+            // What a swipe down set going, in words: on a server, that it is asking and then that
+            // the folder is up to date; anywhere, what went wrong. A folder on the phone reads
+            // again too quickly to need saying.
+            val onServer = folder != null && com.wanderwildwood.tana.store.Stores.server(folder.store) != null
+            val pulled = state.pulled
+            LaunchedEffect(pulled) { if (pulled == Pulled.Done || pulled is Pulled.Failed) { delay(3000); vm.clearPulled() } }
+            val pullLine = when (pulled) {
+                Pulled.Asking -> if (onServer) stringResource(R.string.folder_pull_asking) else null
+                Pulled.Done -> if (onServer) stringResource(R.string.folder_pull_done) else null
+                is Pulled.Failed -> describe(context, pulled.problem)
+                null -> null
+            }
+            if (pullLine != null) {
+                TextMMD(
+                    text = pullLine,
+                    style = MaterialTheme.typography.labelSmall,
+                    // Two, so what went wrong is read whole: "… cannot be reached. Away from home,
+                    // check that Tailscale is on." does not fit one.
+                    maxLines = 2,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+                )
+            }
             Box(Modifier.weight(1f)) {
                 when {
                     state.reading == Reading.FAILED -> Column(Modifier.padding(16.dp)) {
@@ -254,7 +278,11 @@ fun FolderScreen(state: UiState, work: com.wanderwildwood.tana.work.Work, vm: Br
                         modifier = Modifier.padding(16.dp),
                     )
                     else -> FolderList(state, vm) { shown, listState ->
-                        PagedColumn(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface), state = listState) {
+                        PagedColumn(
+                            Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface),
+                            state = listState,
+                            onPullAtTop = vm::pull,
+                        ) {
                             items(shown, key = { it.loc.path }) { entry ->
                                 EntryRow(
                                     entry = entry,

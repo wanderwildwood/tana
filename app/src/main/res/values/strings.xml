@@ -53,6 +53,9 @@
     <string name="folder_reading">Reading…</string>
     <string name="folder_empty">Nothing here.</string>
     <string name="folder_try_again">Try again</string>
+    <!-- One line above a server folder after a swipe down on its first page -->
+    <string name="folder_pull_asking">Reading the folder again…</string>
+    <string name="folder_pull_done">Up to date</string>
     <!-- Top bar while things are selected -->
     <!-- While choosing files for another app: the button that hands them back -->
     <!-- Shown inside Android's own file picker when a server does not answer -->

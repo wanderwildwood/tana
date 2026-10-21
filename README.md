@@ -50,6 +50,7 @@ as places like any other.
   reaches whatever the phone can reach, so a server's Tailscale address works with Tailscale on.
   A Nextcloud is added by its address, your user name and an app password made for the phone
   (in Nextcloud, Settings → Security → Devices & sessions).
+  A swipe down at the top of a folder reads it again, on a server or on the phone.
 - **Servers in Android's own file picker**, under *Files*. A file chosen there can be saved back
   by the app that chose it — a password vault, an editor. The app writes into a copy on the
   phone; when it closes the file, the copy goes up under a name of its own and then takes the old

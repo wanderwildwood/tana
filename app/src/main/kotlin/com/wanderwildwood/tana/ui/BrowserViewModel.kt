@@ -141,6 +141,8 @@ data class UiState(
     val pdf: PdfView? = null,
     /** The Nearby page, open: what is to be sent from it, or nothing when it was opened to receive. */
     val nearby: List<Entry>? = null,
+    /** How a swipe down on the folder's first page is going; see [BrowserViewModel.pull]. */
+    val pulled: Pulled? = null,
 ) {
     val selecting: Boolean get() = selection.isNotEmpty()
     val folder: Loc? get() = (place as? Place.Folder)?.loc
@@ -149,6 +151,16 @@ data class UiState(
     /** What is chosen: among the search's results while a search is open, else in the folder. */
     fun selected(): List<Entry> = (search?.results ?: entries).filter { it.loc in selection }
 }
+
+/** A folder read again from a swipe down, said in a line above it rather than by blanking it. */
+sealed interface Pulled {
+    data object Asking : Pulled
+    data object Done : Pulled
+    data class Failed(val problem: Throwable) : Pulled
+}
+
+/** A folder or Recent can be read again once it has been read; Home lists nothing fetched. */
+internal fun canPull(place: Place, reading: Reading): Boolean = place != Place.Home && reading == Reading.DONE
 
 class BrowserViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -260,8 +272,50 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     }
 
     private fun show(place: Place) {
-        _state.update { it.copy(place = place, selection = emptySet(), entries = emptyList(), failure = null) }
+        _state.update { it.copy(place = place, selection = emptySet(), entries = emptyList(), failure = null, pulled = null) }
         refresh()
+    }
+
+    /**
+     * A swipe down at the top of a folder: the same listing as [refresh], but the rows stay on
+     * screen while it is read, and a server that does not answer leaves them there and says why
+     * in the line above, rather than swapping the folder for an error.
+     */
+    fun pull() {
+        val start = _state.value
+        if (!canPull(start.place, start.reading) || start.pulled == Pulled.Asking) return
+        val place = start.place
+        listing?.cancel()
+        _state.update { it.copy(pulled = Pulled.Asking) }
+        listing = viewModelScope.launch {
+            val result = withContext(Dispatchers.IO) { runCatching { read(place, _state.value.showHidden) } }
+            if (!isActive || _state.value.place != place) return@launch
+            result.fold(
+                onSuccess = { list -> show(place, list); _state.update { it.copy(pulled = Pulled.Done) } },
+                onFailure = { e -> _state.update { it.copy(pulled = Pulled.Failed(e)) } },
+            )
+        }
+    }
+
+    /** The line above the folder has been said for long enough. */
+    fun clearPulled() = _state.update { if (it.pulled == Pulled.Asking) it else it.copy(pulled = null) }
+
+    private fun read(place: Place, hidden: Boolean): List<Entry> = when (place) {
+        Place.Recent -> Recent.list(app, hidden)
+        is Place.Folder -> Stores.get(place.loc.store).list(place.loc.path)
+            .filter { hidden || !it.name.startsWith('.') }
+        Place.Home -> emptyList()
+    }
+
+    private fun show(place: Place, list: List<Entry>) {
+        val sorted = if (place == Place.Recent) list else _state.value.sort.apply(list)
+        _state.update { s ->
+            s.copy(
+                entries = sorted,
+                reading = Reading.DONE,
+                selection = s.selection.intersect(sorted.map { it.loc }.toSet()),
+            )
+        }
     }
 
     fun refresh() {
@@ -272,31 +326,13 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
             _state.update { it.copy(reading = Reading.DONE) }
             return
         }
-        _state.update { it.copy(reading = Reading.NOT_YET, failure = null) }
+        _state.update { it.copy(reading = Reading.NOT_YET, failure = null, pulled = null) }
         listing = viewModelScope.launch {
             val hidden = _state.value.showHidden
-            val result = withContext(Dispatchers.IO) {
-                runCatching {
-                    when (place) {
-                        Place.Recent -> Recent.list(app, hidden)
-                        is Place.Folder -> Stores.get(place.loc.store).list(place.loc.path)
-                            .filter { hidden || !it.name.startsWith('.') }
-                        Place.Home -> emptyList()
-                    }
-                }
-            }
+            val result = withContext(Dispatchers.IO) { runCatching { read(place, hidden) } }
             if (!isActive || _state.value.place != place) return@launch
             result.fold(
-                onSuccess = { list ->
-                    val sorted = if (place == Place.Recent) list else _state.value.sort.apply(list)
-                    _state.update { s ->
-                        s.copy(
-                            entries = sorted,
-                            reading = Reading.DONE,
-                            selection = s.selection.intersect(sorted.map { it.loc }.toSet()),
-                        )
-                    }
-                },
+                onSuccess = { list -> show(place, list) },
                 onFailure = { e -> _state.update { it.copy(reading = Reading.FAILED, failure = e, entries = emptyList()) } },
             )
         }
