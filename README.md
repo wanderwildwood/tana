@@ -120,7 +120,7 @@ sent anywhere but to the servers you add and the nearby devices you send to.
 
 ## Where this is up to
 
-Version 0.2.0. The copy, move, delete and search engine is unit tested against real folders —
+Version 0.7.3. The copy, move, delete and search engine is unit tested against real folders —
 including a copy stopped half way, and a write that fails while replacing a file, where the old
 file has to survive. Zips are made and read back byte for byte, and an archive that tries to
 write outside the folder it is extracted into has those entries left out. A second suite runs against a real Samba share when one is named, and
@@ -128,8 +128,7 @@ passes: a five-megabyte folder there and back byte for byte, an upload stopped h
 nothing on the server, a connection left idle for ninety seconds still answering at once.
 
 Every screen has been driven on an Android 12 emulator the size of a Kompakt, against a real
-server: the checksum the app worked out for a file on the server matched the server's own. What
-has not happened yet is anybody using it on the phone for a week.
+server: the checksum the app worked out for a file on the server matched the server's own.
 
 Nearby has been run against LocalSend's own command-line client, 1.18.2, in both directions:
 a file, a folder and three hundred megabytes received and sent byte for byte, a decline from
