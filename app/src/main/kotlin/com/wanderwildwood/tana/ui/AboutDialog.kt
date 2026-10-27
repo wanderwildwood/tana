@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -46,17 +47,22 @@ fun AboutDialog(onDismiss: () -> Unit) {
         )
 
         Spacer(Modifier.height(14.dp))
-        TextMMD(
-            text = stringResource(R.string.about_body),
-            style = MaterialTheme.typography.labelSmall,
-        )
-
-        Spacer(Modifier.height(14.dp))
-        TextMMD(text = stringResource(R.string.about_licence), style = MaterialTheme.typography.labelSmall)
-        TextMMD(
-            text = stringResource(R.string.about_bundled),
-            style = MaterialTheme.typography.labelSmall,
-        )
+        // The text may outgrow the dialog; it pages by whole rows and Close stays below it.
+        PagedColumn(Modifier.weight(1f, fill = false).heightIn(max = 440.dp)) {
+            item { TextMMD(text = stringResource(R.string.about_body), style = MaterialTheme.typography.labelSmall) }
+            item { Heading(R.string.about_privacy_title) }
+            item { TextMMD(text = stringResource(R.string.about_privacy_servers), style = MaterialTheme.typography.labelSmall) }
+            item { TextMMD(text = stringResource(R.string.about_privacy_phone), style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 8.dp)) }
+            item { TextMMD(text = stringResource(R.string.about_privacy_nearby), style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 8.dp)) }
+            item { TextMMD(text = stringResource(R.string.about_privacy_close), style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 8.dp)) }
+            item { Heading(R.string.about_terms_title) }
+            item { TextMMD(text = stringResource(R.string.about_terms), style = MaterialTheme.typography.labelSmall) }
+            item {
+                Spacer(Modifier.height(10.dp))
+                TextMMD(text = stringResource(R.string.about_licence), style = MaterialTheme.typography.labelSmall)
+                TextMMD(text = stringResource(R.string.about_bundled), style = MaterialTheme.typography.labelSmall)
+            }
+        }
 
         Spacer(Modifier.height(14.dp))
         Llama()
@@ -67,6 +73,16 @@ fun AboutDialog(onDismiss: () -> Unit) {
             modifier = Modifier.fillMaxWidth().height(48.dp),
         ) { TextMMD(text = stringResource(R.string.about_close), style = MaterialTheme.typography.bodySmall) }
     }
+}
+
+@Composable
+private fun Heading(id: Int) {
+    TextMMD(
+        text = stringResource(id),
+        style = MaterialTheme.typography.bodyMedium,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(top = 14.dp, bottom = 4.dp),
+    )
 }
 
 /**

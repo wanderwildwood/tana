@@ -101,6 +101,15 @@ fun NameDialog(title: String, confirm: String, initial: String, onDone: (String)
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { commit() }),
         )
+        // The button is off for want of something; say what.
+        if (!ok) {
+            TextMMD(
+                text = stringResource(if (value.text.isBlank()) R.string.name_needed else R.string.name_invalid),
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(top = 6.dp),
+            )
+        }
         Spacer(Modifier.height(18.dp))
         Row(Modifier.fillMaxWidth()) {
             OutlinedButtonMMD(onClick = onDismiss, modifier = Modifier.weight(1f).height(48.dp)) {
@@ -146,6 +155,7 @@ fun PageDialog(pages: Int, onGo: (Int) -> Unit, onDismiss: () -> Unit) {
         TextMMD(
             text = stringResource(R.string.pdf_go_range, count.format(1), count.format(pages)),
             style = MaterialTheme.typography.labelSmall,
+            fontWeight = if (typed.isNotEmpty() && page == null) FontWeight.Bold else null,
             modifier = Modifier.padding(top = 6.dp),
         )
         Spacer(Modifier.height(18.dp))
@@ -204,16 +214,6 @@ fun SortDialog(sort: Sort, showHidden: Boolean, onSort: (SortBy) -> Unit, onHidd
             }
             Spacer(Modifier.width(12.dp))
             SwitchMMD(checked = showHidden, onCheckedChange = null)
-        }
-        val context = LocalContext.current
-        val jumpShown by rememberListJumpShown()
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().clickable { ListJumpPrefs.setShown(context, !jumpShown) }.padding(vertical = 8.dp),
-        ) {
-            TextMMD(text = stringResource(R.string.list_jump_setting), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-            Spacer(Modifier.width(12.dp))
-            SwitchMMD(checked = jumpShown, onCheckedChange = null)
         }
         Spacer(Modifier.height(14.dp))
         WideButton(stringResource(R.string.close), onDismiss)

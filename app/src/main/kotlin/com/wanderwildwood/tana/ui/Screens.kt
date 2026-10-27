@@ -137,7 +137,7 @@ fun HomeScreen(
                     var armed by remember(pin) { mutableStateOf(false) }
                     LaunchedEffect(armed) {
                         if (armed) {
-                            kotlinx.coroutines.delay(4000)
+                            kotlinx.coroutines.delay(6000)
                             armed = false
                         }
                     }
@@ -237,7 +237,7 @@ fun FolderScreen(state: UiState, work: com.wanderwildwood.tana.work.Work, vm: Br
             // again too quickly to need saying.
             val onServer = folder != null && com.wanderwildwood.tana.store.Stores.server(folder.store) != null
             val pulled = state.pulled
-            LaunchedEffect(pulled) { if (pulled == Pulled.Done || pulled is Pulled.Failed) { delay(3000); vm.clearPulled() } }
+            LaunchedEffect(pulled) { if (pulled == Pulled.Done) { delay(3000); vm.clearPulled() } }
             val pullLine = when (pulled) {
                 Pulled.Asking -> if (onServer) stringResource(R.string.folder_pull_asking) else null
                 Pulled.Done -> if (onServer) stringResource(R.string.folder_pull_done) else null
@@ -327,29 +327,14 @@ fun FolderScreen(state: UiState, work: com.wanderwildwood.tana.work.Work, vm: Br
     }
 }
 
-/**
- * A folder's entries with the jump down their edge. Folders come first in every order, so by
- * name the list is two runs from A to Z, and the letters follow the longer of them: the files,
- * in a folder of files, or the folders where those are most of it. Any other order has dots.
- */
+/** A folder's entries, folders first in every order, in the order chosen. */
 @Composable
 private fun FolderList(state: UiState, vm: BrowserViewModel, list: @Composable (List<com.wanderwildwood.tana.store.Entry>, LazyListState) -> Unit) {
     val shown = vm.shown(state.entries)
     // Each folder opens at its top: one state shared by every folder kept the row number of the
     // last, and a folder opened from far down another came up already scrolled.
     val listState = remember(state.place) { LazyListState() }
-    val byName = state.place != Place.Recent && state.sort.by == SortBy.NAME && !state.sort.reversed
-    val jump = remember(shown, byName) {
-        if (!byName) {
-            ListJump.Pages
-        } else {
-            val folders = shown.takeWhile { it.isFolder }
-            val files = shown.drop(folders.size)
-            if (folders.size > files.size) ListJump.Letters(folders.map { it.name })
-            else ListJump.Letters(files.map { it.name }, firstIndex = folders.size)
-        }
-    }
-    ListJumpBox(listState, jump) { list(shown, listState) }
+    list(shown, listState)
 }
 
 /**
@@ -436,7 +421,7 @@ fun SearchScreen(search: SearchState, state: UiState, work: com.wanderwildwood.t
                         onClick = go,
                         modifier = Modifier.fillMaxWidth().padding(16.dp).height(48.dp),
                     ) { TextMMD(text = stringResource(R.string.search_go), style = MaterialTheme.typography.bodySmall) }
-                    else -> ListJumpBox(resultsState, ListJump.Pages) {
+                    else -> androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
                         PagedColumn(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface), state = resultsState) {
                             items(search.results, key = { it.loc.store + it.loc.path }) { entry ->
                                 EntryRow(
@@ -542,7 +527,16 @@ fun ServerScreen(initial: Server, vm: BrowserViewModel, onDone: () -> Unit) {
         onDone()
     }
     val ready = host.isNotBlank() && (dav || share.isNotBlank()) && !checking
-    KeyboardFirst(onDone)
+    // Anything typed is asked about before it is thrown away: the first press of Close or Back
+    // says so, the second leaves.
+    val changed = name != initial.name || kind != initial.kind || host != initial.host ||
+        share != initial.share || user != initial.user || password != initial.password
+    val (discarding, pressLeave) = rememberArmed("discard", onDone)
+    val leave = { if (changed && !checking) pressLeave() else onDone() }
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    // The answer is at the top of the form; the form may be turned to a lower page.
+    LaunchedEffect(problem, discarding) { if (problem != null || discarding) listState.scrollToItem(0) }
+    KeyboardFirst(leave)
 
     val save = {
         if (ready) {
@@ -564,12 +558,13 @@ fun ServerScreen(initial: Server, vm: BrowserViewModel, onDone: () -> Unit) {
         }
     }
 
+    val first = if (discarding) stringResource(R.string.server_discard_armed) else problem
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             TopAppBarMMD(
                 title = { TextMMD(text = stringResource(if (editing) R.string.server_edit_title else R.string.server_add_title)) },
-                navigationIcon = { BarButton(Icons.Close, stringResource(R.string.cancel), onDone) },
+                navigationIcon = { BarButton(Icons.Close, stringResource(R.string.cancel), leave) },
                 // In the bar, not at the foot of the form: with the keyboard up the foot of
                 // the form is under it, and a button you cannot see is one you cannot press.
                 actions = {
@@ -583,10 +578,10 @@ fun ServerScreen(initial: Server, vm: BrowserViewModel, onDone: () -> Unit) {
             )
         },
     ) { padding ->
-        PagedColumn(Modifier.fillMaxSize().padding(padding).imePadding().background(MaterialTheme.colorScheme.surface)) {
+        PagedColumn(Modifier.fillMaxSize().padding(padding).imePadding().background(MaterialTheme.colorScheme.surface), state = listState) {
             // First, where it will be seen: the answer to Save is read from the top of the
             // screen, next to the word that was pressed.
-            problem?.let {
+            first?.let {
                 item {
                     TextMMD(
                         text = it,
@@ -625,6 +620,15 @@ fun ServerScreen(initial: Server, vm: BrowserViewModel, onDone: () -> Unit) {
                         text = stringResource(if (checking) R.string.server_checking else if (dav) R.string.server_dav_note else R.string.server_note),
                         style = MaterialTheme.typography.labelSmall,
                     )
+                    // Save is greyed out for want of something; say what.
+                    if (!ready && !checking) {
+                        Spacer(Modifier.height(8.dp))
+                        TextMMD(
+                            text = stringResource(if (host.isBlank()) R.string.server_need_address else R.string.server_need_share),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
                 }
             }
             if (editing) {

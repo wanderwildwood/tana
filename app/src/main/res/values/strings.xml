@@ -98,6 +98,8 @@
     <!-- Under the box a page number is typed in. "1 to 80" -->
     <string name="pdf_go_range">%1$s to %2$s</string>
     <string name="pdf_go">Go</string>
+    <string name="name_needed">Type a name first.</string>
+    <string name="name_invalid">A name cannot hold a slash.</string>
     <string name="pdf_locked">This PDF is locked with a password. Files cannot open a locked one; another app may.</string>
     <string name="pdf_failed">This file cannot be read as a PDF here. Another app may manage it.</string>
     <string name="pdf_hand_on">Open with another app</string>
@@ -110,7 +112,7 @@
     <string name="action_copy">Copy</string>
     <string name="action_move">Move</string>
     <string name="action_delete">Delete</string>
-    <string name="action_delete_armed">Delete — tap again</string>
+    <string name="action_delete_armed">Delete for good, no undo — tap again</string>
     <string name="action_more">More</string>
     <!-- In the "More" dialog -->
     <string name="action_share">Share</string>
@@ -185,7 +187,7 @@
     <string name="rename_title">Rename</string>
     <string name="rename_confirm">Rename</string>
 
-    <string name="sort_title">Sort by</string>
+    <string name="sort_title">Sort and show</string>
     <string name="sort_name">Name</string>
     <string name="sort_date">Date</string>
     <string name="sort_size">Size</string>
@@ -261,6 +263,9 @@
     <string name="server_dav_note">For a Nextcloud, its address alone is enough. Make an app password for this phone in Nextcloud, under Settings → Security → Devices &amp; sessions, and type it here. Any other WebDAV server: the full address of the folder. Away from home, the phone reaches it only if the address is one it can reach from there, such as a Tailscale address with Tailscale on.</string>
     <string name="server_note">The shared drives on a Samba or Windows server. Away from home, the phone reaches it only if the server’s address is one it can reach from there, such as a Tailscale address with Tailscale on.</string>
     <string name="server_save">Save</string>
+    <string name="server_discard_armed">You have not saved this server. Press Close again to leave without saving it.</string>
+    <string name="server_need_address">Save needs an address first.</string>
+    <string name="server_need_share">Save needs the name of the shared folder first.</string>
     <string name="server_checking">Checking it can be reached…</string>
     <!-- The same, where Save was, in the top bar -->
     <string name="server_checking_short">Checking…</string>
@@ -325,6 +330,13 @@
 
     <string name="about_title">Files %1$s</string>
     <string name="about_body">It reaches the servers you add, and nothing else. A server’s password is kept only on this phone, sealed with a key that never leaves it.</string>
+    <string name="about_privacy_title">Privacy</string>
+    <string name="about_privacy_servers">The app connects only to the servers you set up (Samba, Nextcloud or WebDAV). Your sign-in details are kept on this phone, sealed with a key that never leaves it, and are sent only to that server. Nothing is sent to the app’s maker.</string>
+    <string name="about_privacy_phone">It asks for access to all files on the phone, because that is what a file manager does, and to install packages, so an APK you tap goes to Android’s installer. Other apps can open and save files on your servers through this app only when you pick one in Android’s file picker. Location is asked for only to start or join a Wi-Fi Direct network on the Nearby page; the app never reads where the phone is.</string>
+    <string name="about_privacy_nearby">Nearby is on only while its page is open. Then the phone announces its name on the Wi-Fi and, if you tap two phones together (NFC), shares a network name and password. Files arrive only when you accept them.</string>
+    <string name="about_privacy_close">There are no ads, no analytics and no tracking. The llama opens a donation page in your browser, and that is the only link.</string>
+    <string name="about_terms_title">Terms</string>
+    <string name="about_terms">This app is free software under the GNU General Public License v3. It comes with no warranty: use it at your own risk. Deleting a file here cannot be undone.</string>
     <string name="about_licence">GNU General Public License v3</string>
     <string name="about_bundled">Servers through smbj and Bouncy Castle (Apache-2.0, MIT). Icons from Material Symbols (Apache-2.0).</string>
     <string name="about_feed_the_llamas">feed the llamas</string>
@@ -386,7 +398,7 @@
     <string name="nearby_accept">Accept</string>
     <string name="nearby_decline">Decline</string>
     <string name="nearby_pin_title">%1$s asks for its PIN</string>
-    <string name="nearby_pin_wrong">Not the right PIN for %1$s. Try again</string>
+    <string name="nearby_pin_wrong">Not the right PIN for %1$s. Try again.</string>
     <string name="nearby_pin_send">Send</string>
     <!-- Away from Wi-Fi: a Wi-Fi Direct network of the phone's own, joined by an NFC tap -->
     <string name="nearby_section_away">Away from Wi-Fi</string>
@@ -410,7 +422,4 @@
     <string name="nearby_away_busy">Wi-Fi Direct is busy. Try again in a moment.</string>
     <string name="nearby_away_no_answer">Could not join in half a minute. Check the other phone still shows its network, then hold the phones together again.</string>
     <string name="nearby_away_other">That did not work. Try again.</string>
-    <string name="list_jump_setting">Letters and page dots</string>
-    <string name="list_jump_shown">Shown</string>
-    <string name="list_jump_hidden">Hidden</string>
 </resources>

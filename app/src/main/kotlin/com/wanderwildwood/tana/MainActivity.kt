@@ -9,6 +9,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalCursorBlinkEnabled
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -61,7 +63,10 @@ class MainActivity : ComponentActivity() {
         if (savedInstanceState == null) asked = intent
         setContent {
             ThemeMMD(colorScheme = monochrome) {
-                Files(this, asked, onAnswered = { asked = null })
+                // A steady cursor: a blinking one repaints the panel twice a second.
+                CompositionLocalProvider(LocalCursorBlinkEnabled provides false) {
+                    Files(this, asked, onAnswered = { asked = null })
+                }
             }
         }
     }

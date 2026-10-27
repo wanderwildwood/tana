@@ -30,8 +30,10 @@ import java.io.FileNotFoundException
  * a picture before it is chosen -- was there at all.
  *
  * A file chosen here can be read, and written back by the app that chose it (see
- * [openForWriting]); nothing new is made on a server from another app's save dialog. The
- * phone's own storage is not repeated here; Android's picker already shows it.
+ * [openForWriting]). A server's folders also take new files and folders, so another app's
+ * "Save as" and its choose-a-folder screens can write into a Nextcloud through this app, and
+ * files and folders here can be renamed and deleted. The phone's own storage is not repeated
+ * here; Android's picker already shows it.
  */
 class ServersProvider : DocumentsProvider() {
 
@@ -55,7 +57,7 @@ class ServersProvider : DocumentsProvider() {
             .add(Root.COLUMN_DOCUMENT_ID, TOP)
             .add(Root.COLUMN_TITLE, context!!.getString(R.string.app_name))
             .add(Root.COLUMN_SUMMARY, servers.joinToString(", ") { label(it) })
-            .add(Root.COLUMN_FLAGS, Root.FLAG_SUPPORTS_IS_CHILD)
+            .add(Root.COLUMN_FLAGS, Root.FLAG_SUPPORTS_IS_CHILD or Root.FLAG_SUPPORTS_CREATE)
             .add(Root.COLUMN_ICON, R.mipmap.ic_launcher)
             .add(Root.COLUMN_MIME_TYPES, "*/*")
         return cursor
@@ -120,6 +122,92 @@ class ServersProvider : DocumentsProvider() {
                 }
             }
         return cursor
+    }
+
+    override fun createDocument(parentDocumentId: String, mimeType: String, displayName: String): String {
+        if (parentDocumentId == TOP) throw FileNotFoundException("a server is chosen first")
+        val (store, parentPath) = split(parentDocumentId)
+        servers()
+        val source = Stores.get(store)
+        val clean = displayName.replace('/', '_').trim().ifEmpty { "New file" }
+        val folder = mimeType == Document.MIME_TYPE_DIR
+        try {
+            return onNetwork {
+                // A name already taken gets a number, as the contract asks, so a save never
+                // replaces a file that is there.
+                val taken = source.list(parentPath).map { it.name.lowercase() }.toSet()
+                var name = clean
+                var n = 1
+                while (name.lowercase() in taken) {
+                    val dot = clean.lastIndexOf('.').takeIf { it > 0 && !folder }
+                    name = if (dot == null) "$clean ($n)" else clean.substring(0, dot) + " ($n)" + clean.substring(dot)
+                    n++
+                }
+                val path = if (parentPath.isEmpty()) name else "$parentPath/$name"
+                if (folder) source.makeFolder(path) else source.openWrite(path).close()
+                source.stat(path)?.let { seen[idOf(store, path)] = it }
+                changed(parentDocumentId)
+                idOf(store, path)
+            }
+        } catch (e: Exception) {
+            android.util.Log.w(TAG, "could not create on a server", e)
+            throw FileNotFoundException("could not create $displayName: ${e.message}")
+        }
+    }
+
+    override fun deleteDocument(documentId: String) {
+        val (store, path) = split(documentId)
+        if (path.isEmpty()) throw FileNotFoundException("a server cannot be removed here")
+        servers()
+        try {
+            onNetwork { deleteTree(Stores.get(store), path) }
+        } catch (e: Exception) {
+            android.util.Log.w(TAG, "could not delete on a server", e)
+            throw FileNotFoundException("could not delete ${path.substringAfterLast('/')}: ${e.message}")
+        }
+        forget(documentId)
+        changed(idOf(store, path.substringBeforeLast('/', "")))
+    }
+
+    /** A folder goes with what is in it, as a delete from another app means. */
+    private fun deleteTree(source: com.wanderwildwood.tana.store.Store, path: String) {
+        val entry = source.stat(path) ?: return
+        if (!entry.isFolder) return source.deleteFile(path)
+        source.list(path).forEach { deleteTree(source, it.loc.path) }
+        source.deleteFolder(path)
+    }
+
+    override fun renameDocument(documentId: String, displayName: String): String? {
+        val (store, path) = split(documentId)
+        if (path.isEmpty()) throw FileNotFoundException("a server cannot be renamed here")
+        servers()
+        val clean = displayName.replace('/', '_').trim()
+        if (clean.isEmpty()) throw FileNotFoundException("no name")
+        val parent = path.substringBeforeLast('/', "")
+        val to = if (parent.isEmpty()) clean else "$parent/$clean"
+        if (to == path) return null
+        try {
+            onNetwork { Stores.get(store).rename(path, to) }
+        } catch (e: Exception) {
+            android.util.Log.w(TAG, "could not rename on a server", e)
+            throw FileNotFoundException("could not rename: ${e.message}")
+        }
+        forget(documentId)
+        changed(idOf(store, parent))
+        return idOf(store, to)
+    }
+
+    private fun forget(documentId: String) {
+        val inside = documentId.substringAfter('|')
+        seen.keys.removeAll { it == documentId || it.substringAfter('|').startsWith("$inside/") && it.substringBefore('|') == documentId.substringBefore('|') }
+        read.remove(documentId)
+    }
+
+    /** Tells whoever is showing [folderId] that its list changed. */
+    private fun changed(folderId: String) {
+        context?.contentResolver?.notifyChange(
+            DocumentsContract.buildChildDocumentsUri(context!!.packageName + ".servers", folderId), null,
+        )
     }
 
     override fun isChildDocument(parentDocumentId: String, documentId: String): Boolean {
@@ -308,12 +396,13 @@ class ServersProvider : DocumentsProvider() {
 
     private fun label(server: Server) = server.name.ifBlank { server.host }
 
+    /** A server's top folder (or the place holding the servers, [TOP]): takes new things, cannot be renamed or deleted. */
     private fun folderRow(cursor: MatrixCursor, id: String, name: String) {
         cursor.newRow()
             .add(Document.COLUMN_DOCUMENT_ID, id)
             .add(Document.COLUMN_DISPLAY_NAME, name)
             .add(Document.COLUMN_MIME_TYPE, Document.MIME_TYPE_DIR)
-            .add(Document.COLUMN_FLAGS, 0)
+            .add(Document.COLUMN_FLAGS, if (id == TOP) 0 else Document.FLAG_DIR_SUPPORTS_CREATE)
     }
 
     private fun row(cursor: MatrixCursor, entry: Entry) {
@@ -323,8 +412,13 @@ class ServersProvider : DocumentsProvider() {
             .add(Document.COLUMN_MIME_TYPE, if (entry.isFolder) Document.MIME_TYPE_DIR else Names.mime(entry.name))
             .add(Document.COLUMN_SIZE, if (entry.isFolder) null else entry.size)
             .add(Document.COLUMN_LAST_MODIFIED, entry.modified.takeIf { it > 0 })
-            // A file can be saved back by the app that opened it; see openForWriting.
-            .add(Document.COLUMN_FLAGS, if (entry.isFolder) 0 else Document.FLAG_SUPPORTS_WRITE)
+            // A file can be saved back by the app that opened it (see openForWriting); a folder
+            // takes new things; both can be renamed and deleted.
+            .add(
+                Document.COLUMN_FLAGS,
+                Document.FLAG_SUPPORTS_DELETE or Document.FLAG_SUPPORTS_RENAME or
+                    if (entry.isFolder) Document.FLAG_DIR_SUPPORTS_CREATE else Document.FLAG_SUPPORTS_WRITE,
+            )
     }
 
     /**

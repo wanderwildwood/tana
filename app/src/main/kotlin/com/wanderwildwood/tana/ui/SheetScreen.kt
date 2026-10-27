@@ -150,7 +150,7 @@ private fun androidx.compose.foundation.layout.ColumnScope.Rows(view: SheetView,
         when {
             body.isEmpty() -> Line(stringResource(R.string.sheet_empty))
             !view.finding && found?.isEmpty() == true -> Line(stringResource(R.string.search_none))
-            else -> ListJumpBox(rowsState, ListJump.Pages) {
+            else -> androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
                 PagedColumn(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface), state = rowsState) {
                     items(shown, key = { it }) { i -> RowLines(body[i]) { onOpen(i) } }
                 }
@@ -191,7 +191,7 @@ private fun WholeRow(headings: List<String>, cells: List<String>) {
         (heading.ifEmpty { stringResource(R.string.sheet_column, letters(i)) }) to value
     }
     val cellsState = rememberLazyListState()
-    ListJumpBox(cellsState, ListJump.Pages) {
+    androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
         PagedColumn(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface), state = cellsState) {
             items(pairs.size) { i ->
                 val (heading, value) = pairs[i]

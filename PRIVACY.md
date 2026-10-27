@@ -89,6 +89,14 @@ password each time, and it is taken down when the Nearby page closes. Anyone wit
 who has the name and password can join it, as with any Wi-Fi network, and can then offer files
 like any device on your home Wi-Fi: every offer still asks Accept or Decline.
 
+## Other apps and your servers
+
+Files lists your servers in Android's own file picker, so another app's Open and Save screens
+can reach them. An app gets a file from a server, or writes one into it (or makes a folder,
+renames, deletes), only through a file or folder you pick in that picker; Files fetches or
+sends it with the sign-in you gave, and never hands the password to the app. Deleting through
+the picker removes the file from the server for good.
+
 ## The one other address in the app
 
 The llama at the foot of the About opens `square.link/u/AGu8oT10` in whatever browser you

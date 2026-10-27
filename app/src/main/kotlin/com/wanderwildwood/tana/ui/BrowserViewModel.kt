@@ -45,7 +45,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.security.MessageDigest
 import java.util.UUID
 
@@ -835,10 +837,13 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
      */
     suspend fun saveServer(draft: Server): Throwable? {
         var server = if (draft.id.isEmpty()) draft.copy(id = UUID.randomUUID().toString()) else draft
-        val problem = withContext(Dispatchers.IO) {
+        // A server that never answers must not leave the form "checking" for ever: after
+        // twenty seconds that is its answer. The attempt itself runs on and ends by its own
+        // network timeouts; nothing waits for it.
+        val attempt = viewModelScope.async(Dispatchers.IO) {
             if (server.isDav) {
                 // A Nextcloud given by its address alone is kept as the folder its files are in.
-                return@withContext try {
+                return@async try {
                     server = server.copy(host = DavStore.resolve(server, java.io.File(getApplication<Application>().cacheDir, "spool")))
                     null
                 } catch (e: Exception) {
@@ -855,6 +860,9 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
                 probe.close()
             }
         }
+        val answered = withTimeoutOrNull(CHECK_SECONDS * 1000L) { attempt.await() to true } ?: (null to false)
+        val problem: Throwable? = if (answered.second) answered.first
+        else StoreException(StoreException.Reason.SERVER_UNREACHABLE, draft.host.trim().substringAfter("://").substringBefore('/'))
         if (problem != null) return problem
         val servers = _state.value.servers.filterNot { it.id == server.id } + server
         prefs.servers = servers
@@ -960,7 +968,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         val hidden = _state.value.showHidden
         searching = viewModelScope.launch(Dispatchers.IO) {
             Search(Stores::get, isCancelled = { searchCancelled }).run(search.roots, words, kind, hidden) { found ->
-                _state.update { s -> s.search?.let { s.copy(search = it.copy(results = it.results + found)) } ?: s }
+                _state.update { s -> s.search?.let { s.copy(search = it.copy(results = Sort().apply(it.results + found))) } ?: s }
             }
             _state.update { s -> s.search?.let { s.copy(search = it.copy(running = false)) } ?: s }
         }
@@ -981,6 +989,9 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
     fun noticeSeen() = _state.update { it.copy(notice = null) }
 }
+
+/** How long adding a server waits to hear from it before saying it cannot be reached. */
+private const val CHECK_SECONDS = 20
 
 /** The words for a problem, from strings.xml. */
 fun describe(app: android.content.Context, problem: Throwable): String {

@@ -5,6 +5,8 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalCursorBlinkEnabled
 import com.mudita.mmd.ThemeMMD
 import com.wanderwildwood.tana.ui.monochrome
 import com.wanderwildwood.tana.work.Opener
@@ -24,7 +26,9 @@ class PickActivity : ComponentActivity() {
         val picking = Picking.from(intent) ?: run { finish(); return }
         setContent {
             ThemeMMD(colorScheme = monochrome) {
-                Files(this, null, {}, picking) { files -> answer(files) }
+                CompositionLocalProvider(LocalCursorBlinkEnabled provides false) {
+                    Files(this, null, {}, picking) { files -> answer(files) }
+                }
             }
         }
     }

@@ -25,15 +25,18 @@ data class Sort(val by: SortBy = SortBy.NAME, val reversed: Boolean = false) {
             val stems = naturalCompare(stem(a), stem(b), collator)
             if (stems != 0) stems else naturalCompare(a.name, b.name, collator)
         }
-        val natural: Comparator<Entry> = when (by) {
-            SortBy.NAME -> byName
-            SortBy.DATE -> compareByDescending<Entry> { it.modified }.then(byName)
-            SortBy.SIZE -> compareByDescending<Entry> { it.size }.then(byName)
-            SortBy.TYPE -> compareBy<Entry> { Names.extension(it.name) }.then(byName)
+        // Reversing turns the order round, not the tie-break under it: items that are equal in
+        // size or date (every folder is, in a size order) stay A to Z either way round.
+        val ordered: Comparator<Entry> = when (by) {
+            SortBy.NAME -> if (reversed) byName.reversed() else byName
+            SortBy.DATE -> directed(compareByDescending<Entry> { it.modified }).then(byName)
+            SortBy.SIZE -> directed(compareByDescending<Entry> { if (it.isFolder) 0L else it.size }).then(byName)
+            SortBy.TYPE -> directed(compareBy<Entry> { Names.extension(it.name) }).then(byName)
         }
-        val ordered = if (reversed) natural.reversed() else natural
         return entries.sortedWith(compareByDescending<Entry> { it.isFolder }.then(ordered))
     }
+
+    private fun directed(c: Comparator<Entry>): Comparator<Entry> = if (reversed) c.reversed() else c
 
     companion object {
         private fun stem(e: Entry): String {
