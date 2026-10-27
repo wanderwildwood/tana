@@ -334,7 +334,7 @@ private fun FolderList(state: UiState, vm: BrowserViewModel, list: @Composable (
     // Each folder opens at its top: one state shared by every folder kept the row number of the
     // last, and a folder opened from far down another came up already scrolled.
     val listState = remember(state.place) { LazyListState() }
-    list(shown, listState)
+    WithPageFoot(listState, shown.size) { list(shown, listState) }
 }
 
 /**
@@ -421,7 +421,7 @@ fun SearchScreen(search: SearchState, state: UiState, work: com.wanderwildwood.t
                         onClick = go,
                         modifier = Modifier.fillMaxWidth().padding(16.dp).height(48.dp),
                     ) { TextMMD(text = stringResource(R.string.search_go), style = MaterialTheme.typography.bodySmall) }
-                    else -> androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
+                    else -> WithPageFoot(resultsState, search.results.size) {
                         PagedColumn(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface), state = resultsState) {
                             items(search.results, key = { it.loc.store + it.loc.path }) { entry ->
                                 EntryRow(

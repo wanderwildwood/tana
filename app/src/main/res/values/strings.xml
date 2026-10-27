@@ -52,6 +52,8 @@
     <string name="cd_clear_selection">Clear the selection</string>
     <string name="folder_reading">Reading…</string>
     <string name="folder_empty">Nothing here.</string>
+    <string name="page_range">%1$d–%2$d of %3$d</string>
+    <string name="page_of">Page %1$d of %2$d</string>
     <string name="folder_try_again">Try again</string>
     <!-- One line above a server folder after a swipe down on its first page -->
     <string name="folder_pull_asking">Reading the folder again…</string>
