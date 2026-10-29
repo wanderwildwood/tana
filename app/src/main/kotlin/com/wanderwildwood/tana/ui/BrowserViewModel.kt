@@ -7,6 +7,7 @@ import com.wanderwildwood.tana.R
 import com.wanderwildwood.tana.store.Entry
 import com.wanderwildwood.tana.store.LocalStore
 import com.wanderwildwood.tana.store.Loc
+import com.wanderwildwood.tana.work.Asked
 import com.wanderwildwood.tana.store.Server
 import com.wanderwildwood.tana.store.SafRoot
 import com.wanderwildwood.tana.store.DavStore
@@ -21,6 +22,7 @@ import com.wanderwildwood.tana.work.Mode
 import com.wanderwildwood.tana.work.Names
 import com.wanderwildwood.tana.work.Opener
 import com.wanderwildwood.tana.work.Pdfs
+import com.wanderwildwood.tana.work.Texts
 import com.wanderwildwood.tana.work.Picking
 import com.wanderwildwood.tana.work.Pin
 import com.wanderwildwood.tana.work.Prefs
@@ -71,6 +73,7 @@ sealed interface Notice {
     data object NothingOpens : Notice
     data object NothingPrints : Notice
     data object FoldersNotShared : Notice
+    data object FileGone : Notice
     data class Problem(val problem: Throwable) : Notice
 }
 
@@ -111,6 +114,9 @@ data class SheetView(
 /** A PDF open to be read. [file] is there from the start for one on the phone, and once it is fetched for one on a server. */
 data class PdfView(val entry: Entry, val file: java.io.File? = null)
 
+/** A text file open to be read; [file] as for [PdfView]. */
+data class TextView(val entry: Entry, val file: java.io.File? = null)
+
 data class SearchState(
     val roots: List<Loc>,
     val within: String,
@@ -141,6 +147,9 @@ data class UiState(
     val preview: Preview? = null,
     val sheet: SheetView? = null,
     val pdf: PdfView? = null,
+    val text: TextView? = null,
+    /** A file another app asked to have shown: the list pages to it once, then this is cleared. */
+    val revealed: Loc? = null,
     /** The Nearby page, open: what is to be sent from it, or nothing when it was opened to receive. */
     val nearby: List<Entry>? = null,
     /** How a swipe down on the folder's first page is going; see [BrowserViewModel.pull]. */
@@ -226,7 +235,47 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
     // ---------------------------------------------------------------- where you are
 
+    /** A file to select once its folder has been read, and the folder it was asked for in. */
+    private var revealing: Asked.Reveal? = null
+    private var cameToShow: Place? = null
+
+    /**
+     * Another app asked for [what] to be shown: its folder opens (nothing stacked behind it, so
+     * Back leaves for the app that asked), the file is found, selected and paged to, or, if it
+     * is gone, the folder is left as it is and the line above says so.
+     */
+    fun reveal(what: Asked.Reveal) {
+        history.clear()
+        revealing = what
+        val place = Place.Folder(what.folder)
+        cameToShow = place
+        _state.update {
+            it.copy(
+                search = null, info = null, preview = null, sheet = null, pdf = null, text = null, nearby = null,
+                notice = null, revealed = null,
+            )
+        }
+        if (_state.value.place != place) show(place) else { _state.update { it.copy(selection = emptySet()) }; refresh() }
+    }
+
+    fun revealShown() = _state.update { it.copy(revealed = null) }
+
+    private fun foundReveal(sorted: List<Entry>) {
+        val what = revealing ?: return
+        revealing = null
+        val visible = shown(sorted)
+        val at = Asked.indexOfName(visible.map { it.name }, what.name)
+        if (at < 0) {
+            notice(Notice.FileGone)
+        } else {
+            val loc = visible[at].loc
+            _state.update { it.copy(selection = setOf(loc), revealed = loc) }
+        }
+    }
+
     fun go(place: Place) {
+        cameToShow = null
+        revealing = null
         val current = _state.value.place
         if (place == current) return
         val up = (place as? Place.Folder)?.loc
@@ -262,12 +311,15 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
             s.nearby != null -> closeNearby()
             s.sheet != null -> closeSheet()
             s.pdf != null -> closePdf()
+            s.text != null -> closeText()
             s.preview != null -> closePreview()
             s.info != null -> _state.update { it.copy(info = null) }
             s.search != null && s.selecting -> clearSelection()
             s.search != null -> closeSearch()
             s.selecting -> clearSelection()
             s.place == Place.Home -> return false
+            // Shown a file by another app: Back goes back to that app, not down a path.
+            cameToShow == s.place -> { cameToShow = null; return false }
             else -> show(history.removeLastOrNull() ?: Place.Home)
         }
         return true
@@ -318,6 +370,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
                 selection = s.selection.intersect(sorted.map { it.loc }.toSet()),
             )
         }
+        if (revealing != null && place == Place.Folder(revealing!!.folder)) foundReveal(sorted)
     }
 
     fun refresh() {
@@ -390,6 +443,8 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
             browse(entry)
         } else if (Pdfs.canRead(entry.name)) {
             read(entry)
+        } else if (Texts.canRead(entry.name)) {
+            readText(entry)
         } else if (Sheets.canView(entry.name)) {
             view(entry)
         } else {
@@ -566,6 +621,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
                     work.fetched.firstOrNull()?.let { file -> _state.value.sheet?.let { readSheet(it.entry, file) } }
                     work.fetched.firstOrNull()?.let { file ->
                         _state.update { s -> s.pdf?.takeIf { it.file == null }?.let { s.copy(pdf = it.copy(file = file)) } ?: s }
+                        _state.update { s -> s.text?.takeIf { it.file == null }?.let { s.copy(text = it.copy(file = file)) } ?: s }
                     }
                     Transfers.seen()
                 } else if (job is Job.Fetch && job.purpose == Purpose.BROWSE) {
@@ -593,6 +649,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
                 _state.value.sheet?.takeIf { it.sheets == null && it.failure == null && it.entry.loc.store != LocalStore.ID }
                     ?.let { closeSheet() }
                 _state.value.pdf?.takeIf { it.file == null }?.let { closePdf() }
+                _state.value.text?.takeIf { it.file == null }?.let { closeText() }
                 refresh()
             }
             else -> Unit
@@ -693,6 +750,27 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     fun handPdfOn() {
         val shown = _state.value.pdf ?: return
         closePdf()
+        open(shown.entry, Purpose.OPEN_WITH)
+    }
+
+    // ---------------------------------------------------------------- text
+
+    /** A text file opened here, to be read. One not on the phone is fetched first, as a PDF is. */
+    fun readText(entry: Entry) {
+        if (entry.loc.store == LocalStore.ID) {
+            _state.update { it.copy(text = TextView(entry, Stores.phone.file(entry.loc.path)), selection = emptySet()) }
+        } else {
+            _state.update { it.copy(text = TextView(entry), selection = emptySet()) }
+            if (!start(Job.Fetch(listOf(entry), Purpose.VIEW))) _state.update { it.copy(text = null) }
+        }
+    }
+
+    fun closeText() = _state.update { it.copy(text = null) }
+
+    /** The text on screen is not text, or too large: put away, and handed to another app to try. */
+    fun handTextOn() {
+        val shown = _state.value.text ?: return
+        closeText()
         open(shown.entry, Purpose.OPEN_WITH)
     }
 

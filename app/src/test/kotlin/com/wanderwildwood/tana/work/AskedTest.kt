@@ -18,4 +18,39 @@ class AskedTest {
         assertNull(Asked.fromDocumentId("msf:1234"))
         assertNull(Asked.fromDocumentId("nonsense"))
     }
+
+    @Test fun aPathIsTurnedIntoItsFolderAndName() {
+        val r = Asked.revealPath("/storage/emulated/0/Download/my photo \u00e9.gif")!!
+        assertEquals("storage/emulated/0/Download", r.folder.path)
+        assertEquals("my photo \u00e9.gif", r.name)
+    }
+
+    @Test fun aPathIsTidiedBeforeItIsUsed() {
+        val r = Asked.revealPath("/storage/emulated/0/Download/../Pictures//./x.png")!!
+        assertEquals("storage/emulated/0/Pictures", r.folder.path)
+        assertEquals("x.png", r.name)
+    }
+
+    @Test fun aPathThatCannotBeShownIsRefused() {
+        assertNull(Asked.revealPath(null))
+        assertNull(Asked.revealPath(""))
+        assertNull(Asked.revealPath("Download/x.gif"))
+        assertNull(Asked.revealPath("/"))
+    }
+
+    @Test fun theNameIsFoundExactlyThenIgnoringCase() {
+        val names = listOf("a.txt", "B.TXT", "b.txt")
+        assertEquals(2, Asked.indexOfName(names, "b.txt"))
+        assertEquals(1, Asked.indexOfName(listOf("a.txt", "B.TXT"), "b.txt"))
+        assertEquals(-1, Asked.indexOfName(names, "c.txt"))
+    }
+
+    @Test fun thePageThatHoldsARowStartsAtAWholeNumberOfPages() {
+        assertEquals(0, Asked.pageStart(0, 7))
+        assertEquals(0, Asked.pageStart(6, 7))
+        assertEquals(7, Asked.pageStart(7, 7))
+        assertEquals(14, Asked.pageStart(20, 7))
+        assertEquals(20, Asked.pageStart(20, 0))
+        assertEquals(0, Asked.pageStart(-1, 7))
+    }
 }

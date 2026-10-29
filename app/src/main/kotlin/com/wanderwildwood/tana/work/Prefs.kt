@@ -22,6 +22,11 @@ class Prefs(context: Context) {
         )
         set(value) = prefs.edit().putString("sort_by", value.by.name).putBoolean("sort_reversed", value.reversed).apply()
 
+    /** The text reader's size, as a place in [TEXT_SIZES]. */
+    var textSize: Int
+        get() = prefs.getInt("text_size", DEFAULT_TEXT_SIZE).coerceIn(0, TEXT_SIZES.lastIndex)
+        set(value) = prefs.edit().putInt("text_size", value.coerceIn(0, TEXT_SIZES.lastIndex)).apply()
+
     var showHidden: Boolean
         get() = prefs.getBoolean("show_hidden", false)
         set(value) = prefs.edit().putBoolean("show_hidden", value).apply()
@@ -87,4 +92,10 @@ class Prefs(context: Context) {
             value.forEach { array.put(JSONObject().put("store", it.loc.store).put("path", it.loc.path).put("label", it.label)) }
             prefs.edit().putString("pins", array.toString()).apply()
         }
+
+    companion object {
+        /** Sizes of the text reader, in sp. None is under 14. */
+        val TEXT_SIZES = listOf(14, 17, 20, 24, 28)
+        const val DEFAULT_TEXT_SIZE = 1
+    }
 }

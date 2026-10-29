@@ -57,13 +57,13 @@ object Opener {
     }
 
     /**
-     * A PDF that the reader here could not open, handed to whatever else on the phone reads
-     * PDFs, by the address it came with. Another app's address is passed on with the read
+     * A PDF (or text file, by [mime]) that the reader here could not open, handed to whatever else on the phone reads
+     * them, by the address it came with. Another app's address is passed on with the read
      * grant this app was given for it.
      */
-    fun handOn(context: Context, uri: Uri): Boolean {
+    fun handOn(context: Context, uri: Uri, mime: String = Pdfs.MIME): Boolean {
         val intent = Intent(Intent.ACTION_VIEW)
-            .setDataAndType(uri, Pdfs.MIME)
+            .setDataAndType(uri, mime)
             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         return try {
             context.startActivity(chooser(context, intent).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))

@@ -84,6 +84,13 @@ as places like any other.
   Back goes straight back to the app they came from. A PDF locked with a password is not opened;
   it can be handed to another app from where it says so, and *Open with* still does that for
   any PDF.
+- **Text and Markdown, read here.** A .txt, .md, .log, .json, .xml, .yml, .ini, .conf or similar
+  file opens in a reader that turns by whole lines, like a list, with two buttons in the bar for
+  smaller and larger text (14sp up; the choice is kept). Markdown is shown as plain reading:
+  headings bold and larger, bullets, quotes, code in monospace, links as their words, no images.
+  Files are read a line at a time, so one of many megabytes opens as quickly as a short one. UTF-8,
+  or Windows-1252 for an old file; a file that is not text is said so, and *Open with another app*
+  is offered. Other apps' text files open here too (a CSV still opens as a table).
 - **Printing.** *More → Print…* on a PDF or a picture sends it through the phone's own print
   service, which finds most Wi-Fi printers by itself; a picture goes as one page, as big as the
   paper allows. Files on a server are fetched first.
@@ -115,12 +122,12 @@ No thumbnails: a photograph at the size of a list row is a grey smudge on this s
 `Android/data`: Android 12 lets no app into another app's private folders. A zip is read, never
 rewritten: to change what is in one, extract it, change that, and compress it again. A
 spreadsheet is read, never edited, and the old Excel format (xls) is not read at all. A PDF is
-read, not searched, annotated or filled in. Nothing is
+read, not searched, annotated or filled in. Text is read, never edited. Nothing is
 sent anywhere but to the servers you add and the nearby devices you send to.
 
 ## Where this is up to
 
-Version 0.8.1. The copy, move, delete and search engine is unit tested against real folders —
+Version 0.8.2. The copy, move, delete and search engine is unit tested against real folders —
 including a copy stopped half way, and a write that fails while replacing a file, where the old
 file has to survive. Zips are made and read back byte for byte, and an archive that tries to
 write outside the folder it is extracted into has those entries left out. A second suite runs against a real Samba share when one is named, and

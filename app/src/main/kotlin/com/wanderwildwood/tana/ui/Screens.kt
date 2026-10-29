@@ -23,6 +23,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.flow.first
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -80,6 +82,7 @@ private fun Foot(state: UiState, work: com.wanderwildwood.tana.work.Work, vm: Br
     when (val n = state.notice) {
         null, is Notice.Problem -> Unit
         Notice.Busy -> NoticeStrip(stringResource(R.string.notice_busy), vm::noticeSeen)
+        Notice.FileGone -> NoticeStrip(stringResource(R.string.notice_file_gone), vm::noticeSeen)
         Notice.NothingOpens -> NoticeStrip(stringResource(R.string.notice_nothing_opens), vm::noticeSeen)
         Notice.NothingPrints -> NoticeStrip(stringResource(R.string.notice_nothing_prints), vm::noticeSeen)
         Notice.FoldersNotShared -> NoticeStrip(stringResource(R.string.notice_folders_not_shared), vm::noticeSeen)
@@ -334,6 +337,22 @@ private fun FolderList(state: UiState, vm: BrowserViewModel, list: @Composable (
     // Each folder opens at its top: one state shared by every folder kept the row number of the
     // last, and a folder opened from far down another came up already scrolled.
     val listState = remember(state.place) { LazyListState() }
+    // Shown for a file another app asked to have revealed: paged to the page that holds it.
+    val target = state.revealed
+    LaunchedEffect(target, shown) {
+        if (target == null) return@LaunchedEffect
+        val index = shown.indexOfFirst { it.loc == target }
+        if (index >= 0) {
+            // Pages are whole rows from the top, as many as the first page holds.
+            snapshotFlow { listState.layoutInfo.visibleItemsInfo.size to listState.layoutInfo.viewportSize.height }
+                .first { it.first > 0 }
+            val info = listState.layoutInfo
+            val viewport = info.viewportSize.height - info.beforeContentPadding - info.afterContentPadding
+            val per = info.visibleItemsInfo.count { it.index < shown.size && it.offset + it.size <= viewport }
+            listState.scrollToItem(com.wanderwildwood.tana.work.Asked.pageStart(index, per))
+        }
+        vm.revealShown()
+    }
     WithPageFoot(listState, shown.size) { list(shown, listState) }
 }
 

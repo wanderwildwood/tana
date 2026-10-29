@@ -94,6 +94,19 @@
                 <category android:name="android.intent.category.APP_FILES" />
             </intent-filter>
 
+            <!-- "Show this file": another app (Gallery's Show in Files) names a file by its path,
+                 as the string extra `path` or a file:// address, and Files opens its folder at
+                 the page that holds it, with it selected. -->
+            <intent-filter>
+                <action android:name="com.wanderwildwood.tana.action.SHOW_FILE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="com.wanderwildwood.tana.action.SHOW_FILE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="file" />
+            </intent-filter>
+
             <!-- "Show the downloads", from a download notification or an app that saved one. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW_DOWNLOADS" />
@@ -140,7 +153,7 @@
             </intent-filter>
         </activity>
 
-        <!-- A PDF another app asks to have opened: an attachment, a download. Its own activity
+        <!-- A PDF or text file another app asks to have opened: an attachment, a download. Its own activity
              with no task of the file manager's (taskAffinity empty), so it opens in the asking
              app's task, or a task of its own, and Back from it goes back to that app rather
              than into a folder. Gone from Recents once it is closed. -->
@@ -157,6 +170,16 @@
                 <data android:scheme="content" />
                 <data android:scheme="file" />
                 <data android:mimeType="application/pdf" />
+            </intent-filter>
+            <!-- A text or Markdown file, read the same way. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:mimeType="text/plain" />
+                <data android:mimeType="text/markdown" />
+                <data android:mimeType="text/x-markdown" />
             </intent-filter>
         </activity>
 

@@ -67,6 +67,13 @@ lately, under a hash of the file's name and size rather than the name itself. A 
 app hands over in a form that cannot be read in place is copied into the app's cache first, and
 the copy is deleted when it is closed, or a day later if the app was stopped before it could be.
 
+## Text files
+
+A text or Markdown file is read on the phone, a line at a time, by the app itself; nothing about
+it goes anywhere, and the app keeps nothing of it but the text size you chose. One another app
+hands over is copied into the app's cache to be read, and the copy is deleted when it is closed,
+or a day later if the app was stopped before it could be.
+
 ## Nearby
 
 The Nearby page speaks [LocalSend](https://localsend.org)'s protocol, and does so only while it

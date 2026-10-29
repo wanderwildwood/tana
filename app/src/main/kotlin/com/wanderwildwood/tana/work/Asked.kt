@@ -36,6 +36,49 @@ object Asked {
         return Loc(LocalStore.ID, Stores.phone.pathOf(file))
     }
 
+    /** What [reveal] found: the folder to open and the name of the file to show in it. */
+    data class Reveal(val folder: Loc, val name: String)
+
+    /**
+     * `com.wanderwildwood.tana.action.SHOW_FILE` with the file's absolute path as the string
+     * extra `path`, or a `file://` address as the data: open the file's folder, with the file
+     * found, paged to and selected. Null for any other intent, or a path with no folder to
+     * open (relative, or the root).
+     */
+    fun reveal(intent: Intent?): Reveal? {
+        intent ?: return null
+        if (intent.action != SHOW_FILE) return null
+        val raw = intent.getStringExtra(EXTRA_PATH)
+            ?: intent.data?.takeIf { it.scheme == "file" }?.path
+        return revealPath(raw)
+    }
+
+    fun revealPath(raw: String?): Reveal? {
+        if (raw.isNullOrBlank() || !raw.startsWith("/")) return null
+        // /sdcard and the like are links to the real place; the folder listing names the real one.
+        var file = File(raw).normalize()
+        runCatching { File(raw).canonicalFile }.getOrNull()?.takeIf { it.parentFile != null }?.let { file = it }
+        val parent = file.parentFile ?: return null
+        if (file.name.isEmpty()) return null
+        return Reveal(Loc(LocalStore.ID, Stores.phone.pathOf(parent)), file.name)
+    }
+
+    /** Where a file is in a list of names: its own spelling first, else the same ignoring case; -1 if absent. */
+    fun indexOfName(names: List<String>, name: String): Int {
+        val exact = names.indexOf(name)
+        return if (exact >= 0) exact else names.indexOfFirst { it.equals(name, ignoreCase = true) }
+    }
+
+    /**
+     * The row a page starts at when it holds [index], for pages of [perPage] whole rows from
+     * the top. A page of no known size starts at the row itself.
+     */
+    fun pageStart(index: Int, perPage: Int): Int =
+        if (index < 0) 0 else if (perPage <= 0) index else index - index % perPage
+
+    const val SHOW_FILE = "com.wanderwildwood.tana.action.SHOW_FILE"
+    const val EXTRA_PATH = "path"
+
     private fun fromDocument(uri: Uri): File? {
         return when (uri.authority) {
             DOWNLOADS -> File(Stores.phone.file(Volumes.downloads().path).path)

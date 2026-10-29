@@ -37,6 +37,8 @@ import com.wanderwildwood.tana.ui.HomeScreen
 import com.wanderwildwood.tana.ui.InfoDialog
 import com.wanderwildwood.tana.ui.NearbyScreen
 import com.wanderwildwood.tana.ui.PdfScreen
+import com.wanderwildwood.tana.ui.TextScreen
+import com.wanderwildwood.tana.work.Texts
 import com.wanderwildwood.tana.ui.Notice
 import com.wanderwildwood.tana.ui.Place
 import com.wanderwildwood.tana.ui.SearchScreen
@@ -129,7 +131,8 @@ private fun Browser(
     LaunchedEffect(vm) { vm.printing.collect { if (!Printer.print(activity, it)) vm.cannotPrint() } }
     LaunchedEffect(asked) {
         if (asked != null) {
-            Asked.place(asked)?.let(vm::openAt)
+            val shown = Asked.reveal(asked)
+            if (shown != null) vm.reveal(shown) else Asked.place(asked)?.let(vm::openAt)
             onAnswered()
         }
     }
@@ -171,11 +174,15 @@ private fun Browser(
     val nearby = state.nearby
     val sheet = state.sheet
     val pdf = state.pdf
+    val text = state.text
     when {
         server != null -> ServerScreen(server, vm) { editing = null }
         nearby != null -> NearbyScreen(nearby, vm)
         sheet != null -> SheetScreen(sheet, vm)
         pdf != null -> PdfScreen(pdf.file?.let(PdfSource::OfFile), pdf.entry.name, vm::closePdf, vm::handPdfOn)
+        text != null -> TextScreen(
+            text.file?.let(PdfSource::OfFile), text.entry.name, Texts.isMarkdown(text.entry.name), vm::closeText, vm::handTextOn,
+        )
         preview != null -> PreviewScreen(preview, preview.entry.loc in state.selection, picking?.several == true, vm)
         search != null -> SearchScreen(search, state, work, vm)
         state.place == Place.Home -> HomeScreen(
