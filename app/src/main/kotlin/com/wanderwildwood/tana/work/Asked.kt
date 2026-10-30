@@ -69,13 +69,6 @@ object Asked {
         return if (exact >= 0) exact else names.indexOfFirst { it.equals(name, ignoreCase = true) }
     }
 
-    /**
-     * The row a page starts at when it holds [index], for pages of [perPage] whole rows from
-     * the top. A page of no known size starts at the row itself.
-     */
-    fun pageStart(index: Int, perPage: Int): Int =
-        if (index < 0) 0 else if (perPage <= 0) index else index - index % perPage
-
     const val SHOW_FILE = "com.wanderwildwood.tana.action.SHOW_FILE"
     const val EXTRA_PATH = "path"
 

@@ -44,13 +44,4 @@ class AskedTest {
         assertEquals(1, Asked.indexOfName(listOf("a.txt", "B.TXT"), "b.txt"))
         assertEquals(-1, Asked.indexOfName(names, "c.txt"))
     }
-
-    @Test fun thePageThatHoldsARowStartsAtAWholeNumberOfPages() {
-        assertEquals(0, Asked.pageStart(0, 7))
-        assertEquals(0, Asked.pageStart(6, 7))
-        assertEquals(7, Asked.pageStart(7, 7))
-        assertEquals(14, Asked.pageStart(20, 7))
-        assertEquals(20, Asked.pageStart(20, 0))
-        assertEquals(0, Asked.pageStart(-1, 7))
-    }
 }

@@ -23,8 +23,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.snapshotFlow
-import kotlinx.coroutines.flow.first
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -343,13 +341,8 @@ private fun FolderList(state: UiState, vm: BrowserViewModel, list: @Composable (
         if (target == null) return@LaunchedEffect
         val index = shown.indexOfFirst { it.loc == target }
         if (index >= 0) {
-            // Pages are whole rows from the top, as many as the first page holds.
-            snapshotFlow { listState.layoutInfo.visibleItemsInfo.size to listState.layoutInfo.viewportSize.height }
-                .first { it.first > 0 }
-            val info = listState.layoutInfo
-            val viewport = info.viewportSize.height - info.beforeContentPadding - info.afterContentPadding
-            val per = info.visibleItemsInfo.count { it.index < shown.size && it.offset + it.size <= viewport }
-            listState.scrollToItem(com.wanderwildwood.tana.work.Asked.pageStart(index, per))
+            // The page that holds the file starts at it: whole rows, so no row is cut.
+            listState.scrollToItem(index)
         }
         vm.revealShown()
     }
