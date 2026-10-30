@@ -80,7 +80,7 @@
     <!-- Choosing a folder for another app: the button, on the folder being looked at -->
     <string name="pick_for_app">For %1$s</string>
     <string name="pick_for_unknown">For an app</string>
-    <string name="pick_unknown_app">An app</string>
+    <string name="pick_unknown_app">an app</string>
     <string name="pick_folder_root">Choose a folder inside storage. The top of storage and the Download folder cannot be given to an app.</string>
     <string name="pick_folder_confirm">Give %1$s read and write access to “%2$s” and everything in it, now and later?</string>
     <string name="pick_folder_allow">Allow</string>
