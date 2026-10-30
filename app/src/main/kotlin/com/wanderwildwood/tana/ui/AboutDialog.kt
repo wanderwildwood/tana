@@ -1,10 +1,12 @@
 package com.wanderwildwood.tana.ui
 
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.lazy.items
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -39,40 +41,107 @@ import com.wanderwildwood.tana.R
  */
 @Composable
 fun AboutDialog(onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    var page by rememberSaveable { mutableStateOf("") }
+    val gpl = remember { Licences.read(context, R.raw.licence_gpl3) }
+    val texts = remember { Licences.distinctLicences().associateWith { Licences.read(context, Licences.textFor(it)) } }
     EInkDialog(onDismiss = onDismiss) {
         TextMMD(
-            text = stringResource(R.string.about_title, BuildConfig.VERSION_NAME),
+            text = if (page.isEmpty()) stringResource(R.string.about_title, BuildConfig.VERSION_NAME) else stringResource(
+                when (page) {
+                    PRIVACY -> R.string.about_privacy_title
+                    TERMS -> R.string.about_terms_title
+                    else -> R.string.about_licences_title
+                },
+            ),
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.Medium,
         )
 
         Spacer(Modifier.height(14.dp))
-        // The text may outgrow the dialog; it pages by whole rows and Close stays below it.
+        // The text may outgrow the dialog; it pages by whole rows and Back or Close stays below it.
         PagedColumn(Modifier.weight(1f, fill = false).heightIn(max = 440.dp)) {
-            item { TextMMD(text = stringResource(R.string.about_body), style = MaterialTheme.typography.labelSmall) }
-            item { Heading(R.string.about_privacy_title) }
-            item { TextMMD(text = stringResource(R.string.about_privacy_servers), style = MaterialTheme.typography.labelSmall) }
-            item { TextMMD(text = stringResource(R.string.about_privacy_phone), style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 8.dp)) }
-            item { TextMMD(text = stringResource(R.string.about_privacy_nearby), style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 8.dp)) }
-            item { TextMMD(text = stringResource(R.string.about_privacy_close), style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 8.dp)) }
-            item { Heading(R.string.about_terms_title) }
-            item { TextMMD(text = stringResource(R.string.about_terms), style = MaterialTheme.typography.labelSmall) }
-            item {
-                Spacer(Modifier.height(10.dp))
-                TextMMD(text = stringResource(R.string.about_licence), style = MaterialTheme.typography.labelSmall)
-                TextMMD(text = stringResource(R.string.about_bundled), style = MaterialTheme.typography.labelSmall)
+            when (page) {
+                PRIVACY -> {
+                    item { TextMMD(text = stringResource(R.string.about_privacy_servers), style = MaterialTheme.typography.labelSmall) }
+                    item { TextMMD(text = stringResource(R.string.about_privacy_phone), style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 8.dp)) }
+                    item { TextMMD(text = stringResource(R.string.about_privacy_nearby), style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 8.dp)) }
+                    item { TextMMD(text = stringResource(R.string.about_privacy_picker), style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 8.dp)) }
+                    item { TextMMD(text = stringResource(R.string.about_privacy_close), style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 8.dp)) }
+                }
+                TERMS -> item { TextMMD(text = stringResource(R.string.about_terms), style = MaterialTheme.typography.labelSmall) }
+                LICENCES -> {
+                    item { Heading(R.string.licences_source) }
+                    item {
+                        LinkRow(Licences.SOURCE.removePrefix("https://")) {
+                            openLink(context, Licences.SOURCE, context.getString(R.string.about_no_browser_address, Licences.SOURCE))
+                        }
+                    }
+                    item { Heading(R.string.licences_licence) }
+                    item { TextMMD(text = stringResource(R.string.licences_licence_line), style = MaterialTheme.typography.labelSmall) }
+                    items(gpl) { Words(it) }
+                    item { Heading(R.string.licences_built_with) }
+                    item { TextMMD(text = stringResource(R.string.licences_built_with_note), style = MaterialTheme.typography.labelSmall) }
+                    items(Licences.components) { c ->
+                        Column(Modifier.padding(vertical = 4.dp)) {
+                            Words(c.name + ", " + c.licence)
+                            LinkRow(c.link.removePrefix("https://")) {
+                                openLink(context, c.link, context.getString(R.string.about_no_browser_address, c.link))
+                            }
+                        }
+                    }
+                    for (licence in Licences.distinctLicences()) {
+                        item { TextMMD(text = stringResource(R.string.licences_text_of, licence), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 10.dp, bottom = 2.dp)) }
+                        items(texts.getValue(licence)) { Words(it) }
+                    }
+                }
+                else -> {
+                    item { TextMMD(text = stringResource(R.string.about_body), style = MaterialTheme.typography.labelSmall) }
+                    item { AboutRow(R.string.about_privacy_title) { page = PRIVACY } }
+                    item { AboutRow(R.string.about_terms_title) { page = TERMS } }
+                    item { AboutRow(R.string.about_licences_title) { page = LICENCES } }
+                }
             }
         }
 
-        Spacer(Modifier.height(14.dp))
-        Llama()
+        if (page.isEmpty()) {
+            Spacer(Modifier.height(14.dp))
+            Llama()
+        }
 
-        Spacer(Modifier.height(18.dp))
+        Spacer(Modifier.height(if (page.isEmpty()) 18.dp else 8.dp))
         OutlinedButtonMMD(
-            onClick = onDismiss,
+            onClick = { if (page.isEmpty()) onDismiss() else page = "" },
             modifier = Modifier.fillMaxWidth().height(48.dp),
-        ) { TextMMD(text = stringResource(R.string.about_close), style = MaterialTheme.typography.bodySmall) }
+        ) { TextMMD(text = stringResource(if (page.isEmpty()) R.string.about_close else R.string.about_back), style = MaterialTheme.typography.bodySmall) }
     }
+}
+
+private const val PRIVACY = "privacy"
+private const val TERMS = "terms"
+private const val LICENCES = "licences"
+
+@Composable
+private fun AboutRow(text: Int, onClick: () -> Unit) {
+    TextMMD(
+        text = stringResource(text),
+        style = MaterialTheme.typography.bodyLarge,
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).heightIn(min = 48.dp).wrapContentHeight(Alignment.CenterVertically),
+    )
+}
+
+@Composable
+private fun LinkRow(text: String, onClick: () -> Unit) {
+    TextMMD(
+        text = text,
+        style = MaterialTheme.typography.labelSmall,
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).heightIn(min = 48.dp).wrapContentHeight(Alignment.CenterVertically),
+    )
+}
+
+@Composable
+private fun Words(text: String) {
+    TextMMD(text = text, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(vertical = 4.dp))
 }
 
 @Composable
@@ -100,9 +169,6 @@ private fun Heading(id: Int) {
 @Composable
 private fun Llama() {
     val context = LocalContext.current
-    // Which address had nothing to open it, to say so in place of the words.
-    var dead by remember { mutableStateOf<String?>(null) }
-
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth(),
@@ -112,28 +178,14 @@ private fun Llama() {
             style = MaterialTheme.typography.labelSmall,
             // The site's address opens the site, the way the llama beside it opens its page.
             modifier = Modifier
-                .clickable {
-                    val opened = runCatching {
-                        context.startActivity(
-                            Intent(Intent.ACTION_VIEW, Uri.parse("https://wanderthe.dev")),
-                        )
-                    }.isSuccess
-                    dead = if (opened) null else "wanderthe.dev"
-                }
+                .clickable { openLink(context, "https://wanderthe.dev", context.getString(R.string.about_no_browser_address, "wanderthe.dev")) }
                 .padding(vertical = 4.dp),
         )
         Spacer(Modifier.width(6.dp))
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
-                .clickable {
-                    val opened = runCatching {
-                        context.startActivity(
-                            Intent(Intent.ACTION_VIEW, Uri.parse("https://square.link/u/AGu8oT10")),
-                        )
-                    }.isSuccess
-                    dead = if (opened) null else "square.link/u/AGu8oT10"
-                }
+                .clickable { openLink(context, "https://square.link/u/AGu8oT10", context.getString(R.string.about_no_browser_address, "square.link/u/AGu8oT10")) }
                 .padding(vertical = 4.dp),
         ) {
             Image(
@@ -143,11 +195,7 @@ private fun Llama() {
             )
             Spacer(Modifier.width(6.dp))
             TextMMD(
-                text = if (dead != null) {
-                    stringResource(R.string.about_no_browser, dead!!)
-                } else {
-                    stringResource(R.string.about_feed_the_llamas)
-                },
+                text = stringResource(R.string.about_feed_the_llamas),
                 style = MaterialTheme.typography.labelSmall,
             )
         }

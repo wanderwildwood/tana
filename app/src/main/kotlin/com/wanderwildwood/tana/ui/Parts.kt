@@ -285,25 +285,32 @@ internal fun SaveBar(vm: BrowserViewModel, folderOnPhone: Boolean) {
     val exists = target?.exists() == true
     val (armed, press) = rememberArmed(name to target) { vm.saveHere(name) }
     HorizontalDividerMMD()
-    Column(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp)) {
-        TextMMD(text = stringResource(R.string.pick_save_name), style = MaterialTheme.typography.labelSmall)
-        TextFieldMMD(
-            value = vm.saveField,
-            onValueChange = { vm.saveField = it },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-        )
-        if (problem != null && name.isNotBlank()) {
-            TextMMD(text = problem, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 4.dp))
+    // Name and button side by side, and a line of words only when there is something to say:
+    // the list above keeps its room (it had four rows left).
+    Column(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 6.dp)) {
+        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+            TextFieldMMD(
+                value = vm.saveField,
+                onValueChange = { vm.saveField = it },
+                modifier = Modifier.weight(1f),
+                singleLine = true,
+                placeholder = { TextMMD(text = stringResource(R.string.pick_save_name), style = MaterialTheme.typography.labelSmall) },
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            )
+            Spacer(Modifier.width(8.dp))
+            FootButton(
+                stringResource(if (armed) R.string.pick_save_again else R.string.pick_save_here),
+                Modifier.width(112.dp),
+                { if (exists) press() else vm.saveHere(name) },
+                enabled = problem == null,
+            )
         }
-        Spacer(Modifier.height(8.dp))
-        FootButton(
-            if (armed) stringResource(R.string.pick_save_replace, name.trim()) else stringResource(R.string.pick_save_here),
-            Modifier.fillMaxWidth(),
-            { if (exists) press() else vm.saveHere(name) },
-            enabled = problem == null,
-        )
+        val line = when {
+            armed -> stringResource(R.string.pick_save_replace, name.trim())
+            problem != null && name.isNotBlank() -> problem
+            else -> null
+        }
+        if (line != null) TextMMD(text = line, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 4.dp))
     }
 }
 
@@ -382,7 +389,7 @@ internal fun WorkStrip(work: Work) {
     // A result stays long enough to read and then goes; a failure is a dialog instead.
     if (work is Work.Finished || work is Work.Stopped) {
         LaunchedEffect(work) {
-            delay(5000)
+            delay(10_000)
             Transfers.seen()
         }
     }
@@ -404,7 +411,7 @@ internal fun WorkStrip(work: Work) {
 @Composable
 internal fun NoticeStrip(text: String, onSeen: () -> Unit) {
     LaunchedEffect(text) {
-        delay(5000)
+        delay(10_000)
         onSeen()
     }
     HorizontalDividerMMD()

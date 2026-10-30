@@ -6,7 +6,9 @@
     <!-- Asking for access, on first launch -->
 
     <string name="access_title">Files needs to see your storage.</string>
-    <string name="access_body">Android keeps this behind a switch of its own, called “All files access”. The button opens that page; turn the switch on for Files and come back.</string>
+    <string name="access_body">Android keeps this behind a switch of its own, called “All files access”. The button opens that page; turn the switch on for Files and come back. Files uses it only to show and manage what is on this phone; the about page says what else it does.</string>
+    <string name="access_about">About Files</string>
+    <string name="access_not_now">Not now</string>
     <string name="access_open">Open the setting</string>
 
     <!-- ============================================================ -->
@@ -76,9 +78,16 @@
     <string name="pick_title_save">Save as</string>
     <string name="pick_title_folder">Pick folder</string>
     <!-- Choosing a folder for another app: the button, on the folder being looked at -->
+    <string name="pick_for_app">For %1$s</string>
+    <string name="pick_for_unknown">For an app</string>
+    <string name="pick_unknown_app">An app</string>
+    <string name="pick_folder_root">Choose a folder inside storage. The top of storage and the Download folder cannot be given to an app.</string>
+    <string name="pick_folder_confirm">Give %1$s read and write access to “%2$s” and everything in it, now and later?</string>
+    <string name="pick_folder_allow">Allow</string>
     <string name="pick_use_folder">Choose this folder</string>
     <!-- Saving for another app: the file name box, the button, and the button when the name is taken (tap again) -->
     <string name="pick_save_name">File name</string>
+    <string name="pick_save_again">Replace</string>
     <string name="pick_save_here">Save here</string>
     <string name="pick_save_replace">“%1$s” is here. Tap again to replace it</string>
     <string name="pick_save_is_folder">That name is a folder.</string>
@@ -354,15 +363,22 @@
     <string name="about_body">It reaches the servers you add, and nothing else. A server’s password is kept only on this phone, sealed with a key that never leaves it.</string>
     <string name="about_privacy_title">Privacy</string>
     <string name="about_privacy_servers">The app connects only to the servers you set up (Samba, Nextcloud or WebDAV). Your sign-in details are kept on this phone, sealed with a key that never leaves it, and are sent only to that server. Nothing is sent to the app’s maker.</string>
-    <string name="about_privacy_phone">It asks for access to all files on the phone, because that is what a file manager does, and to install packages, so an APK you tap goes to Android’s installer. Other apps can open and save files on your servers through this app only when you pick one in Android’s file picker. Location is asked for only to start or join a Wi-Fi Direct network on the Nearby page; the app never reads where the phone is.</string>
-    <string name="about_privacy_nearby">Nearby is on only while its page is open. Then the phone announces its name on the Wi-Fi and, if you tap two phones together (NFC), shares a network name and password. Files arrive only when you accept them.</string>
+    <string name="about_privacy_phone">It asks for access to all files on the phone, because that is what a file manager does, and to install packages, so an APK you tap goes to Android’s installer. It keeps a long copy going with the screen off (wake lock and a notification). Location is asked for only to start or join a Wi-Fi Direct network on the Nearby page; the app never reads where the phone is.</string>
+    <string name="about_privacy_nearby">Nearby is on only while its page is open. Then the phone announces its name on the Wi-Fi (it holds a multicast lock for that) and, if you tap two phones together (NFC), shares a network name and password. Files arrive only when you accept them.</string>
+    <string name="about_privacy_picker">Files can answer other apps that ask for a file, a folder or a place to save. It shows which app is asking, and an app gets only what you choose there: a folder is given only after you confirm it, never the whole storage or the Download folder.</string>
     <string name="about_privacy_close">There are no ads, no analytics and no tracking. The llama opens a donation page in your browser, and that is the only link.</string>
     <string name="about_terms_title">Terms</string>
-    <string name="about_terms">This app is free software under the GNU General Public License v3. It comes with no warranty: use it at your own risk. Deleting a file here cannot be undone.</string>
-    <string name="about_licence">GNU General Public License v3</string>
-    <string name="about_bundled">Servers through smbj and Bouncy Castle (Apache-2.0, MIT). Icons from Material Symbols (Apache-2.0).</string>
+    <string name="about_terms">This app is free software under the GNU General Public License v3, with no warranty: use it at your own risk. Deleting a file here cannot be undone. A file manager can delete or overwrite anything on the phone; check what is chosen before you press a button.</string>
+    <string name="about_licences_title">Licences</string>
+    <string name="about_back">Back</string>
+    <string name="licences_source">Source code</string>
+    <string name="licences_licence">Licence</string>
+    <string name="licences_licence_line">This app is released under the GNU General Public License, version 3 only. Copyright wander wildwood. The full text follows.</string>
+    <string name="licences_built_with">Built with</string>
+    <string name="licences_built_with_note">The parts of this app that others made, each under its own licence. The full text of each licence follows the list.</string>
+    <string name="licences_text_of">%1$s licence</string>
+    <string name="about_no_browser_address">No browser is installed. The address is %1$s.</string>
     <string name="about_feed_the_llamas">feed the llamas</string>
-    <string name="about_no_browser">Nothing here opens web pages — %1$s</string>
     <string name="about_close">Close</string>
 
     <!-- ============================================================ -->

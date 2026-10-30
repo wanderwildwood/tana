@@ -17,6 +17,7 @@ import com.wanderwildwood.tana.work.Ask
 import com.wanderwildwood.tana.work.Opener
 import com.wanderwildwood.tana.work.PathGuard
 import com.wanderwildwood.tana.work.Picking
+import com.wanderwildwood.tana.work.Volumes
 import java.io.File
 
 /**
@@ -31,7 +32,7 @@ class PickActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val picking = Picking.from(intent) ?: run { finish(); return }
+        val picking = (Picking.from(intent) ?: run { finish(); return }).copy(caller = callerName())
         setContent {
             ThemeMMD(colorScheme = monochrome) {
                 CompositionLocalProvider(LocalCursorBlinkEnabled provides false) {
@@ -63,10 +64,13 @@ class PickActivity : ComponentActivity() {
         else DocumentsContract.buildDocumentUri(authority(), id)
     }
 
+    /** Which app is asking, by the name on its launcher; empty when the phone will not say. */
+    private fun callerName(): String {
+        val pkg = callingPackage ?: callingActivity?.packageName ?: return ""
+        return runCatching { packageManager.getApplicationInfo(pkg, 0).loadLabel(packageManager).toString() }.getOrDefault("")
+    }
+
     private fun authority() = "$packageName.picked"
 
-    private fun storageRoots(): List<String> {
-        val volumes = getSystemService(StorageManager::class.java).storageVolumes.mapNotNull { it.directory?.path }
-        return (listOf(Environment.getExternalStorageDirectory().path) + volumes).distinct()
-    }
+    private fun storageRoots(): List<String> = Volumes.sharedRoots(this)
 }

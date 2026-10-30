@@ -2,6 +2,7 @@ package com.wanderwildwood.tana.work
 
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -94,5 +95,32 @@ class PathGuardTest {
         assertTrue(PathGuard.within("/a/b/c", "/a/b"))
         assertTrue(!PathGuard.within("/a/bc", "/a/b"))
         assertTrue(PathGuard.within("/a/b", "/"))
+    }
+
+    private fun may(p: String) = PathGuard.mayGrantFolder(p, listOf(storage.path))
+
+    @Test fun theTopOfStorageCannotBeGivenAway() {
+        assertFalse(may(storage.path))
+    }
+
+    @Test fun theDownloadFolderCannotBeGivenAway() {
+        assertFalse(may(File(storage, "Download").path))
+        assertFalse(may(File(storage, "download").path))
+    }
+
+    @Test fun aFolderInsideStorageCan() {
+        File(storage, "Documents/Notes").mkdirs()
+        assertTrue(may(File(storage, "Documents").path))
+        assertTrue(may(File(storage, "Documents/Notes").path))
+        // Below Download is another matter: it is a folder the reader made there.
+        File(storage, "Download/mine").mkdirs()
+        assertTrue(may(File(storage, "Download/mine").path))
+    }
+
+    @Test fun anotherAppsFoldersAndOutsideStorageCannot() {
+        assertFalse(may(File(storage, "Android/data/com.other").path))
+        assertFalse(may(File(storage, "ANDROID/DATA/com.other").path))
+        assertFalse(may(outside.path))
+        assertFalse(may("relative/path"))
     }
 }

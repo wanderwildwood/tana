@@ -30,11 +30,29 @@ object PathGuard {
         return null
     }
 
+    /**
+     * Whether a whole folder may be handed to another app with read and write access that
+     * lasts: any folder inside shared storage except the top of it and the Download folder, as
+     * Android's own picker refuses them (the top is everything, Download is where other apps'
+     * files land). Names compare without regard to case, as shared storage does.
+     */
+    fun mayGrantFolder(path: String, roots: List<String>): Boolean {
+        val real = resolve(path, roots) ?: return false
+        for (root in roots) {
+            val top = try { File(root).canonicalPath } catch (e: java.io.IOException) { continue }
+            if (!within(real, top)) continue
+            if (real.equals(top, ignoreCase = true)) return false
+            if (real.equals(File(top, "Download").path, ignoreCase = true)) return false
+            if (real.equals(File(top, "Downloads").path, ignoreCase = true)) return false
+        }
+        return true
+    }
+
     /** True for [path] itself and anything below it; "/a/bc" is not below "/a/b". */
     fun within(path: String, top: String): Boolean =
         path == top || path.startsWith(if (top.endsWith("/")) top else "$top/")
 
     /** Another app's own folders, which sit under shared storage but are not for sharing. */
     private fun private(real: String, top: String): Boolean =
-        listOf("Android/data", "Android/obb").any { within(real, File(top, it).path) }
+        listOf("android/data", "android/obb").any { within(real.lowercase(), File(top, it).path.lowercase()) }
 }

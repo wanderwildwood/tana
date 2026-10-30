@@ -101,15 +101,23 @@ internal fun Files(
         onDispose { lifecycleOwner.lifecycle.removeObserver(watcher) }
     }
 
+    var aboutBeforeAccess by remember { mutableStateOf(false) }
     if (!access) {
-        AccessScreen {
-            val intent = Intent(
-                Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
-                Uri.parse("package:" + activity.packageName),
-            )
-            runCatching { activity.startActivity(intent) }
-                .onFailure { activity.startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)) }
-        }
+        // Back leaves the app: there is nothing behind this page to go back to.
+        BackHandler { activity.finish() }
+        AccessScreen(
+            onOpen = {
+                val intent = Intent(
+                    Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                    Uri.parse("package:" + activity.packageName),
+                )
+                runCatching { activity.startActivity(intent) }
+                    .onFailure { activity.startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)) }
+            },
+            onAbout = { aboutBeforeAccess = true },
+            onLeave = { activity.finish() },
+        )
+        if (aboutBeforeAccess) AboutDialog(onDismiss = { aboutBeforeAccess = false })
         return
     }
 

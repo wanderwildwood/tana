@@ -23,7 +23,9 @@ import com.wanderwildwood.tana.work.Kind
 import com.wanderwildwood.tana.work.Mode
 import com.wanderwildwood.tana.work.Names
 import com.wanderwildwood.tana.work.Opener
+import com.wanderwildwood.tana.work.PathGuard
 import com.wanderwildwood.tana.work.Pdfs
+import com.wanderwildwood.tana.work.Volumes
 import com.wanderwildwood.tana.work.Texts
 import com.wanderwildwood.tana.work.Ask
 import com.wanderwildwood.tana.work.Picking
@@ -229,10 +231,34 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     fun saveTarget(name: String): java.io.File? =
         _state.value.folder?.takeIf { it.store == LocalStore.ID }?.let { Stores.phone.file(it.path) }?.resolve(name.trim())
 
-    /** The folder on screen, handed back to the app that asked for one. */
+    /** A folder offered to the app that asked for one, waiting for the reader to confirm, or told it cannot be given. */
+    sealed class FolderAsk {
+        object Refused : FolderAsk()
+        data class Confirm(val folder: java.io.File) : FolderAsk()
+    }
+
+    private val _folderAsk = MutableStateFlow<FolderAsk?>(null)
+    val folderAsk: StateFlow<FolderAsk?> = _folderAsk
+
+    /**
+     * The folder on screen, for the app that asked for one. Not handed over at once: the top of
+     * storage and Download are refused, and any other is confirmed first by name, because the
+     * grant is read and write and lasts.
+     */
     fun chooseFolder() {
         val loc = _state.value.folder?.takeIf { it.store == LocalStore.ID } ?: return
-        _picked.tryEmit(listOf(Stores.phone.file(loc.path)))
+        val folder = Stores.phone.file(loc.path)
+        _folderAsk.value = if (PathGuard.mayGrantFolder(folder.path, Volumes.sharedRoots(app))) FolderAsk.Confirm(folder) else FolderAsk.Refused
+    }
+
+    fun folderConfirmed() {
+        val ask = _folderAsk.value
+        _folderAsk.value = null
+        if (ask is FolderAsk.Confirm) _picked.tryEmit(listOf(ask.folder))
+    }
+
+    fun folderDeclined() {
+        _folderAsk.value = null
     }
 
     /**

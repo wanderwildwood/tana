@@ -23,6 +23,8 @@ data class Picking(
     val write: Boolean = false,
     val persist: Boolean = false,
     val prefix: Boolean = false,
+    /** The asking app's name as the phone knows it; empty when it could not be told. */
+    val caller: String = "",
 ) {
 
     /** Whether a file of this name is one the asking app will take. */

@@ -24,6 +24,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -67,11 +68,61 @@ internal fun pickTitle(p: com.wanderwildwood.tana.work.Picking): String = string
     },
 )
 
+/**
+ * The top bar's title while another app is asking: what it asks for stays in the first line,
+ * and the second says who asks and, while choosing, how many are chosen ("2 selected · For
+ * Messaging"), so the verb never disappears behind a count.
+ */
+@Composable
+internal fun PickingTitle(p: com.wanderwildwood.tana.work.Picking, selected: Int = 0) {
+    val who = if (p.caller.isBlank()) stringResource(R.string.pick_for_unknown) else stringResource(R.string.pick_for_app, p.caller)
+    Column {
+        TextMMD(text = pickTitle(p), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        TextMMD(
+            text = if (selected > 0) pluralStringResource(R.plurals.selected, selected, selected) + " · " + who else who,
+            style = MaterialTheme.typography.labelSmall,
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+        )
+    }
+}
+
+/** The asking app's folder request: refused for storage's top and Download, otherwise confirmed by name. */
+@Composable
+internal fun FolderAskDialog(vm: BrowserViewModel) {
+    val ask by vm.folderAsk.collectAsStateWithLifecycle()
+    val shown = ask ?: return
+    val who = vm.picking?.caller?.ifBlank { null } ?: stringResource(R.string.pick_unknown_app)
+    EInkDialog(onDismiss = vm::folderDeclined) {
+        when (shown) {
+            is BrowserViewModel.FolderAsk.Refused -> {
+                TextMMD(text = stringResource(R.string.pick_folder_root), style = MaterialTheme.typography.bodyMedium)
+                Spacer(Modifier.height(16.dp))
+                OutlinedButtonMMD(onClick = vm::folderDeclined, modifier = Modifier.fillMaxWidth().height(48.dp)) {
+                    TextMMD(text = stringResource(R.string.about_close), style = MaterialTheme.typography.bodySmall)
+                }
+            }
+            is BrowserViewModel.FolderAsk.Confirm -> {
+                TextMMD(text = stringResource(R.string.pick_folder_confirm, who, shown.folder.name), style = MaterialTheme.typography.bodyMedium)
+                Spacer(Modifier.height(16.dp))
+                OutlinedButtonMMD(onClick = vm::folderConfirmed, modifier = Modifier.fillMaxWidth().height(48.dp)) {
+                    TextMMD(text = stringResource(R.string.pick_folder_allow), style = MaterialTheme.typography.bodySmall)
+                }
+                Spacer(Modifier.height(8.dp))
+                OutlinedButtonMMD(onClick = vm::folderDeclined, modifier = Modifier.fillMaxWidth().height(48.dp)) {
+                    TextMMD(text = stringResource(R.string.cancel), style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+    }
+}
+
 /** Everything along the foot of a screen, in the order it stacks. */
 @Composable
 private fun Foot(state: UiState, work: com.wanderwildwood.tana.work.Work, vm: BrowserViewModel, inSearch: Boolean = false, onMore: () -> Unit) {
     val picking = vm.picking
     if (picking != null) {
+        FolderAskDialog(vm)
         // Choosing for another app: nothing here copies, moves or deletes.
         when (picking.ask) {
             com.wanderwildwood.tana.work.Ask.FILE -> if (state.selecting) PickBar(state.selection.size, vm::pickSelected)
@@ -121,7 +172,7 @@ fun HomeScreen(
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             TopAppBarMMD(
-                title = { TextMMD(text = vm.picking?.let { pickTitle(it) } ?: stringResource(R.string.app_name)) },
+                title = { vm.picking?.let { PickingTitle(it) } ?: TextMMD(text = stringResource(R.string.app_name)) },
                 actions = {
                     BarButton(Icons.Search, stringResource(R.string.cd_search), vm::openSearch)
                     BarButton(Icons.Info, stringResource(R.string.cd_info), onAbout)
@@ -212,8 +263,8 @@ fun FolderScreen(state: UiState, work: com.wanderwildwood.tana.work.Work, vm: Br
     val folder = state.folder
     val (root, rootLabel) = folder?.let { vm.rootOf(it) } ?: (null to "")
     val title = when {
+        vm.picking != null -> ""
         state.selecting -> pluralStringResource(R.plurals.selected, state.selection.size, state.selection.size)
-        vm.picking != null -> pickTitle(vm.picking!!)
         state.place == Place.Recent -> stringResource(R.string.home_recent)
         folder != null && root != null && folder.path == root.path -> rootLabel
         else -> folder?.name.orEmpty()
@@ -223,7 +274,11 @@ fun FolderScreen(state: UiState, work: com.wanderwildwood.tana.work.Work, vm: Br
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             TopAppBarMMD(
-                title = { TextMMD(text = title, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
+                title = {
+                    val p = vm.picking
+                    if (p != null) PickingTitle(p, if (state.selecting) state.selection.size else 0)
+                    else TextMMD(text = title, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                },
                 navigationIcon = {
                     if (state.selecting) {
                         BarButton(Icons.Close, stringResource(R.string.cd_clear_selection), vm::clearSelection)
@@ -393,7 +448,8 @@ fun SearchScreen(search: SearchState, state: UiState, work: com.wanderwildwood.t
             // Chosen results look and act as chosen files in a folder do.
             TopAppBarMMD(
                 title = {
-                    TextMMD(
+                    val p = vm.picking
+                    if (p != null && state.selecting) PickingTitle(p, state.selection.size) else TextMMD(
                         text = if (state.selecting) pluralStringResource(R.plurals.selected, state.selection.size, state.selection.size) else search.within,
                         maxLines = 1,
                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
@@ -711,19 +767,30 @@ private fun Field(
     }
 }
 
-/** Before Android has been told this app may see storage. One page, one button. */
+/**
+ * Before Android has been told this app may see storage. One page, one button, and a way to read
+ * what the app is (the info button opens About: Privacy, Terms, Licences) and a way out.
+ */
 @Composable
-fun AccessScreen(onOpen: () -> Unit) {
+fun AccessScreen(onOpen: () -> Unit, onAbout: () -> Unit, onLeave: () -> Unit) {
     Column(
         modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).padding(horizontal = 20.dp),
         verticalArrangement = Arrangement.Center,
     ) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            BarButton(Icons.Info, stringResource(R.string.access_about), onAbout)
+        }
+        Spacer(Modifier.height(24.dp))
         TextMMD(text = stringResource(R.string.access_title), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
         Spacer(Modifier.height(8.dp))
         TextMMD(text = stringResource(R.string.access_body), style = MaterialTheme.typography.labelSmall)
         Spacer(Modifier.height(20.dp))
         OutlinedButtonMMD(onClick = onOpen, modifier = Modifier.fillMaxWidth().height(48.dp)) {
             TextMMD(text = stringResource(R.string.access_open), style = MaterialTheme.typography.bodySmall)
+        }
+        Spacer(Modifier.height(8.dp))
+        OutlinedButtonMMD(onClick = onLeave, modifier = Modifier.fillMaxWidth().height(48.dp)) {
+            TextMMD(text = stringResource(R.string.access_not_now), style = MaterialTheme.typography.bodySmall)
         }
     }
 }

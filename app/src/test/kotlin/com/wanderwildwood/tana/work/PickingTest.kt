@@ -75,4 +75,9 @@ class PickingTest {
         assertTrue(Picking.matches("text/plain", "TEXT/PLAIN"))
         assertFalse(Picking.matches("text/plain", "text/html"))
     }
+
+    @Test fun theCallerIsEmptyUntilTheActivityNamesIt() {
+        assertEquals("", of(Intent.ACTION_OPEN_DOCUMENT_TREE)!!.caller)
+        assertEquals("Messaging", of(Intent.ACTION_OPEN_DOCUMENT_TREE)!!.copy(caller = "Messaging").caller)
+    }
 }

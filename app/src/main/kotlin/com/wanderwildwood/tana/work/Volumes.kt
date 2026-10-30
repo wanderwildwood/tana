@@ -19,6 +19,12 @@ data class Volume(
 
 object Volumes {
 
+    /** The tops of shared storage: the phone's and any card's. What other apps may be handed lies below these. */
+    fun sharedRoots(context: Context): List<String> {
+        val volumes = context.getSystemService(StorageManager::class.java).storageVolumes.mapNotNull { it.directory?.path }
+        return (listOf(Environment.getExternalStorageDirectory().path) + volumes).distinct()
+    }
+
     /**
      * What is mounted now. Asked for fresh each time the start page shows, because an SD
      * card comes and goes.

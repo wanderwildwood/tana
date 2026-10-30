@@ -110,7 +110,7 @@ When another app asks for a file to open, a place to save one, or a folder, File
 screens and hands back the one file, the files, or the folder you chose, and nothing else. The app
 gets a read grant (and a write grant when it is saving, choosing a folder, or said it would write
 the file back), which it may ask to keep across restarts; it reaches only what you chose, and a
-folder only from that folder down. Files never lets an app reach another app's private folders,
+folder only from that folder down. Before a folder is given, Files names the asking app (or says "an app" when Android does not tell it), refuses the top of storage and the Download folder, as Android's own picker does, and asks you to confirm the folder by name. Files never lets an app reach another app's private folders,
 and refuses any path that climbs out of the phone's shared storage. You can see and remove what
 an app was granted in Android's settings for that app. Files learns nothing from this beyond the
 request itself, and sends nothing anywhere.
