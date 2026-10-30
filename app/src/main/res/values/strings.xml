@@ -74,7 +74,7 @@
     <string name="pick_title_file">Choose a file</string>
     <string name="pick_title_files">Choose files</string>
     <string name="pick_title_save">Save as</string>
-    <string name="pick_title_folder">Choose a folder</string>
+    <string name="pick_title_folder">Pick folder</string>
     <!-- Choosing a folder for another app: the button, on the folder being looked at -->
     <string name="pick_use_folder">Choose this folder</string>
     <!-- Saving for another app: the file name box, the button, and the button when the name is taken (tap again) -->
