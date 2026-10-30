@@ -1,6 +1,8 @@
 package com.wanderwildwood.tana.ui
 
 import android.app.Application
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.wanderwildwood.tana.R
@@ -23,6 +25,7 @@ import com.wanderwildwood.tana.work.Names
 import com.wanderwildwood.tana.work.Opener
 import com.wanderwildwood.tana.work.Pdfs
 import com.wanderwildwood.tana.work.Texts
+import com.wanderwildwood.tana.work.Ask
 import com.wanderwildwood.tana.work.Picking
 import com.wanderwildwood.tana.work.Pin
 import com.wanderwildwood.tana.work.Prefs
@@ -202,10 +205,52 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
     fun cannotPrint() = notice(Notice.NothingPrints)
 
-    /** What a folder shows: while choosing for another app, only what it will take. */
+    /** The name typed for a file being saved for another app; a file tapped in the list is put here. */
+    var saveField by androidx.compose.runtime.mutableStateOf(androidx.compose.ui.text.input.TextFieldValue(""))
+    val saveName: String get() = saveField.text
+
+    /**
+     * What a folder shows: while choosing for another app, only what it will take. Choosing a
+     * folder shows folders alone; saving shows every file, so the names taken are in sight.
+     */
     fun shown(entries: List<Entry>): List<Entry> {
         val p = picking ?: return entries
-        return entries.filter { it.isFolder || p.accepts(it.name) }
+        return when (p.ask) {
+            Ask.FILE -> entries.filter { it.isFolder || p.accepts(it.name) }
+            Ask.TREE -> entries.filter { it.isFolder }
+            Ask.SAVE -> entries
+        }
+    }
+
+    /** Only a file is chosen from a list by pressing and holding; a folder or a save is not. */
+    private val choosingFiles: Boolean get() = (picking?.ask ?: Ask.FILE) == Ask.FILE
+
+    /** Whether the folder on screen, and the name typed, already name something there. */
+    fun saveTarget(name: String): java.io.File? =
+        _state.value.folder?.takeIf { it.store == LocalStore.ID }?.let { Stores.phone.file(it.path) }?.resolve(name.trim())
+
+    /** The folder on screen, handed back to the app that asked for one. */
+    fun chooseFolder() {
+        val loc = _state.value.folder?.takeIf { it.store == LocalStore.ID } ?: return
+        _picked.tryEmit(listOf(Stores.phone.file(loc.path)))
+    }
+
+    /**
+     * The file named [name] made in the folder on screen and handed back. An empty new file
+     * is made here; the asking app then writes into it. One already there is handed back as
+     * it is, which the screen has asked about first.
+     */
+    fun saveHere(name: String) {
+        val target = saveTarget(name) ?: return
+        val trimmed = name.trim()
+        if (trimmed.isEmpty() || '/' in trimmed || trimmed == "." || trimmed == ".." || target.isDirectory) return
+        try {
+            if (!target.exists() && !target.createNewFile()) throw java.io.IOException(trimmed)
+        } catch (e: java.io.IOException) {
+            notice(Notice.Problem(StoreException(StoreException.Reason.CANNOT_WRITE, trimmed, e)))
+            return
+        }
+        _picked.tryEmit(listOf(target))
     }
 
     /** The chosen files, handed back; one only, if the asking app takes one. */
@@ -424,7 +469,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     fun press(entry: Entry) {
         val s = _state.value
         // Choosing a picture for another app, it is looked at first, chosen or not.
-        if (picking != null && !entry.isFolder && Previews.isImage(entry.name)) {
+        if (picking != null && choosingFiles && !entry.isFolder && Previews.isImage(entry.name)) {
             preview(entry)
             return
         }
@@ -435,6 +480,11 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         val p = picking
         if (entry.isFolder) {
             go(Place.Folder(entry.loc))
+        } else if (p != null && p.ask == Ask.SAVE) {
+            // Saving: a file in the list is a name already taken, put in the box to be replaced.
+            saveField = androidx.compose.ui.text.input.TextFieldValue(entry.name)
+        } else if (p != null && p.ask == Ask.TREE) {
+            Unit
         } else if (p != null) {
             // Choosing for another app, a zip is a file like any other. Several allowed:
             // tapping chooses, and Attach hands them all back.
@@ -497,6 +547,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun toggle(entry: Entry) {
+        if (!choosingFiles) return
         _state.update { s ->
             val sel = if (entry.loc in s.selection) s.selection - entry.loc else s.selection + entry.loc
             s.copy(selection = sel)

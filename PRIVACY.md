@@ -104,6 +104,17 @@ renames, deletes), only through a file or folder you pick in that picker; Files 
 sends it with the sign-in you gave, and never hands the password to the app. Deleting through
 the picker removes the file from the server for good.
 
+## Other apps asking for a file
+
+When another app asks for a file to open, a place to save one, or a folder, Files shows its own
+screens and hands back the one file, the files, or the folder you chose, and nothing else. The app
+gets a read grant (and a write grant when it is saving, choosing a folder, or said it would write
+the file back), which it may ask to keep across restarts; it reaches only what you chose, and a
+folder only from that folder down. Files never lets an app reach another app's private folders,
+and refuses any path that climbs out of the phone's shared storage. You can see and remove what
+an app was granted in Android's settings for that app. Files learns nothing from this beyond the
+request itself, and sends nothing anywhere.
+
 ## The one other address in the app
 
 The llama at the foot of the About opens `square.link/u/AGu8oT10` in whatever browser you

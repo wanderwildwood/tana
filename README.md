@@ -113,6 +113,15 @@ as places like any other.
   whether it does, asks the question when Android still would, and opens the other app's
   "Open by default" page — which the Kompakt's own settings leave out — when that app was chosen
   instead.
+- **Answers other apps' Open, Save and Choose-a-folder**, in its own screens instead of Android's.
+  When an app asks for a file (one or several, of the kinds it names), for a place to save one, or
+  for a folder, Files opens with the title saying which; a tap chooses, *Save as* has a name box
+  and asks again before it replaces a file, *Choose a folder* takes the folder on screen. The app
+  is handed that one file or folder and nothing else of the phone. Saving and folders are on the
+  phone's storage; a file on a server can be chosen to open, as a read-only copy. Android's own
+  picker answers the same requests, so the first time Android asks which to use; choose Files with
+  *Always*. Apps that carry a small client for it ask for Files by name, and use Android's
+  picker when Files is not installed.
 - **Rename, new folder, show hidden files**, and a path along the top where each step is a press
   back to it.
 

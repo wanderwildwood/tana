@@ -57,13 +57,27 @@ import com.wanderwildwood.tana.work.Volumes
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+/** What another app is asking for, as the top bar says it. */
+@Composable
+internal fun pickTitle(p: com.wanderwildwood.tana.work.Picking): String = stringResource(
+    when (p.ask) {
+        com.wanderwildwood.tana.work.Ask.TREE -> R.string.pick_title_folder
+        com.wanderwildwood.tana.work.Ask.SAVE -> R.string.pick_title_save
+        com.wanderwildwood.tana.work.Ask.FILE -> if (p.several) R.string.pick_title_files else R.string.pick_title_file
+    },
+)
+
 /** Everything along the foot of a screen, in the order it stacks. */
 @Composable
 private fun Foot(state: UiState, work: com.wanderwildwood.tana.work.Work, vm: BrowserViewModel, inSearch: Boolean = false, onMore: () -> Unit) {
     val picking = vm.picking
     if (picking != null) {
         // Choosing for another app: nothing here copies, moves or deletes.
-        if (state.selecting) PickBar(state.selection.size, vm::pickSelected)
+        when (picking.ask) {
+            com.wanderwildwood.tana.work.Ask.FILE -> if (state.selecting) PickBar(state.selection.size, vm::pickSelected)
+            com.wanderwildwood.tana.work.Ask.TREE -> if (!inSearch) FolderBar(state.folder?.store == com.wanderwildwood.tana.store.LocalStore.ID, vm::chooseFolder)
+            com.wanderwildwood.tana.work.Ask.SAVE -> if (!inSearch) SaveBar(vm, state.folder?.store == com.wanderwildwood.tana.store.LocalStore.ID)
+        }
     } else if (state.selecting) {
         SelectionBar(
             count = state.selection.size,
@@ -107,7 +121,7 @@ fun HomeScreen(
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             TopAppBarMMD(
-                title = { TextMMD(text = stringResource(R.string.app_name)) },
+                title = { TextMMD(text = vm.picking?.let { pickTitle(it) } ?: stringResource(R.string.app_name)) },
                 actions = {
                     BarButton(Icons.Search, stringResource(R.string.cd_search), vm::openSearch)
                     BarButton(Icons.Info, stringResource(R.string.cd_info), onAbout)
@@ -131,9 +145,12 @@ fun HomeScreen(
                 )
             }
 
-            if (state.pins.isNotEmpty()) {
+            // A folder or a new file can only be on the phone; the servers and other apps' folders wait for a file.
+            val phoneOnly = vm.picking?.let { it.ask != com.wanderwildwood.tana.work.Ask.FILE } == true
+            val pins = if (phoneOnly) state.pins.filter { it.loc.store == com.wanderwildwood.tana.store.LocalStore.ID } else state.pins
+            if (pins.isNotEmpty()) {
                 item { Heading(stringResource(R.string.home_section_pinned)) }
-                items(state.pins, key = { "p:" + it.loc.store + it.loc.path }) { pin ->
+                items(pins, key = { "p:" + it.loc.store + it.loc.path }) { pin ->
                     // A long press arms it; a tap while armed unpins, and it disarms itself.
                     var armed by remember(pin) { mutableStateOf(false) }
                     LaunchedEffect(armed) {
@@ -152,8 +169,8 @@ fun HomeScreen(
                 }
             }
 
-            item { Heading(stringResource(R.string.home_section_servers)) }
-            items(state.servers, key = { "s:" + it.id }) { server ->
+            if (!phoneOnly) item { Heading(stringResource(R.string.home_section_servers)) }
+            items(if (phoneOnly) emptyList() else state.servers, key = { "s:" + it.id }) { server ->
                 PlaceRow(
                     server.name,
                     if (server.isDav) server.host.substringAfter("://").trimEnd('/') else "${server.host} / ${server.share}",
@@ -161,11 +178,11 @@ fun HomeScreen(
                     onLongPress = { onEditServer(server) },
                 )
             }
-            item { PlaceRow(stringResource(R.string.home_add_server), null, onAddServer) }
+            if (!phoneOnly) item { PlaceRow(stringResource(R.string.home_add_server), null, onAddServer) }
 
             // Folders other apps offer through Android's picker, which no path reaches.
-            item { Heading(stringResource(R.string.home_section_other_apps)) }
-            items(state.others, key = { "o:" + it.id }) { root ->
+            if (!phoneOnly) item { Heading(stringResource(R.string.home_section_other_apps)) }
+            items(if (phoneOnly) emptyList() else state.others, key = { "o:" + it.id }) { root ->
                 val (armed, press) = rememberArmed(root.id) { vm.removeOther(root) }
                 PlaceRow(
                     if (armed) stringResource(R.string.home_remove_armed) else root.label,
@@ -174,7 +191,7 @@ fun HomeScreen(
                     onLongPress = { if (!armed) press() },
                 )
             }
-            item { PlaceRow(stringResource(R.string.home_add_other), null, onAddOther) }
+            if (!phoneOnly) item { PlaceRow(stringResource(R.string.home_add_other), null, onAddOther) }
 
             // Last, and quiet once it says Files: whether this is the app that answers.
             if (vm.picking == null) item { OpensRow() }
@@ -196,6 +213,7 @@ fun FolderScreen(state: UiState, work: com.wanderwildwood.tana.work.Work, vm: Br
     val (root, rootLabel) = folder?.let { vm.rootOf(it) } ?: (null to "")
     val title = when {
         state.selecting -> pluralStringResource(R.plurals.selected, state.selection.size, state.selection.size)
+        vm.picking != null -> pickTitle(vm.picking!!)
         state.place == Place.Recent -> stringResource(R.string.home_recent)
         folder != null && root != null && folder.path == root.path -> rootLabel
         else -> folder?.name.orEmpty()

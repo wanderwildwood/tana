@@ -8,6 +8,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
+import com.mudita.mmd.components.text_field.TextFieldMMD
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -254,6 +257,54 @@ internal fun PickBar(count: Int, onPick: () -> Unit) {
         Modifier.fillMaxWidth().padding(10.dp),
         onPick,
     )
+}
+
+/** Choosing a folder for another app: the folder being looked at is the answer. */
+@Composable
+internal fun FolderBar(enabled: Boolean, onChoose: () -> Unit) {
+    HorizontalDividerMMD()
+    FootButton(stringResource(R.string.pick_use_folder), Modifier.fillMaxWidth().padding(10.dp), onChoose, enabled)
+}
+
+/**
+ * Saving for another app: the name, the folder being looked at, and the button. A name already
+ * taken there is not overwritten by the first press: it arms the button, which says so, and
+ * the second press (within six seconds) replaces.
+ */
+@Composable
+internal fun SaveBar(vm: BrowserViewModel, folderOnPhone: Boolean) {
+    val name = vm.saveName
+    val target = vm.saveTarget(name)
+    val problem = when {
+        name.isBlank() -> stringResource(R.string.name_needed)
+        '/' in name || name.trim() == "." || name.trim() == ".." -> stringResource(R.string.name_invalid)
+        !folderOnPhone -> stringResource(R.string.pick_save_not_here)
+        target?.isDirectory == true -> stringResource(R.string.pick_save_is_folder)
+        else -> null
+    }
+    val exists = target?.exists() == true
+    val (armed, press) = rememberArmed(name to target) { vm.saveHere(name) }
+    HorizontalDividerMMD()
+    Column(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp)) {
+        TextMMD(text = stringResource(R.string.pick_save_name), style = MaterialTheme.typography.labelSmall)
+        TextFieldMMD(
+            value = vm.saveField,
+            onValueChange = { vm.saveField = it },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+        )
+        if (problem != null && name.isNotBlank()) {
+            TextMMD(text = problem, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 4.dp))
+        }
+        Spacer(Modifier.height(8.dp))
+        FootButton(
+            if (armed) stringResource(R.string.pick_save_replace, name.trim()) else stringResource(R.string.pick_save_here),
+            Modifier.fillMaxWidth(),
+            { if (exists) press() else vm.saveHere(name) },
+            enabled = problem == null,
+        )
+    }
 }
 
 @Composable

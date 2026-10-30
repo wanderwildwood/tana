@@ -126,7 +126,10 @@ private fun Browser(
     vm: BrowserViewModel = viewModel(),
 ) {
     // Before anything can be pressed: see BrowserViewModel.press.
-    if (picking != null && vm.picking == null) vm.picking = picking
+    if (picking != null && vm.picking == null) {
+        vm.picking = picking
+        vm.saveField = androidx.compose.ui.text.input.TextFieldValue(picking.title)
+    }
     LaunchedEffect(vm) { vm.picked.collect { onPicked(it) } }
     LaunchedEffect(vm) { vm.printing.collect { if (!Printer.print(activity, it)) vm.cannotPrint() } }
     LaunchedEffect(asked) {

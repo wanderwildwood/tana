@@ -124,10 +124,12 @@
             </intent-filter>
         </activity>
 
-        <!-- Another app asking for a file: an attachment, an upload. Standard launch mode,
-             not the main window's singleTask, so the answer goes back to the app that
-             asked. Android's own picker answers the same request; the chooser lets this be
-             the one that always does. -->
+        <!-- Another app asking for a file, several, a folder, or a place to save one: an
+             attachment, an upload, "Open", "Save as", "Choose a folder". Standard launch
+             mode, not the main window's singleTask, so the answer goes back to the app that
+             asked. Android's own picker answers the same requests; the chooser lets this be
+             the one that always does, and an app of this shop that has FilesPicker asks for
+             this one by name. It has no launcher entry: it is only ever opened by a request. -->
         <activity
             android:name=".PickActivity"
             android:exported="true"
@@ -138,6 +140,22 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.OPENABLE" />
                 <data android:mimeType="*/*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.OPEN_DOCUMENT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.OPENABLE" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.CREATE_DOCUMENT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.OPENABLE" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.OPEN_DOCUMENT_TREE" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
             <!-- The older way to ask, which Messaging's "Attach any file" still uses. Kinds of
                  file only: a filter of */* here would put this in every contact picker too,
@@ -213,6 +231,16 @@
                 <action android:name="android.content.action.DOCUMENTS_PROVIDER" />
             </intent-filter>
         </provider>
+
+        <!-- The files and folders handed back to an app that asked for them (see PickedProvider).
+             It lists no place of its own, so Android's picker never shows it; an address in it
+             works only for the app it was granted to. -->
+        <provider
+            android:name=".work.PickedProvider"
+            android:authorities="${applicationId}.picked"
+            android:exported="true"
+            android:grantUriPermissions="true"
+            android:permission="android.permission.MANAGE_DOCUMENTS" />
 
         <!-- How another app is handed a file to open or share: a content address with a
              one-off grant, rather than a path it would need its own permission to read. -->

@@ -67,9 +67,22 @@
     <string name="provider_save_failed">“%1$s” did not reach the server: %2$s</string>
     <string name="provider_unreachable">The server did not answer. Is it on, and is this phone on its network?</string>
     <plurals name="pick_attach">
-        <item quantity="one">Attach %1$d file</item>
-        <item quantity="other">Attach %1$d files</item>
+        <item quantity="one">Choose %1$d file</item>
+        <item quantity="other">Choose %1$d files</item>
     </plurals>
+    <!-- The top bar while another app is asking: what it is asking for -->
+    <string name="pick_title_file">Choose a file</string>
+    <string name="pick_title_files">Choose files</string>
+    <string name="pick_title_save">Save as</string>
+    <string name="pick_title_folder">Choose a folder</string>
+    <!-- Choosing a folder for another app: the button, on the folder being looked at -->
+    <string name="pick_use_folder">Choose this folder</string>
+    <!-- Saving for another app: the file name box, the button, and the button when the name is taken (tap again) -->
+    <string name="pick_save_name">File name</string>
+    <string name="pick_save_here">Save here</string>
+    <string name="pick_save_replace">“%1$s” is here. Tap again to replace it</string>
+    <string name="pick_save_is_folder">That name is a folder.</string>
+    <string name="pick_save_not_here">Open a folder on the phone to save into.</string>
     <!-- Under a picture tapped while choosing for another app; it is sent back as it is -->
     <string name="preview_attach">Attach</string>
     <!-- The same, when the asking app takes several: adds it to (or takes it out of) the ones chosen -->
