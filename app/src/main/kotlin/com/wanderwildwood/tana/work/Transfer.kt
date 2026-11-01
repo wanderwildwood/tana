@@ -1,6 +1,7 @@
 package com.wanderwildwood.tana.work
 
 import com.wanderwildwood.tana.store.Entry
+import com.wanderwildwood.tana.store.LocalStore
 import com.wanderwildwood.tana.store.Loc
 import com.wanderwildwood.tana.store.Store
 import com.wanderwildwood.tana.store.StoreException
@@ -46,6 +47,8 @@ class Transfer(
     private val onProgress: (Progress) -> Unit = {},
     /** A partial copy made (true) or finished with (false). See [PartJournal]. */
     private val onPart: (Loc, Boolean) -> Unit = { _, _ -> },
+    /** Where things deleted from the phone go instead of being removed; null deletes for good. */
+    private val trash: Trash? = null,
 ) {
     private var filesDone = 0
     private var filesTotal = 0
@@ -204,13 +207,39 @@ class Transfer(
         return finalName
     }
 
+    /**
+     * Deletes [entries]. On the phone, with a [trash], they are moved there (a rename, kept
+     * [TRASH_DAYS] days) and a failure to do so is a failure: it never falls back to deleting for
+     * good. Anything else (a server, another app's folder, something already in the trash) is
+     * removed for good.
+     */
     fun delete(entries: List<Entry>): Outcome {
-        val plans = entries.map { it to flatten(it) }
-        filesTotal = plans.sumOf { (_, items) -> items.size }
-        for ((entry, _) in plans) {
-            deleteTree(resolve(entry.loc.store), entry, counting = true)
+        val binned = entries.associateWith { binFile(it) }
+        val plans = entries.filter { binned[it] == null }.map { it to flatten(it) }
+        filesTotal = plans.sumOf { (_, items) -> items.size } + binned.values.count { it != null }
+        for (entry in entries) {
+            checkCancelled()
+            val file = binned[entry]
+            if (file == null) {
+                deleteTree(resolve(entry.loc.store), entry, counting = true)
+            } else {
+                try {
+                    trash!!.put(file)
+                } catch (e: TrashException) {
+                    throw StoreException(StoreException.Reason.CANNOT_TRASH, entry.name, e)
+                }
+                filesDone++
+                report(entry.name)
+            }
         }
         return Outcome(entries.size, 0)
+    }
+
+    /** The file on the phone this entry is, when it is to go to the trash; null when it is deleted for good. */
+    private fun binFile(entry: Entry): File? {
+        if (trash == null || entry.loc.store != LocalStore.ID) return null
+        val file = (resolve(entry.loc.store) as? LocalStore)?.file(entry.loc.path) ?: return null
+        return file.takeUnless { trash.isInTrash(it) }
     }
 
     /** Brings one file from wherever it is to a real file on the phone, for another app to open. */

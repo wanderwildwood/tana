@@ -54,6 +54,7 @@ import com.wanderwildwood.tana.work.SortBy
 import com.wanderwildwood.tana.store.Server
 import com.wanderwildwood.tana.store.Stores
 import com.wanderwildwood.tana.work.Kind
+import com.wanderwildwood.tana.work.TRASH_DAYS
 import com.wanderwildwood.tana.work.Volumes
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -133,6 +134,7 @@ private fun Foot(state: UiState, work: com.wanderwildwood.tana.work.Work, vm: Br
         SelectionBar(
             count = state.selection.size,
             readOnly = if (inSearch) state.selected().any { Stores.isReadOnly(it.loc.store) } else state.readOnly,
+            delete = vm.deleteKind(state.selected()),
             onCopy = { vm.pickUp(com.wanderwildwood.tana.work.Mode.COPY) },
             onMove = { vm.pickUp(com.wanderwildwood.tana.work.Mode.MOVE) },
             onDelete = vm::delete,
@@ -186,6 +188,7 @@ fun HomeScreen(
             item { PlaceRow(stringResource(R.string.home_downloads), null, { vm.go(Place.Folder(Volumes.downloads())) }) }
             // Not while choosing for another app: that errand is a file from here, not from elsewhere.
             if (vm.picking == null) item { PlaceRow(stringResource(R.string.home_nearby), stringResource(R.string.home_nearby_note), { vm.openNearby() }) }
+            if (vm.picking == null) item { PlaceRow(stringResource(R.string.home_trash), pluralStringResource(R.plurals.home_trash_note, TRASH_DAYS, TRASH_DAYS), { vm.openTrash() }) }
 
             item { Heading(stringResource(R.string.home_section_phone)) }
             items(state.volumes, key = { "v:" + it.loc.path }) { volume ->

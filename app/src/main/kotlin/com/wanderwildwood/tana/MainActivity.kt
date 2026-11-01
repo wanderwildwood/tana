@@ -28,6 +28,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mudita.mmd.ThemeMMD
 import com.wanderwildwood.tana.store.Server
 import com.wanderwildwood.tana.ui.AboutDialog
+import com.wanderwildwood.tana.ui.TrashScreen
 import com.wanderwildwood.tana.ui.AccessScreen
 import com.wanderwildwood.tana.ui.BrowserViewModel
 import com.wanderwildwood.tana.ui.ClashDialog
@@ -188,6 +189,7 @@ private fun Browser(
     val text = state.text
     when {
         server != null -> ServerScreen(server, vm) { editing = null }
+        state.trash != null -> TrashScreen(state.trash!!, vm)
         nearby != null -> NearbyScreen(nearby, vm)
         sheet != null -> SheetScreen(sheet, vm)
         pdf != null -> PdfScreen(pdf.file?.let(PdfSource::OfFile), pdf.entry.name, vm::closePdf, vm::handPdfOn)

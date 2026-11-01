@@ -42,6 +42,14 @@ as places like any other.
   a delete, and the original is deleted only after all of it has arrived. Stop a copy half way
   and what had arrived is kept, and nothing half-written is left behind. Long copies carry on
   with the screen off, with a notification that can stop them.
+- **A trash for the phone's own files.** Delete on the phone's storage or the SD card moves
+  things to a hidden `.Cabinet-trash` folder on the same volume (a rename, so even a big file is
+  instant and takes no extra room), with a small note of where each came from. The start page's
+  Trash lists them newest first: Restore puts one back where it was (never over something of the
+  same name: it comes back as "name (restored)"), Delete forever and Empty the trash ask a second
+  tap, and anything older than 7 days is removed when Cabinet starts and when the Trash opens.
+  A server has no trash in this app: deleting there cannot be undone from Cabinet (the server's
+  own trash may still hold it), and the button says so before the second tap.
 - **Asks about names already taken**, before it starts: keep both, leave those out, or replace
   — and replace asks a second time in its own face, because it is the one that deletes.
 - **Servers.** Any Samba or Windows share, signed in as a guest or with a user and password, and

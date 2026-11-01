@@ -117,6 +117,7 @@ class TransferService : Service() {
         runCatching { PartJournal.sweepLeftovers(this) }
         val transfer = Transfer(
             resolve = Stores::get,
+            trash = Trash(Volumes.sharedRoots(this).map(::File)),
             isCancelled = Transfers::isCancelled,
             onPart = { loc, started ->
                 if (started) PartJournal.started(this, loc) else PartJournal.done(this, loc)

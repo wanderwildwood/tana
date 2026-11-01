@@ -143,6 +143,35 @@
     <string name="action_move">Move</string>
     <string name="action_delete">Delete</string>
     <string name="action_delete_armed">Delete for good, no undo — tap again</string>
+    <string name="action_delete_trash_armed">Move to the trash — tap again</string>
+    <!-- Said above the armed Delete button, so the second tap is known before it is made -->
+    <plurals name="delete_note_trash">
+        <item quantity="one">This goes to the trash and stays %d day. Trash, on the start page, brings it back.</item>
+        <item quantity="other">This goes to the trash and stays %d days. Trash, on the start page, brings it back.</item>
+    </plurals>
+    <string name="delete_note_server">A server has no trash in this app, so this cannot be undone here. The server\'s own trash may still hold it.</string>
+    <string name="delete_note_forever">This cannot be undone: it is deleted at once, with no trash.</string>
+    <!-- The start page row and the Trash page -->
+    <string name="home_trash">Trash</string>
+    <plurals name="home_trash_note">
+        <item quantity="one">Deleted from the phone, kept %d day</item>
+        <item quantity="other">Deleted from the phone, kept %d days</item>
+    </plurals>
+    <string name="trash_title">Trash</string>
+    <plurals name="trash_rule">
+        <item quantity="one">Kept %d day, then gone for good. Servers have no trash here.</item>
+        <item quantity="other">Kept %d days, then gone for good. Servers have no trash here.</item>
+    </plurals>
+    <string name="trash_none">Nothing in the trash.</string>
+    <!-- %1$s is a date, %2$s the name of the folder it was deleted from -->
+    <string name="trash_deleted">Deleted %1$s · from %2$s</string>
+    <string name="trash_restore">Restore</string>
+    <string name="trash_forever">Delete forever</string>
+    <string name="trash_forever_armed">Delete forever — tap again</string>
+    <string name="trash_empty">Empty the trash</string>
+    <string name="trash_empty_armed">Empty the trash for good — tap again</string>
+    <!-- %1$s is the name, %2$s the folder it went back to -->
+    <string name="trash_restored">Restored “%1$s” to %2$s.</string>
     <string name="action_more">More</string>
     <!-- In the "More" dialog -->
     <string name="action_share">Share</string>
@@ -330,6 +359,8 @@
     <string name="problem_cannot_make_folder">The folder “%1$s” could not be made here.</string>
     <string name="problem_cannot_rename">“%1$s” could not be renamed.</string>
     <string name="problem_cannot_delete">“%1$s” could not be deleted.</string>
+    <string name="problem_cannot_trash">“%1$s” could not be moved to the trash, so it was not deleted.</string>
+    <string name="problem_cannot_restore">“%1$s” could not be put back. It is still in the trash.</string>
     <string name="problem_cannot_write">“%1$s” could not be written. There may not be room for it.</string>
     <string name="problem_server_unreachable">%1$s cannot be reached. Away from home, check that Tailscale is on.</string>
     <string name="problem_login_refused">The server did not accept that user and password.</string>
@@ -368,7 +399,7 @@
     <string name="about_privacy_picker">Cabinet can answer other apps that ask for a file, a folder or a place to save. It shows which app is asking, and an app gets only what you choose there: a folder is given only after you confirm it, never the whole storage or the Download folder.</string>
     <string name="about_privacy_close">There are no ads, no analytics and no tracking. The llama opens a donation page in your browser, and that is the only link.</string>
     <string name="about_terms_title">Terms</string>
-    <string name="about_terms">This app is free software under the GNU General Public License v3, with no warranty: use it at your own risk. Deleting a file here cannot be undone. A file manager can delete or overwrite anything on the phone; check what is chosen before you press a button.</string>
+    <string name="about_terms">This app is free software under the GNU General Public License v3, with no warranty: use it at your own risk. Files deleted from the phone wait in the trash for 7 days; files deleted from a server cannot be brought back here. A file manager can delete or overwrite anything on the phone; check what is chosen before you press a button.</string>
     <string name="about_licences_title">Licences</string>
     <string name="about_back">Back</string>
     <string name="licences_title">Licences</string>

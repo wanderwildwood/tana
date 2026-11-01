@@ -42,6 +42,7 @@ import com.wanderwildwood.tana.work.Transfers
 import com.wanderwildwood.tana.work.Volume
 import com.wanderwildwood.tana.work.Volumes
 import com.wanderwildwood.tana.work.Work
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job as CoroutineJob
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -80,6 +81,9 @@ sealed interface Notice {
     data object FileGone : Notice
     data class Problem(val problem: Throwable) : Notice
 }
+
+/** The Trash page: what is in it ([items] is null until read), and a line about the last thing done. */
+data class TrashView(val items: List<com.wanderwildwood.tana.work.Trashed>? = null, val note: String? = null)
 
 /** What the info dialog knows so far about one thing. Filled in as it is worked out. */
 data class Info(
@@ -156,6 +160,8 @@ data class UiState(
     val revealed: Loc? = null,
     /** The Nearby page, open: what is to be sent from it, or nothing when it was opened to receive. */
     val nearby: List<Entry>? = null,
+    /** The Trash page, open; null when it is not. */
+    val trash: TrashView? = null,
     /** How a swipe down on the folder's first page is going; see [BrowserViewModel.pull]. */
     val pulled: Pulled? = null,
 ) {
@@ -298,6 +304,8 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         Stores.setOthers(_state.value.others, application.contentResolver)
         Opener.tidyFetched(application)
         refreshVolumes()
+        // Whatever has been in the trash longer than a week goes now, before anyone looks.
+        viewModelScope.launch(Dispatchers.IO) { runCatching { trash().purgeExpired() } }
         viewModelScope.launch {
             Transfers.work.collect { work -> onWork(work) }
         }
@@ -321,7 +329,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         cameToShow = place
         _state.update {
             it.copy(
-                search = null, info = null, preview = null, sheet = null, pdf = null, text = null, nearby = null,
+                search = null, info = null, preview = null, sheet = null, pdf = null, text = null, nearby = null, trash = null,
                 notice = null, revealed = null,
             )
         }
@@ -378,6 +386,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     fun back(): Boolean {
         val s = _state.value
         when {
+            s.trash != null -> closeTrash()
             s.nearby != null -> closeNearby()
             s.sheet != null -> closeSheet()
             s.pdf != null -> closePdf()
@@ -603,6 +612,65 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
             else if (!Opener.hand(app, files, purpose)) notice(Notice.NothingOpens)
         } else {
             start(Job.Fetch(entries, purpose))
+        }
+    }
+
+    // ---------------------------------------------------------------- trash
+
+    private fun trash() = com.wanderwildwood.tana.work.Trash(Volumes.sharedRoots(app).map(::File))
+
+    /** What a delete of [chosen] will do: the phone's own files go to the trash; a server's cannot. */
+    internal fun deleteKind(chosen: List<Entry>): DeleteKind = when {
+        chosen.all { it.loc.store == com.wanderwildwood.tana.store.LocalStore.ID && !com.wanderwildwood.tana.work.pathIsInTrash(it.loc.path) } -> DeleteKind.TRASH
+        chosen.all { c -> _state.value.servers.any { it.storeId == c.loc.store } } -> DeleteKind.SERVER
+        else -> DeleteKind.FOREVER
+    }
+
+    fun openTrash() {
+        _state.update { it.copy(trash = TrashView(), selection = emptySet()) }
+        readTrash(null)
+    }
+
+    fun closeTrash() {
+        _state.update { it.copy(trash = null) }
+        refresh()
+    }
+
+    /** Reads the trash again (after purging what is a week old), keeping [note] under the bar. */
+    private fun readTrash(note: String?) {
+        viewModelScope.launch {
+            val items = withContext(Dispatchers.IO) {
+                runCatching { trash().also { it.purgeExpired() }.list() }
+            }
+            items.onSuccess { list -> _state.update { s -> s.trash?.let { s.copy(trash = TrashView(list, note)) } ?: s } }
+                .onFailure { notice(Notice.Problem(it)) }
+        }
+    }
+
+    fun restore(item: com.wanderwildwood.tana.work.Trashed) {
+        viewModelScope.launch {
+            val result = withContext(Dispatchers.IO) { runCatching { trash().restore(item) } }
+            result.onSuccess { readTrash(app.getString(R.string.trash_restored, it.name, it.parentFile?.name.orEmpty())) }
+                .onFailure {
+                    readTrash(null)
+                    notice(Notice.Problem(StoreException(StoreException.Reason.CANNOT_RESTORE, item.name, it)))
+                }
+        }
+    }
+
+    fun deleteForever(item: com.wanderwildwood.tana.work.Trashed) {
+        viewModelScope.launch {
+            val result = withContext(Dispatchers.IO) { runCatching { trash().deleteForever(item) } }
+            result.onFailure { notice(Notice.Problem(StoreException(StoreException.Reason.CANNOT_DELETE, item.name, it))) }
+            readTrash(null)
+        }
+    }
+
+    fun emptyTrash() {
+        viewModelScope.launch {
+            val result = withContext(Dispatchers.IO) { runCatching { trash().empty() } }
+            result.onFailure { notice(Notice.Problem(it)) }
+            readTrash(null)
         }
     }
 
@@ -1158,6 +1226,8 @@ fun describe(app: android.content.Context, problem: Throwable): String {
         StoreException.Reason.CANNOT_MAKE_FOLDER -> R.string.problem_cannot_make_folder
         StoreException.Reason.CANNOT_RENAME -> R.string.problem_cannot_rename
         StoreException.Reason.CANNOT_DELETE -> R.string.problem_cannot_delete
+        StoreException.Reason.CANNOT_TRASH -> R.string.problem_cannot_trash
+        StoreException.Reason.CANNOT_RESTORE -> R.string.problem_cannot_restore
         StoreException.Reason.CANNOT_WRITE -> R.string.problem_cannot_write
         StoreException.Reason.SERVER_UNREACHABLE -> R.string.problem_server_unreachable
         StoreException.Reason.LOGIN_REFUSED -> R.string.problem_login_refused

@@ -99,6 +99,8 @@ class StoreException(
         CANNOT_MAKE_FOLDER,
         CANNOT_RENAME,
         CANNOT_DELETE,
+        CANNOT_TRASH,
+        CANNOT_RESTORE,
         CANNOT_WRITE,
         SERVER_UNREACHABLE,
         LOGIN_REFUSED,

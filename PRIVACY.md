@@ -96,6 +96,15 @@ password each time, and it is taken down when the Nearby page closes. Anyone wit
 who has the name and password can join it, as with any Wi-Fi network, and can then offer files
 like any device on your home Wi-Fi: every offer still asks Accept or Decline.
 
+## The trash
+
+Deleting from the phone's storage or the SD card moves the file into a hidden folder,
+`.Cabinet-trash`, at the top of the same storage, with a small text note beside it saying where it
+came from and when it was deleted. It stays there seven days and is then removed. It never leaves
+the phone and nothing is sent anywhere; the storage access Cabinet already asks for is the only
+permission it uses for this. Clearing Cabinet's data does not empty it; the Trash page or deleting
+the folder does. Files deleted on a server are not moved: they are deleted there.
+
 ## Other apps and your servers
 
 Cabinet lists your servers in Android's own file picker, so another app's Open and Save screens

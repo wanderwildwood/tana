@@ -44,6 +44,7 @@ import com.wanderwildwood.tana.store.Entry
 import com.wanderwildwood.tana.store.Loc
 import com.wanderwildwood.tana.work.Job
 import com.wanderwildwood.tana.work.Mode
+import com.wanderwildwood.tana.work.TRASH_DAYS
 import com.wanderwildwood.tana.work.Transfers
 import com.wanderwildwood.tana.work.Work
 import kotlinx.coroutines.delay
@@ -219,13 +220,30 @@ internal fun PathLine(root: Loc, rootLabel: String, here: Loc, onJump: (Loc) -> 
     HorizontalDividerMMD()
 }
 
+/** What a delete will do to what is chosen: go to the trash for a week, or be gone. */
+internal enum class DeleteKind { TRASH, SERVER, FOREVER }
+
 /** Four words along the foot while things are chosen. Delete asks in its own face. */
 @Composable
-internal fun SelectionBar(count: Int, readOnly: Boolean, onCopy: () -> Unit, onMove: () -> Unit, onDelete: () -> Unit, onMore: () -> Unit) {
+internal fun SelectionBar(count: Int, readOnly: Boolean, delete: DeleteKind, onCopy: () -> Unit, onMove: () -> Unit, onDelete: () -> Unit, onMore: () -> Unit) {
     val (armed, pressDelete) = rememberArmed(count, onDelete)
     HorizontalDividerMMD()
     if (armed) {
-        FootButton(stringResource(R.string.action_delete_armed), Modifier.fillMaxWidth().padding(10.dp), pressDelete)
+        // What the second tap will do, said plainly: where it goes, or that nothing can bring it back.
+        TextMMD(
+            text = when (delete) {
+                DeleteKind.TRASH -> pluralStringResource(R.plurals.delete_note_trash, TRASH_DAYS, TRASH_DAYS)
+                DeleteKind.SERVER -> stringResource(R.string.delete_note_server)
+                DeleteKind.FOREVER -> stringResource(R.string.delete_note_forever)
+            },
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 8.dp),
+        )
+        FootButton(
+            stringResource(if (delete == DeleteKind.TRASH) R.string.action_delete_trash_armed else R.string.action_delete_armed),
+            Modifier.fillMaxWidth().padding(10.dp),
+            pressDelete,
+        )
         return
     }
     // Inside a zip, nothing can be moved out of it or deleted from it; copying out is all.
