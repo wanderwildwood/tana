@@ -51,3 +51,10 @@ ciphers) and Android's TLS stack decides the rest.
 ## Not covered
 
 Android's own Keystore and TLS implementation are the platform's.
+
+## Plain http to the reader's own server
+
+Cabinet can connect to a server the reader types in (a WebDAV or Nextcloud address, a Samba server), often a home server with no certificate. Android refuses plain http by default, so `res/xml/network_security_config.xml` permits it; permitting
+cleartext does not weaken https, it only stops Android refusing http. Android cannot allow it for a range of
+addresses only, so it is allowed everywhere. An address is used as typed. Cabinet does not yet warn before signing in over plain http to a host outside the home network; the reader's own addresses are the case it is built for. A scan that flags `cleartextTrafficPermitted` is seeing this
+and not an accident: removing it would stop every home server that has no certificate from working.

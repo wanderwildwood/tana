@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Files</string>
+    <string name="app_name">Cabinet</string>
 
     <!-- ============================================================ -->
     <!-- Asking for access, on first launch -->
 
-    <string name="access_title">Files needs to see your storage.</string>
-    <string name="access_body">Android keeps this behind a switch of its own, called “All files access”. The button opens that page; turn the switch on for Files and come back. Files uses it only to show and manage what is on this phone; the about page says what else it does.</string>
-    <string name="access_about">About Files</string>
+    <string name="access_title">Cabinet needs to see your storage.</string>
+    <string name="access_body">Android keeps this behind a switch of its own, called “All files access”. The button opens that page; turn the switch on for Cabinet and come back. Cabinet uses it only to show and manage what is on this phone; the about page says what else it does.</string>
+    <string name="access_about">About Cabinet</string>
     <string name="access_not_now">Not now</string>
     <string name="access_open">Open the setting</string>
 
@@ -31,7 +31,7 @@
     <!-- Opens Android's folder picker, to add a folder another app offers (Termux's home, say) -->
     <string name="home_section_opens">Opens folders and downloads</string>
     <string name="opens_asks">Android asks which app</string>
-    <string name="opens_asks_note">Tap, then choose Files and Always</string>
+    <string name="opens_asks_note">Tap, then choose Cabinet and Always</string>
     <string name="opens_other_note_short">Another app. Tap for how to change it</string>
     <string name="opens_other_note">Android opens them in another app, %1$s, without asking, because it was once chosen with Always. On the next page, tap Clear default preferences, then come back and tap this row again.</string>
     <string name="opens_other_open">Open that page</string>
@@ -124,7 +124,7 @@
     <string name="pdf_go">Go</string>
     <string name="name_needed">Type a name first.</string>
     <string name="name_invalid">A name cannot hold a slash.</string>
-    <string name="pdf_locked">This PDF is locked with a password. Files cannot open a locked one; another app may.</string>
+    <string name="pdf_locked">This PDF is locked with a password. Cabinet cannot open a locked one; another app may.</string>
     <string name="pdf_failed">This file cannot be read as a PDF here. Another app may manage it.</string>
     <string name="text_smaller">Smaller text</string>
     <string name="text_larger">Larger text</string>
@@ -359,24 +359,29 @@
     <!-- ============================================================ -->
     <!-- About -->
 
-    <string name="about_title">Files %1$s</string>
+    <string name="about_title">Cabinet %1$s</string>
     <string name="about_body">It reaches the servers you add, and nothing else. A server’s password is kept only on this phone, sealed with a key that never leaves it.</string>
     <string name="about_privacy_title">Privacy</string>
     <string name="about_privacy_servers">The app connects only to the servers you set up (Samba, Nextcloud or WebDAV). Your sign-in details are kept on this phone, sealed with a key that never leaves it, and are sent only to that server. Nothing is sent to the app’s maker.</string>
     <string name="about_privacy_phone">It asks for access to all files on the phone, because that is what a file manager does, and to install packages, so an APK you tap goes to Android’s installer. It keeps a long copy going with the screen off (wake lock and a notification). Location is asked for only to start or join a Wi-Fi Direct network on the Nearby page; the app never reads where the phone is.</string>
-    <string name="about_privacy_nearby">Nearby is on only while its page is open. Then the phone announces its name on the Wi-Fi (it holds a multicast lock for that) and, if you tap two phones together (NFC), shares a network name and password. Files arrive only when you accept them.</string>
-    <string name="about_privacy_picker">Files can answer other apps that ask for a file, a folder or a place to save. It shows which app is asking, and an app gets only what you choose there: a folder is given only after you confirm it, never the whole storage or the Download folder.</string>
+    <string name="about_privacy_nearby">Nearby is on only while its page is open. Then the phone announces its name on the Wi-Fi (it holds a multicast lock for that) and, if you tap two phones together (NFC), shares a network name and password. Cabinet arrive only when you accept them.</string>
+    <string name="about_privacy_picker">Cabinet can answer other apps that ask for a file, a folder or a place to save. It shows which app is asking, and an app gets only what you choose there: a folder is given only after you confirm it, never the whole storage or the Download folder.</string>
     <string name="about_privacy_close">There are no ads, no analytics and no tracking. The llama opens a donation page in your browser, and that is the only link.</string>
     <string name="about_terms_title">Terms</string>
     <string name="about_terms">This app is free software under the GNU General Public License v3, with no warranty: use it at your own risk. Deleting a file here cannot be undone. A file manager can delete or overwrite anything on the phone; check what is chosen before you press a button.</string>
     <string name="about_licences_title">Licences</string>
     <string name="about_back">Back</string>
-    <string name="licences_source">Source code</string>
-    <string name="licences_licence">Licence</string>
-    <string name="licences_licence_line">This app is released under the GNU General Public License, version 3 only. Copyright wander wildwood. The full text follows.</string>
-    <string name="licences_built_with">Built with</string>
-    <string name="licences_built_with_note">The parts of this app that others made, each under its own licence. The full text of each licence follows the list.</string>
-    <string name="licences_text_of">%1$s licence</string>
+    <string name="licences_title">Licences</string>
+    <string name="licences_back">Back</string>
+    <string name="licences_source_head">Source code</string>
+    <string name="licences_licence_head">Licence</string>
+    <string name="licences_licence">This app is released under the GNU General Public License, version 3 only. Copyright wander wildwood. The full text follows.</string>
+    <string name="licences_built_head">Built with</string>
+    <string name="licences_full_head">Full texts</string>
+    <string name="licences_full_gpl">GNU General Public License v3 (full text)</string>
+    <string name="licences_full_apache">Apache License 2.0 (full text)</string>
+    <string name="licences_full_mit">MIT licence (full text)</string>
+    <string name="licences_full_ofl">SIL Open Font Licence 1.1 (full text)</string>
     <string name="about_no_browser_address">No browser is installed. The address is %1$s.</string>
     <string name="about_feed_the_llamas">feed the llamas</string>
     <string name="about_close">Close</string>
@@ -441,13 +446,13 @@
     <!-- Away from Wi-Fi: a Wi-Fi Direct network of the phone's own, joined by an NFC tap -->
     <string name="nearby_section_away">Away from Wi-Fi</string>
     <string name="nearby_away_start">Start a network here</string>
-    <string name="nearby_away_start_note">Android wants location on and allowed for this. Files never reads where you are.</string>
+    <string name="nearby_away_start_note">Android wants location on and allowed for this. Cabinet never reads where you are.</string>
     <string name="nearby_away_join">To join another phone’s, hold this one against it.</string>
     <string name="nearby_away_join_nfc_off">To join another phone’s with a tap, turn NFC on in Settings.</string>
     <string name="nearby_away_join_no_nfc">This phone has no NFC to join another’s with a tap. Join its network in Wi-Fi settings instead.</string>
     <string name="nearby_away_starting">Starting a network…</string>
     <!-- %1$s is the network's name, %2$s its password -->
-    <string name="nearby_away_hosting">Network %1$s is up, password %2$s. Hold another phone with Files on its Nearby page against this one. A laptop can join the network in its Wi-Fi settings and open LocalSend.</string>
+    <string name="nearby_away_hosting">Network %1$s is up, password %2$s. Hold another phone with Cabinet on its Nearby page against this one. A laptop can join the network in its Wi-Fi settings and open LocalSend.</string>
     <string name="nearby_away_stop">Stop the network</string>
     <string name="nearby_away_restarting">Network %1$s dropped. Starting it again with the same name and password %2$s…</string>
     <string name="nearby_away_joining">Joining %1$s’s network…</string>

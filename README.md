@@ -1,4 +1,4 @@
-# 棚 tana — Files
+# 棚 tana — Cabinet
 
 A file manager for an E Ink phone, and for the drives on the servers at home. Built for the
 [Mudita Kompakt](https://mudita.com/products/kompakt/), and it will install on any Android 12
@@ -51,7 +51,7 @@ as places like any other.
   A Nextcloud is added by its address, your user name and an app password made for the phone
   (in Nextcloud, Settings → Security → Devices & sessions).
   A swipe down at the top of a folder reads it again, on a server or on the phone.
-- **Servers in Android's own file picker**, under *Files*. A file chosen there can be saved back
+- **Servers in Android's own file picker**, under *Cabinet*. A file chosen there can be saved back
   by the app that chose it — a password vault, an editor. The app writes into a copy on the
   phone; when it closes the file, the copy goes up under a name of its own and then takes the old
   one's place in one step, and only if nobody else saved the file on the server meanwhile.
@@ -63,12 +63,12 @@ as places like any other.
   what you accept lands in Downloads. Only while that page is open is the phone findable or
   listening; close it and nothing is. Transfers go over HTTPS, and each device is known by its
   certificate, so a file is sent only to the device that announced itself.
-- **Away from Wi-Fi**, two phones with Files make a network of their own. *Start a network here*
+- **Away from Wi-Fi**, two phones with Cabinet make a network of their own. *Start a network here*
   on one (Wi-Fi Direct), then hold the other against it with its Nearby page open: the tap
   (NFC) hands over the network's name and password and who the phone is, and the second joins
   and sends as it would at home. A laptop can join the same network from its Wi-Fi settings,
   with the name and password the page shows, and use LocalSend. Android asks for the location
-  permission, and for location to be on, to start or join one; Files never reads a location, and
+  permission, and for location to be on, to start or join one; Cabinet never reads a location, and
   location can go off again once the phones are connected.
 - **Zip files.** Open one like a folder and copy out what you want, or *Extract here* for all of
   it. *Compress* makes one of whatever is chosen. It works the same for a zip on a server.
@@ -103,7 +103,7 @@ as places like any other.
   comes before chapter 10. Folders always come first.
 - **Opens a file in the app that handles it**, or asks which with Open with. **Installs an
   APK** — the installer asks once whether to allow installs from here. A contact card (.vcf)
-  opens in [Contacts](https://github.com/wanderwildwood/enishi) to be added, and a GPS track
+  opens in [Connections](https://github.com/wanderwildwood/enishi) to be added, and a GPS track
   (.gpx) in [Topo](https://github.com/wanderwildwood/chikei) to be imported.
 - **Info**: size, where, when, and — on request, because it means reading the whole file — its
   SHA-256, set out in fours so it can be read against a checksum posted somewhere else.
@@ -115,13 +115,13 @@ as places like any other.
   instead.
 - **Answers other apps' Open, Save and Choose-a-folder**, in its own screens instead of Android's.
   When an app asks for a file (one or several, of the kinds it names), for a place to save one, or
-  for a folder, Files opens with the title saying which; a tap chooses, *Save as* has a name box
+  for a folder, Cabinet opens with the title saying which; a tap chooses, *Save as* has a name box
   and asks again before it replaces a file, *Choose a folder* takes the folder on screen. The app
   is handed that one file or folder and nothing else of the phone. Saving and folders are on the
   phone's storage; a file on a server can be chosen to open, as a read-only copy. Android's own
-  picker answers the same requests, so the first time Android asks which to use; choose Files with
-  *Always*. Apps that carry a small client for it ask for Files by name, and use Android's
-  picker when Files is not installed.
+  picker answers the same requests, so the first time Android asks which to use; choose Cabinet with
+  *Always*. Apps that carry a small client for it ask for Cabinet by name, and use Android's
+  picker when Cabinet is not installed.
 - **Rename, new folder, show hidden files**, and a path along the top where each step is a press
   back to it.
 

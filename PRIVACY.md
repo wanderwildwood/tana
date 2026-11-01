@@ -1,6 +1,6 @@
 # Privacy
 
-Files talks to the servers you add, to the devices nearby that you send to or accept files from, and to
+Cabinet talks to the servers you add, to the devices nearby that you send to or accept files from, and to
 nothing else.
 
 That is the whole policy. The rest of this page is the evidence for it, because a privacy
@@ -28,7 +28,7 @@ policy that cannot be checked is just a promise.
   Held only while one is under way.
 - **Location** (`ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION`) — only for *Start a network
   here* and joining one by a tap. Android 12 will not let an app start or join a Wi-Fi Direct
-  network without it, and without location being on. **Files never asks where the phone is**:
+  network without it, and without location being on. **Cabinet never asks where the phone is**:
   nothing in it calls Android's location services, and the permission is asked for only when
   you press that row or tap to join, never before. You can refuse it and everything else works.
 - **Wi-Fi state** (`ACCESS_WIFI_STATE`, `CHANGE_WIFI_STATE`) — to start and join that network,
@@ -98,21 +98,21 @@ like any device on your home Wi-Fi: every offer still asks Accept or Decline.
 
 ## Other apps and your servers
 
-Files lists your servers in Android's own file picker, so another app's Open and Save screens
+Cabinet lists your servers in Android's own file picker, so another app's Open and Save screens
 can reach them. An app gets a file from a server, or writes one into it (or makes a folder,
-renames, deletes), only through a file or folder you pick in that picker; Files fetches or
+renames, deletes), only through a file or folder you pick in that picker; Cabinet fetches or
 sends it with the sign-in you gave, and never hands the password to the app. Deleting through
 the picker removes the file from the server for good.
 
 ## Other apps asking for a file
 
-When another app asks for a file to open, a place to save one, or a folder, Files shows its own
+When another app asks for a file to open, a place to save one, or a folder, Cabinet shows its own
 screens and hands back the one file, the files, or the folder you chose, and nothing else. The app
 gets a read grant (and a write grant when it is saving, choosing a folder, or said it would write
 the file back), which it may ask to keep across restarts; it reaches only what you chose, and a
-folder only from that folder down. Before a folder is given, Files names the asking app (or says "an app" when Android does not tell it), refuses the top of storage and the Download folder, as Android's own picker does, and asks you to confirm the folder by name. Files never lets an app reach another app's private folders,
+folder only from that folder down. Before a folder is given, Cabinet names the asking app (or says "an app" when Android does not tell it), refuses the top of storage and the Download folder, as Android's own picker does, and asks you to confirm the folder by name. Cabinet never lets an app reach another app's private folders,
 and refuses any path that climbs out of the phone's shared storage. You can see and remove what
-an app was granted in Android's settings for that app. Files learns nothing from this beyond the
+an app was granted in Android's settings for that app. Cabinet learns nothing from this beyond the
 request itself, and sends nothing anywhere.
 
 ## The one other address in the app
