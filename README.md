@@ -20,12 +20,12 @@ showed there was a gap for one; this is a different answer to the same question.
 ## Why it exists
 
 The phone's own file manager is Android's, and it does nearly everything. It is also drawn for
-a colour screen that scrolls smoothly, which this one does not, and it has never heard of the
+a color screen that scrolls smoothly, which this one does not, and it has never heard of the
 drives plugged into the servers in the next room. The lightweight E Ink file managers look right
 and do a third of the work: one file at a time, no search, no share.
 
 The bar here is the Android one — everything it does that a person reaches for on a phone —
-drawn for sixteen greys and a list that moves four rows at a time, and with the servers in it
+drawn for sixteen grays and a list that moves four rows at a time, and with the servers in it
 as places like any other.
 
 ## What it does
@@ -135,7 +135,7 @@ as places like any other.
 
 ## What it does not do
 
-No thumbnails: a photograph at the size of a list row is a grey smudge on this screen. No
+No thumbnails: a photograph at the size of a list row is a gray smudge on this screen. No
 `Android/data`: Android 12 lets no app into another app's private folders. A zip is read, never
 rewritten: to change what is in one, extract it, change that, and compress it again. A
 spreadsheet is read, never edited, and the old Excel format (xls) is not read at all. A PDF is
@@ -183,7 +183,7 @@ For updates without doing this by hand, add this repository to
 It will offer each new release as it appears. **The application id is settled** — updates
 install over what you have, keeping your settings and anything the app has stored.
 
-## Licence
+## License
 
 GPL-3.0-only. See [LICENSE](LICENSE).
 
