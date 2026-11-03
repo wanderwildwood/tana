@@ -147,7 +147,7 @@ internal fun EntryRow(
             }
         }
     }
-    HorizontalDividerMMD(thickness = 0.5.dp)
+    DottedRule(start = 54.dp, end = 16.dp)
 }
 
 /**
@@ -171,7 +171,7 @@ internal fun Heading(text: String) {
         fontWeight = FontWeight.Bold,
         modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 18.dp, bottom = 4.dp),
     )
-    HorizontalDividerMMD()
+    DottedRule()
 }
 
 /** A row on the start page: a name, and a line under it only when that line says something. */
@@ -187,7 +187,7 @@ internal fun PlaceRow(title: String, note: String?, onPress: () -> Unit, onLongP
         TextMMD(text = title, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
         if (note != null) TextMMD(text = note, style = MaterialTheme.typography.labelSmall, maxLines = 3, overflow = TextOverflow.Ellipsis)
     }
-    HorizontalDividerMMD(thickness = 0.5.dp)
+    DottedRule()
 }
 
 /**

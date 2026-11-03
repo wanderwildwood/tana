@@ -70,7 +70,7 @@ fun TrashScreen(view: TrashView, vm: BrowserViewModel) {
                 style = MaterialTheme.typography.labelSmall,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
             )
-            HorizontalDividerMMD()
+            DottedRule()
             when {
                 items == null -> TextMMD(
                     text = stringResource(R.string.folder_reading),
@@ -126,5 +126,5 @@ private fun TrashRow(item: Trashed, vm: BrowserViewModel) {
             )
         }
     }
-    HorizontalDividerMMD()
+    DottedRule()
 }

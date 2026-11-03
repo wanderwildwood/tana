@@ -65,7 +65,7 @@ private fun DialogRow(label: String, note: String? = null, onClick: () -> Unit) 
         TextMMD(text = label, style = MaterialTheme.typography.bodyMedium)
         if (note != null) TextMMD(text = note, style = MaterialTheme.typography.labelSmall)
     }
-    HorizontalDividerMMD(thickness = 0.5.dp)
+    DottedRule(start = 0.dp)
 }
 
 /**

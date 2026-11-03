@@ -34,7 +34,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import com.mudita.mmd.components.divider.HorizontalDividerMMD
 import androidx.compose.foundation.lazy.rememberLazyListState
 import com.mudita.mmd.components.text.TextMMD
 import com.mudita.mmd.components.text_field.TextFieldMMD
@@ -144,7 +143,7 @@ private fun androidx.compose.foundation.layout.ColumnScope.Rows(view: SheetView,
             if (sheet.cut) stringResource(R.string.sheet_cut, count.format(body.size)) else null,
         ).joinToString(" "),
     )
-    HorizontalDividerMMD()
+    DottedRule()
     val rowsState = rememberLazyListState()
     Box(Modifier.weight(1f)) {
         when {
@@ -179,7 +178,7 @@ private fun RowLines(cells: List<String>, onPress: () -> Unit) {
             )
         }
     }
-    HorizontalDividerMMD(thickness = 0.5.dp)
+    DottedRule()
 }
 
 /** A row opened: each heading over its value, the empty ones left out. */
@@ -199,7 +198,7 @@ private fun WholeRow(headings: List<String>, cells: List<String>) {
                     TextMMD(text = heading, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                     TextMMD(text = value, style = MaterialTheme.typography.bodyMedium)
                 }
-                HorizontalDividerMMD(thickness = 0.5.dp)
+                DottedRule()
             }
         }
     }
