@@ -168,7 +168,7 @@ object Sheets {
                     // A byte-order mark at the very start is not part of the first heading.
                     if (first) {
                         first = false
-                        if (ch == '﻿') continue
+                        if (ch == '\uFEFF') continue
                     }
                     if (quoted) {
                         if (ch == '"') {
