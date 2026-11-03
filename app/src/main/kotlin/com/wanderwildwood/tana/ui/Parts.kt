@@ -171,7 +171,7 @@ internal fun Heading(text: String) {
         fontWeight = FontWeight.Bold,
         modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 18.dp, bottom = 4.dp),
     )
-    DottedRule()
+    HorizontalDividerMMD()
 }
 
 /** A row on the start page: a name, and a line under it only when that line says something. */
