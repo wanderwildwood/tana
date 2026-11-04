@@ -408,8 +408,8 @@
     <string name="licences_full_head">Full texts</string>
     <string name="licences_full_gpl">GNU General Public License v3 (full text)</string>
     <string name="licences_full_apache">Apache License 2.0 (full text)</string>
-    <string name="licences_full_mit">MIT license (full text)</string>
     <string name="licences_full_ofl">SIL Open Font License 1.1 (full text)</string>
+    <string name="licences_full_mpl">Mozilla Public License 2.0 (full text)</string>
     <string name="about_no_browser_address">No browser is installed. The address is %1$s.</string>
     <string name="about_feed_the_llamas">Feed the llamas</string>
     <string name="about_close">Close</string>

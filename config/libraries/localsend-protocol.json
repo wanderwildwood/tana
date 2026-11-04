@@ -1,0 +1,14 @@
+{
+  "uniqueId": "localsend-protocol",
+  "name": "The LocalSend protocol",
+  "description": "Nearby follows LocalSend's published protocol, in its own code; no LocalSend code is in the app.",
+  "developers": [
+    {
+      "name": "the LocalSend authors"
+    }
+  ],
+  "website": "https://github.com/localsend/protocol",
+  "licenses": [
+    "Apache-2.0"
+  ]
+}
