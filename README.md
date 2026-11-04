@@ -14,8 +14,8 @@ showed there was a gap for one; this is a different answer to the same question.
 
 | | |
 |---|---|
-| ![The start page: places, pins and servers](screenshots/1-home.png) | ![Two files chosen in a folder](screenshots/2-choose.png) |
-| ![A text file in the reader, turned by whole lines](screenshots/3-reader.png) | ![About, with Privacy, Terms and Licences](screenshots/4-about.png) |
+| ![The start page: places, pins and servers](screenshots/1-home.png) | ![Two files chosen in a folder on a server](screenshots/2-choose.png) |
+| ![A text file in the reader, turned by whole lines](screenshots/3-reader.png) | ![About, with Privacy, Terms and Licenses](screenshots/4-about.png) |
 
 ## Why it exists
 
