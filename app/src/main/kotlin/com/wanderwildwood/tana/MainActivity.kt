@@ -39,6 +39,7 @@ import com.wanderwildwood.tana.ui.InfoDialog
 import com.wanderwildwood.tana.ui.NearbyScreen
 import com.wanderwildwood.tana.ui.PdfScreen
 import com.wanderwildwood.tana.ui.TextScreen
+import com.wanderwildwood.tana.ui.houseTypography
 import com.wanderwildwood.tana.work.Texts
 import com.wanderwildwood.tana.ui.Notice
 import com.wanderwildwood.tana.ui.Place
@@ -66,7 +67,7 @@ class MainActivity : ComponentActivity() {
         // had got to, not wherever the app was first asked to open.
         if (savedInstanceState == null) asked = intent
         setContent {
-            ThemeMMD(colorScheme = monochrome) {
+            ThemeMMD(colorScheme = monochrome, typography = houseTypography) {
                 ArmedScope {
                     // A steady cursor: a blinking one repaints the panel twice a second.
                     CompositionLocalProvider(LocalCursorBlinkEnabled provides false) {

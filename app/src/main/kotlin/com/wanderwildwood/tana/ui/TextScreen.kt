@@ -60,7 +60,7 @@ import kotlinx.coroutines.withContext
  * every list here, with the rows on the page and the page out of all at the foot. Plain text
  * is shown as it is written; Markdown ([markdown]) as plain reading, with headings, bullets,
  * quotes and code set apart. The two buttons in the bar make the text smaller or larger,
- * from 14sp up, and the choice is kept.
+ * from 16sp up (the house floor), and the choice is kept.
  *
  * The file is indexed once, off the main thread, and only the lines on screen are read, so a
  * file of many megabytes opens as one of a few lines does. A file that is not text, or is too
@@ -162,7 +162,7 @@ private fun MarkdownLine(row: MdRow, sp: Int, ink: androidx.compose.ui.graphics.
         MdKind.RULE -> Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).height(1.dp).background(ink))
         MdKind.CODE -> TextMMD(
             text = row.text.ifEmpty { " " },
-            fontSize = (sp * 0.9f).sp,
+            fontSize = (sp * 0.9f).coerceAtLeast(HOUSE_TYPE_FLOOR_SP).sp,
             fontFamily = FontFamily.Monospace,
             modifier = Modifier.fillMaxWidth().padding(start = 28.dp, end = 16.dp, top = 1.dp, bottom = 1.dp),
         )
@@ -209,7 +209,7 @@ private fun SizeButton(small: Boolean, description: String, onClick: () -> Unit)
     ) {
         TextMMD(
             text = "A",
-            fontSize = if (small) 14.sp else 24.sp,
+            fontSize = if (small) HouseTypeFloor else 24.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(0.dp),
         )

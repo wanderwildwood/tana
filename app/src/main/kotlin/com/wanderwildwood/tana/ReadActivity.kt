@@ -7,6 +7,7 @@ import androidx.activity.compose.setContent
 import com.mudita.mmd.ThemeMMD
 import com.wanderwildwood.tana.ui.PdfScreen
 import com.wanderwildwood.tana.ui.TextScreen
+import com.wanderwildwood.tana.ui.houseTypography
 import com.wanderwildwood.tana.ui.monochrome
 import com.wanderwildwood.tana.work.Opener
 import com.wanderwildwood.tana.work.PdfBook
@@ -42,7 +43,7 @@ class ReadActivity : ComponentActivity() {
         val markdown = Texts.isMarkdownMime(type) || (name.isNotEmpty() && Texts.isMarkdown(name)) ||
             (asText && type == Texts.MIME && runCatching { Texts.isMarkdown(PdfBook.nameOf(this, source)) }.getOrDefault(false))
         setContent {
-            ThemeMMD(colorScheme = monochrome) {
+            ThemeMMD(colorScheme = monochrome, typography = houseTypography) {
                 ArmedScope {
                     if (asText) {
                         TextScreen(source, null, markdown, onBack = ::finish, onHandOn = { handOn(uri, if (markdown) "text/markdown" else Texts.MIME) })

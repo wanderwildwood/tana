@@ -94,8 +94,8 @@ class Prefs(context: Context) {
         }
 
     companion object {
-        /** Sizes of the text reader, in sp. None is under 14. */
-        val TEXT_SIZES = listOf(14, 17, 20, 24, 28)
+        /** Sizes of the text reader, in sp. None is under the house floor of 16. */
+        val TEXT_SIZES = listOf(16, 18, 20, 24, 28)
         const val DEFAULT_TEXT_SIZE = 1
     }
 }

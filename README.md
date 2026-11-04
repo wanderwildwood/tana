@@ -94,7 +94,7 @@ as places like any other.
   any PDF.
 - **Text and Markdown, read here.** A .txt, .md, .log, .json, .xml, .yml, .ini, .conf or similar
   file opens in a reader that turns by whole lines, like a list, with two buttons in the bar for
-  smaller and larger text (14sp up; the choice is kept). Markdown is shown as plain reading:
+  smaller and larger text (16sp up; the choice is kept). Markdown is shown as plain reading:
   headings bold and larger, bullets, quotes, code in monospace, links as their words, no images.
   Files are read a line at a time, so one of many megabytes opens as quickly as a short one. UTF-8,
   or Windows-1252 for an old file; a file that is not text is said so, and *Open with another app*

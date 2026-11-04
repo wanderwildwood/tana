@@ -12,6 +12,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalCursorBlinkEnabled
 import com.mudita.mmd.ThemeMMD
+import com.wanderwildwood.tana.ui.houseTypography
 import com.wanderwildwood.tana.ui.monochrome
 import com.wanderwildwood.tana.work.Ask
 import com.wanderwildwood.tana.work.Opener
@@ -35,7 +36,7 @@ class PickActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val picking = (Picking.from(intent) ?: run { finish(); return }).copy(caller = callerName())
         setContent {
-            ThemeMMD(colorScheme = monochrome) {
+            ThemeMMD(colorScheme = monochrome, typography = houseTypography) {
                 ArmedScope {
                     CompositionLocalProvider(LocalCursorBlinkEnabled provides false) {
                         Files(this, null, {}, picking) { files -> answer(picking, files) }
