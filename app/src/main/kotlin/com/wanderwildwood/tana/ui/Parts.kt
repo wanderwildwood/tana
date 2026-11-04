@@ -23,8 +23,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,18 +64,14 @@ internal fun BarButton(icon: ImageVector, description: String, onClick: () -> Un
 
 /**
  * A row that asks before it acts: the first press arms it and changes what it says, a second
- * press does it, and it disarms itself after six seconds so nothing is left live for whoever
- * picks the phone up next. Returns whether it is armed, and the press to hand the row.
+ * press does it. It stays armed, with no timer, until the next other touch, Back or leaving
+ * the screen (the shared [rememberArmedFlag]). [disarmOnBack] false is for a question Back
+ * itself asks, which the screen's own Back then answers. Returns whether it is armed, and the
+ * press to hand the row.
  */
 @Composable
-internal fun rememberArmed(key: Any?, onConfirmed: () -> Unit): Pair<Boolean, () -> Unit> {
-    var armed by remember(key) { mutableStateOf(false) }
-    LaunchedEffect(armed) {
-        if (armed) {
-            delay(6000)
-            armed = false
-        }
-    }
+internal fun rememberArmed(key: Any?, disarmOnBack: Boolean = true, onConfirmed: () -> Unit): Pair<Boolean, () -> Unit> {
+    var armed by rememberArmedFlag(key, disarmOnBack = disarmOnBack)
     return armed to {
         if (armed) {
             armed = false
@@ -226,7 +220,7 @@ internal enum class DeleteKind { TRASH, SERVER, FOREVER }
 /** Four words along the foot while things are chosen. Delete asks in its own face. */
 @Composable
 internal fun SelectionBar(count: Int, readOnly: Boolean, delete: DeleteKind, onCopy: () -> Unit, onMove: () -> Unit, onDelete: () -> Unit, onMore: () -> Unit) {
-    val (armed, pressDelete) = rememberArmed(count, onDelete)
+    val (armed, pressDelete) = rememberArmed(count, onConfirmed = onDelete)
     HorizontalDividerMMD()
     if (armed) {
         // What the second tap will do, said plainly: where it goes, or that nothing can bring it back.
@@ -287,7 +281,7 @@ internal fun FolderBar(enabled: Boolean, onChoose: () -> Unit) {
 /**
  * Saving for another app: the name, the folder being looked at, and the button. A name already
  * taken there is not overwritten by the first press: it arms the button, which says so, and
- * the second press (within six seconds) replaces.
+ * the second press replaces. It stays armed until the next other touch, Back or leaving.
  */
 @Composable
 internal fun SaveBar(vm: BrowserViewModel, folderOnPhone: Boolean) {

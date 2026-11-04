@@ -34,7 +34,8 @@ import java.util.Date
 /**
  * The trash: what was deleted from the phone in the last [TRASH_DAYS] days, newest first.
  * Restore is one press; Delete forever and Empty trash ask first, in the row's own words, and
- * disarm after six seconds. Anything older than a week has already gone.
+ * stay armed until the next other touch, Back or leaving. Anything older than a week has
+ * already gone.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -205,14 +205,8 @@ fun HomeScreen(
             if (pins.isNotEmpty()) {
                 item { Heading(stringResource(R.string.home_section_pinned)) }
                 items(pins, key = { "p:" + it.loc.store + it.loc.path }) { pin ->
-                    // A long press arms it; a tap while armed unpins, and it disarms itself.
-                    var armed by remember(pin) { mutableStateOf(false) }
-                    LaunchedEffect(armed) {
-                        if (armed) {
-                            kotlinx.coroutines.delay(6000)
-                            armed = false
-                        }
-                    }
+                    // A long press arms it; a tap while armed unpins; any other touch or Back disarms it.
+                    var armed by rememberArmedFlag(pin)
                     val server = state.servers.firstOrNull { it.storeId == pin.loc.store }
                     PlaceRow(
                         if (armed) stringResource(R.string.home_unpin_armed) else pin.label,
@@ -611,21 +605,24 @@ fun ServerScreen(initial: Server, vm: BrowserViewModel, onDone: () -> Unit) {
     var checking by remember { mutableStateOf(false) }
     var problem by remember { mutableStateOf<String?>(null) }
     val editing = initial.id.isNotEmpty()
-    val (armed, pressRemove) = rememberArmed(initial.id) {
-        vm.removeServer(initial)
-        onDone()
-    }
     val ready = host.isNotBlank() && (dav || share.isNotBlank()) && !checking
     // Anything typed is asked about before it is thrown away: the first press of Close or Back
     // says so, the second leaves.
     val changed = name != initial.name || kind != initial.kind || host != initial.host ||
         share != initial.share || user != initial.user || password != initial.password
-    val (discarding, pressLeave) = rememberArmed("discard", onDone)
+    // Back itself asks this one, so Back (through KeyboardFirst) answers it rather than disarming.
+    val (discarding, pressLeave) = rememberArmed("discard", disarmOnBack = false, onConfirmed = onDone)
     val leave = { if (changed && !checking) pressLeave() else onDone() }
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
     // The answer is at the top of the form; the form may be turned to a lower page.
     LaunchedEffect(problem, discarding) { if (problem != null || discarding) listState.scrollToItem(0) }
     KeyboardFirst(leave)
+    // After KeyboardFirst, so that while Remove is armed its own Back handler comes first and
+    // Back only disarms it.
+    val (armed, pressRemove) = rememberArmed(initial.id) {
+        vm.removeServer(initial)
+        onDone()
+    }
 
     val save = {
         if (ready) {

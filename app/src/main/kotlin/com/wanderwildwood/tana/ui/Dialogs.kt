@@ -316,23 +316,29 @@ private fun Fact(label: String, value: String) {
  */
 @Composable
 fun ClashDialog(clashing: Clashing, onAnswer: (Clash?) -> Unit) {
-    val (armed, pressReplace) = rememberArmed(clashing) { onAnswer(Clash.REPLACE) }
     val n = clashing.names.size
     EInkDialog(onDismiss = { onAnswer(null) }) {
-        Title(pluralStringResource(R.plurals.clash_title, n, n, clashing.names.first()))
-        if (n > 1) {
-            Spacer(Modifier.height(6.dp))
-            TextMMD(
-                text = clashing.names.take(4).joinToString("\n") + if (n > 4) "\n…" else "",
-                style = MaterialTheme.typography.labelSmall,
-            )
+        // The dialog is a window of its own, so it gets its own scope: a tap elsewhere in it
+        // disarms Replace.
+        ArmedScope {
+            Column {
+                val (armed, pressReplace) = rememberArmed(clashing) { onAnswer(Clash.REPLACE) }
+                Title(pluralStringResource(R.plurals.clash_title, n, n, clashing.names.first()))
+                if (n > 1) {
+                    Spacer(Modifier.height(6.dp))
+                    TextMMD(
+                        text = clashing.names.take(4).joinToString("\n") + if (n > 4) "\n…" else "",
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                DialogRow(stringResource(R.string.clash_keep_both)) { onAnswer(Clash.KEEP_BOTH) }
+                DialogRow(pluralStringResource(R.plurals.clash_skip, n)) { onAnswer(Clash.SKIP) }
+                DialogRow(pluralStringResource(if (armed) R.plurals.clash_replace_armed else R.plurals.clash_replace, n), onClick = pressReplace)
+                Spacer(Modifier.height(14.dp))
+                WideButton(stringResource(R.string.cancel)) { onAnswer(null) }
+            }
         }
-        Spacer(Modifier.height(8.dp))
-        DialogRow(stringResource(R.string.clash_keep_both)) { onAnswer(Clash.KEEP_BOTH) }
-        DialogRow(pluralStringResource(R.plurals.clash_skip, n)) { onAnswer(Clash.SKIP) }
-        DialogRow(pluralStringResource(if (armed) R.plurals.clash_replace_armed else R.plurals.clash_replace, n), onClick = pressReplace)
-        Spacer(Modifier.height(14.dp))
-        WideButton(stringResource(R.string.cancel)) { onAnswer(null) }
     }
 }
 

@@ -54,6 +54,7 @@ import com.wanderwildwood.tana.work.Picking
 import com.wanderwildwood.tana.work.Printer
 import com.wanderwildwood.tana.work.Transfers
 import com.wanderwildwood.tana.work.Work
+import com.wanderwildwood.tana.ui.ArmedScope
 
 class MainActivity : ComponentActivity() {
     /** What the app was last opened with, so "show the downloads" can land in Downloads. */
@@ -66,9 +67,11 @@ class MainActivity : ComponentActivity() {
         if (savedInstanceState == null) asked = intent
         setContent {
             ThemeMMD(colorScheme = monochrome) {
-                // A steady cursor: a blinking one repaints the panel twice a second.
-                CompositionLocalProvider(LocalCursorBlinkEnabled provides false) {
-                    Files(this, asked, onAnswered = { asked = null })
+                ArmedScope {
+                    // A steady cursor: a blinking one repaints the panel twice a second.
+                    CompositionLocalProvider(LocalCursorBlinkEnabled provides false) {
+                        Files(this, asked, onAnswered = { asked = null })
+                    }
                 }
             }
         }

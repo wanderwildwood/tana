@@ -14,6 +14,7 @@ import com.wanderwildwood.tana.work.PdfSource
 import com.wanderwildwood.tana.work.Pdfs
 import com.wanderwildwood.tana.work.Texts
 import java.io.File
+import com.wanderwildwood.tana.ui.ArmedScope
 
 /**
  * A PDF or text file another app handed over to be opened (`ACTION_VIEW`): an email's attachment, a
@@ -42,10 +43,12 @@ class ReadActivity : ComponentActivity() {
             (asText && type == Texts.MIME && runCatching { Texts.isMarkdown(PdfBook.nameOf(this, source)) }.getOrDefault(false))
         setContent {
             ThemeMMD(colorScheme = monochrome) {
-                if (asText) {
-                    TextScreen(source, null, markdown, onBack = ::finish, onHandOn = { handOn(uri, if (markdown) "text/markdown" else Texts.MIME) })
-                } else {
-                    PdfScreen(source, null, onBack = ::finish, onHandOn = { handOn(uri) })
+                ArmedScope {
+                    if (asText) {
+                        TextScreen(source, null, markdown, onBack = ::finish, onHandOn = { handOn(uri, if (markdown) "text/markdown" else Texts.MIME) })
+                    } else {
+                        PdfScreen(source, null, onBack = ::finish, onHandOn = { handOn(uri) })
+                    }
                 }
             }
         }
