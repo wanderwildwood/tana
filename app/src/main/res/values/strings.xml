@@ -395,7 +395,7 @@
     <string name="about_privacy_title">Privacy</string>
     <string name="about_privacy_servers">The app connects only to the servers you set up (Samba, Nextcloud or WebDAV). Your sign-in details are kept on this phone, sealed with a key that never leaves it, and are sent only to that server. Nothing is sent to the app’s maker.</string>
     <string name="about_privacy_phone">It asks for access to all files on the phone, because that is what a file manager does, and to install packages, so an APK you tap goes to Android’s installer. It keeps a long copy going with the screen off (wake lock and a notification). Location is asked for only to start or join a Wi-Fi Direct network on the Nearby page; the app never reads where the phone is.</string>
-    <string name="about_privacy_nearby">Nearby is on only while its page is open. Then the phone announces its name on the Wi-Fi (it holds a multicast lock for that) and, if you tap two phones together (NFC), shares a network name and password. Cabinet arrive only when you accept them.</string>
+    <string name="about_privacy_nearby">Nearby is on only while its page is open. Then the phone announces its name on the Wi-Fi (it holds a multicast lock for that) and, if you tap two phones together (NFC), shares a network name and password. Files arrive only when you accept them.</string>
     <string name="about_privacy_picker">Cabinet can answer other apps that ask for a file, a folder or a place to save. It shows which app is asking, and an app gets only what you choose there: a folder is given only after you confirm it, never the whole storage or the Download folder.</string>
     <string name="about_privacy_close">There are no ads, no analytics and no tracking. The llama opens a donation page in your browser, and that is the only link.</string>
     <string name="about_terms_title">Terms</string>
@@ -493,4 +493,14 @@
     <string name="nearby_away_busy">Wi-Fi Direct is busy. Try again in a moment.</string>
     <string name="nearby_away_no_answer">Could not join in half a minute. Check the other phone still shows its network, then hold the phones together again.</string>
     <string name="nearby_away_other">That did not work. Try again.</string>
+    <!-- shared-about: contact row + privacy section (edit in /opt/projects/shared-about) -->
+    <string name="about_write_to">Write to %1$s</string>
+    <string name="about_no_mail_app">No email app is installed. The address is %1$s.</string>
+    <string name="privacy_who_title">Who we are</string>
+    <string name="privacy_who">This app is made by wander wildwood, an independent developer: one person, not a company. That makes wander wildwood the data controller for anything the app itself handles, and that is very little: what you put in stays on this phone unless you send it somewhere yourself, and nothing comes to the developer.</string>
+    <string name="privacy_contact_title">How to contact us</string>
+    <string name="privacy_contact">Write to email@wanderthe.dev, about your data or anything else.</string>
+    <string name="privacy_rights_title">Your rights</string>
+    <string name="privacy_rights">Under the GDPR you can ask to see the data held about you, to have it corrected or deleted, to limit or object to its use, to take a copy with you, to withdraw consent, and to complain to a data protection authority. Since the app keeps what it stores only on your phone, you can do most of this yourself: remove a server, and the sign-in kept for it, on the start page, empty the trash on the Trash page (it sits on the phone\'s storage, so clearing the app\'s data or uninstalling leaves it there), clear the app\'s data in Android\'s settings, or uninstall the app. A server of your own is yours: what it keeps is up to you.</string>
+    <!-- /shared-about -->
 </resources>

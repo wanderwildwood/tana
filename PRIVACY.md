@@ -128,4 +128,33 @@ request itself, and sends nothing anywhere.
 
 The llama at the foot of the About opens `square.link/u/AGu8oT10` in whatever browser you
 have. That is a hand-off: this app does not fetch the page, and it learns nothing about
-whether you went there.
+whether you went there. The page is Square's, and what Square learns from a visit is covered by
+Square's own privacy policy.
+
+<!-- shared-about privacy section -->
+## Who we are
+
+Cabinet is made by wander wildwood, an independent developer: one person, not a company. wander wildwood is the data controller for anything the app itself handles, and that is very little. Cabinet keeps what you put in it on your phone and sends nothing to the developer, so the developer holds no data about you.
+
+## How to contact us
+
+Write to email@wanderthe.dev about your data, this policy or anything else. The same address is in the app, under About.
+
+## Your rights
+
+If you are in the EU, the EEA or the UK, the GDPR gives you the right to:
+
+- see the personal data held about you (access)
+- have it corrected (rectification) or deleted (erasure)
+- limit how it is used (restriction)
+- object to its use (objection)
+- get a copy to take elsewhere (portability)
+- withdraw your consent at any time, where something rests on it
+- complain to a data protection supervisory authority, for example the one where you live
+
+Similar laws elsewhere, such as the CCPA in California, give you the right to know, delete and correct, and to opt out of the sale or sharing of your data. Nothing from Cabinet is sold or shared.
+
+Since Cabinet keeps what it stores only on your phone, you can exercise most of these rights yourself: remove a server, and the sign-in kept for it, on the start page, empty the trash on the Trash page (it sits on the phone's storage, so clearing the app's data or uninstalling leaves it there), clear the app's data in Android's settings, or uninstall the app, which deletes all of it. For anything you cannot do yourself, write to the address above.
+
+If you point Cabinet at a server of your own, what that server keeps is yours to manage.
+<!-- /shared-about privacy section -->
