@@ -134,7 +134,7 @@ Square's own privacy policy.
 <!-- shared-about privacy section -->
 ## Who we are
 
-Cabinet is made by wander wildwood, an independent developer: one person, not a company. wander wildwood is the data controller for anything the app itself handles, and that is very little. Cabinet keeps what you put in it on your phone and sends nothing to the developer, so the developer holds no data about you.
+Cabinet is made by wander wildwood, an independent developer: one person, not a company. wander wildwood is the data controller for anything the app itself handles, and that is very little. What you put in Cabinet stays on your phone. The only things that go out are the ones described above: the files you open, copy or delete on a server you added, along with the sign-in you gave for it, and the files you send to a nearby device you chose, with this phone's name and model while the Nearby page is open. The developer receives nothing, so the developer holds no data about you.
 
 ## How to contact us
 
