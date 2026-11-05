@@ -391,7 +391,7 @@
     <!-- About -->
 
     <string name="about_title">Cabinet %1$s</string>
-    <string name="about_body">It reaches the servers you add, and nothing else. A server’s password is kept only on this phone, sealed with a key that never leaves it.</string>
+    <string name="about_body">A file manager, with the shared drives on your own servers as places like any other, and other apps open and save through it. A copy is written whole or not at all.</string>
     <string name="about_privacy_title">Privacy</string>
     <string name="about_privacy_servers">The app connects only to the servers you set up (Samba, Nextcloud or WebDAV). Your sign-in details are kept on this phone, sealed with a key that never leaves it, and are sent only to that server. Nothing is sent to the app’s maker.</string>
     <string name="about_privacy_phone">It asks for access to all files on the phone, because that is what a file manager does, and to install packages, so an APK you tap goes to Android’s installer. It keeps a long copy going with the screen off (wake lock and a notification). Location is asked for only to start or join a Wi-Fi Direct network on the Nearby page; the app never reads where the phone is.</string>
@@ -404,7 +404,7 @@
     <string name="licences_back">Back</string>
     <string name="licences_source_head">Source code</string>
     <string name="licences_no_text">%s needs no license text here.</string>
-    <string name="licences_licence">This app is released under the GNU General Public License, version 3 only. Copyright wander wildwood. What it is built on keeps its own licenses, each on its own page.</string>
+    <string name="licences_licence">This app is released under the GNU General Public License, version 3 only. Copyright wander wildwood. What it is built on keeps its own licenses, listed below.</string>
     <string name="licences_full_head">Full texts</string>
     <string name="licences_full_gpl">GNU General Public License v3 (full text)</string>
     <string name="licences_full_apache">Apache License 2.0 (full text)</string>
@@ -496,6 +496,12 @@
     <!-- shared-about: contact row + privacy section (edit in /opt/projects/shared-about) -->
     <string name="about_write_to">Write to %1$s</string>
     <string name="about_no_mail_app">No email app is installed. The address is %1$s.</string>
+    <!-- shared-about: what a screen reader says for an About drawer, the heading passed in -->
+    <string name="about_open_drawer">Open %1$s</string>
+    <string name="about_close_drawer">Close %1$s</string>
+    <string name="about_intro_head">What it does</string>
+    <string name="about_contact_head">Contact</string>
+    <string name="about_links_head">Links</string>
     <string name="privacy_who_title">Who we are</string>
     <string name="privacy_who">This app is made by wander wildwood, an independent developer: one person, not a company. That makes wander wildwood the data controller for anything the app itself handles, and that is very little: what you put in stays on this phone. The only things that go out are the files you open, copy or delete on a server you added, with the sign-in you gave it, and the files you send to a nearby device you chose. Nothing comes to the developer.</string>
     <string name="privacy_contact_title">How to contact us</string>
