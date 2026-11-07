@@ -144,7 +144,7 @@ fun NearbyScreen(sending: List<Entry>, vm: BrowserViewModel) {
             }
         },
     ) { padding ->
-        PagedColumn(Modifier.fillMaxSize().padding(padding).background(MaterialTheme.colorScheme.surface)) {
+        PagedColumn(Modifier.fillMaxSize().padding(padding).background(MaterialTheme.colorScheme.surface), showCutRow = true) {
             item {
                 val line = when {
                     state.address == null && state.away is Away.Hosting -> stringResource(R.string.nearby_visible_as, state.alias)

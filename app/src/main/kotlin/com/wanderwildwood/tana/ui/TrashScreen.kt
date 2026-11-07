@@ -84,7 +84,7 @@ fun TrashScreen(view: TrashView, vm: BrowserViewModel) {
                     modifier = Modifier.padding(16.dp),
                 )
                 else -> WithPageFoot(listState, items.size) {
-                    PagedColumn(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface), state = listState) {
+                    PagedColumn(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface), state = listState, showCutRow = true) {
                         items(items, key = { it.root.path + "/" + it.slot }) { item -> TrashRow(item, vm) }
                     }
                 }

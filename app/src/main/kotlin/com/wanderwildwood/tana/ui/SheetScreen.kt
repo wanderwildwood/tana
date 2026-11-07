@@ -150,7 +150,7 @@ private fun androidx.compose.foundation.layout.ColumnScope.Rows(view: SheetView,
             body.isEmpty() -> Line(stringResource(R.string.sheet_empty))
             !view.finding && found?.isEmpty() == true -> Line(stringResource(R.string.search_none))
             else -> androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
-                PagedColumn(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface), state = rowsState) {
+                PagedColumn(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface), state = rowsState, showCutRow = true) {
                     items(shown, key = { it }) { i -> RowLines(body[i]) { onOpen(i) } }
                 }
             }
@@ -191,7 +191,7 @@ private fun WholeRow(headings: List<String>, cells: List<String>) {
     }
     val cellsState = rememberLazyListState()
     androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
-        PagedColumn(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface), state = cellsState) {
+        PagedColumn(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface), state = cellsState, showCutRow = true) {
             items(pairs.size) { i ->
                 val (heading, value) = pairs[i]
                 Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)) {

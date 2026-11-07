@@ -134,6 +134,7 @@ private fun Lines(book: TextBook, markdown: Boolean, sp: Int) {
             Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface),
             state = state,
             contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 6.dp),
+            showCutRow = true,
         ) {
             items(count = book.lineCount, key = { it }) { i ->
                 val raw = remember(book, i) { book.line(i) }
