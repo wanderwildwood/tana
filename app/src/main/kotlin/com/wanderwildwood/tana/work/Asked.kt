@@ -14,7 +14,7 @@ import java.io.File
  * the start page.
  *
  * A folder arrives as a plain path, or as the address Android's own file picker gives it —
- * `primary:Download` on internal storage, `74C4-3B51:Music` on a card — which is turned back
+ * `primary:Download` on internal storage, `1A2B-3C4D:Music` on a card — which is turned back
  * into the path it stands for. Anything that cannot be, opens on the start page rather than
  * somewhere wrong.
  */
@@ -89,7 +89,7 @@ object Asked {
         }
     }
 
-    /** `primary:Music/Albums` → /storage/emulated/0/Music/Albums; `74C4-3B51:x` → /storage/74C4-3B51/x. */
+    /** `primary:Music/Albums` → /storage/emulated/0/Music/Albums; `1A2B-3C4D:x` → /storage/1A2B-3C4D/x. */
     fun fromDocumentId(id: String): File? {
         val volume = id.substringBefore(':', "")
         // Internal storage, or a card's volume id; anything else is some other provider's

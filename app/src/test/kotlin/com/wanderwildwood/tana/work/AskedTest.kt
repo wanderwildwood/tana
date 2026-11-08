@@ -11,7 +11,7 @@ class AskedTest {
     }
 
     @Test fun anSdCard() {
-        assertEquals("/storage/74C4-3B51/Books", Asked.fromDocumentId("74C4-3B51:Books")?.path)
+        assertEquals("/storage/1A2B-3C4D/Books", Asked.fromDocumentId("1A2B-3C4D:Books")?.path)
     }
 
     @Test fun somethingThatIsNotAVolumeAddress() {

@@ -82,11 +82,11 @@ class NamesAndSortTest {
     }
 
     @Test fun placesKnowWhatIsInsideThem() {
-        val sd = Loc(LocalStore.ID, "storage/74C4-3B51")
-        assertTrue(Loc(LocalStore.ID, "storage/74C4-3B51/Music").isWithin(sd))
+        val sd = Loc(LocalStore.ID, "storage/1A2B-3C4D")
+        assertTrue(Loc(LocalStore.ID, "storage/1A2B-3C4D/Music").isWithin(sd))
         assertTrue(sd.isWithin(sd))
-        assertFalse(Loc(LocalStore.ID, "storage/74C4-3B51-other").isWithin(sd))
-        assertFalse(Loc("smb:x", "storage/74C4-3B51/Music").isWithin(sd))
+        assertFalse(Loc(LocalStore.ID, "storage/1A2B-3C4D-other").isWithin(sd))
+        assertFalse(Loc("smb:x", "storage/1A2B-3C4D/Music").isWithin(sd))
         assertEquals(Loc(LocalStore.ID, ""), Loc(LocalStore.ID, "storage").parent)
     }
 }
