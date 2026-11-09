@@ -24,7 +24,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import okhttp3.Call
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -38,6 +41,7 @@ import java.io.InputStream
 import java.net.InetAddress
 import java.net.URLEncoder
 import java.security.MessageDigest
+import java.security.cert.X509Certificate
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
@@ -111,6 +115,7 @@ object Nearby {
     @Volatile private var me: Device? = null
     private var server: HttpServer? = null
     private var discovery: Discovery? = null
+    private var scanning: Job? = null
     private val devices = ConcurrentHashMap<String, Device>()
     private val lock = Any()
 
@@ -152,7 +157,10 @@ object Nearby {
             // Wi-Fi now, and a Wi-Fi Direct network comes and goes. A new one is announced on.
             while (isActive) {
                 val networks = Discovery.networks()
-                if (d.follow(networks.map { it.first })) announce()
+                if (d.follow(networks.map { it.first })) {
+                    announce()
+                    scan()
+                }
                 val wifi = networks.firstOrNull { !Discovery.isDirect(it.first) }?.second?.hostAddress
                 _state.update { it.copy(address = wifi) }
                 delay(5000)
@@ -202,6 +210,7 @@ object Nearby {
         devices.clear()
         publish()
         announce()
+        scan()
     }
 
     fun rename(alias: String) {
@@ -232,6 +241,63 @@ object Nearby {
         // An announcement is answered at its sender's server; an older LocalSend's answer by
         // multicast says so with announce false, and is not answered again.
         if (o.optBoolean("announce", true)) scope?.launch { register(d) }
+    }
+
+    /**
+     * LocalSend's own fallback, for a Wi-Fi (or a phone) where multicast never gets through: every
+     * address on the Wi-Fi's /24 is asked directly, with the same /register a device answers an
+     * announcement with. Others could already find this phone that way, by asking it; without
+     * this it heard no one back (tana issue #1). Who answers is known by the certificate it
+     * shows, as with any send. One scan at a time.
+     */
+    private fun scan() {
+        val sc = scope ?: return
+        val id = identity ?: return
+        if (scanning?.isActive == true) return
+        scanning = sc.launch {
+            val mine = Discovery.networks().firstOrNull { !Discovery.isDirect(it.first) }?.second ?: return@launch
+            val b = mine.address.map { it.toInt() and 0xff }
+            val client = base.newBuilder()
+                .connectTimeout(1, TimeUnit.SECONDS)
+                .callTimeout(4, TimeUnit.SECONDS)
+                .sslSocketFactory(id.clientContext(AnyCertificate).socketFactory, AnyCertificate)
+                .hostnameVerifier { _, _ -> true }
+                .build()
+            val gate = Semaphore(32)
+            (1..254).filter { it != b[3] }.map { last ->
+                launch {
+                    gate.withPermit {
+                        val ip = "${b[0]}.${b[1]}.${b[2]}.$last"
+                        if (!ask(client, ip, https = true)) ask(client, ip, https = false)
+                    }
+                }
+            }.joinAll()
+        }
+    }
+
+    /** False only when something answered at [ip] but not in TLS, which is when plain HTTP is worth a try. */
+    private fun ask(client: OkHttpClient, ip: String, https: Boolean): Boolean {
+        val m = me ?: return true
+        val at = Device(alias = "", model = null, type = null, fingerprint = "", port = Wire.PORT, https = https, address = ip)
+        val request = okhttp3.Request.Builder().url(at.url("register")).post(m.json().toString().toRequestBody(json)).build()
+        return try {
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    val answer = runCatching { JSONObject(response.body?.string().orEmpty()) }.getOrNull()
+                    val proven = (response.handshake?.peerCertificates?.firstOrNull() as? X509Certificate)
+                        ?.let { Identity.fingerprintOf(it) }
+                    answer?.let { Device.from(it, ip, Wire.PORT, https) }
+                        ?.let { if (proven != null) it.copy(fingerprint = proven) else it }
+                        ?.takeIf { !it.fingerprint.equals(m.fingerprint, ignoreCase = true) }
+                        ?.let { put(it.copy(port = Wire.PORT, https = https)) }
+                }
+                true
+            }
+        } catch (e: javax.net.ssl.SSLException) {
+            false
+        } catch (e: IOException) {
+            true
+        }
     }
 
     private fun register(d: Device) {
