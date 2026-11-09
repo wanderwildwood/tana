@@ -14,11 +14,12 @@ android {
 
     defaultConfig {
         applicationId = "com.wanderwildwood.tana"
-        // The Kompakt runs Android 12 (API 31); nothing here needs anything newer.
-        minSdk = 31
+        // The Kompakt runs Android 12 (API 31); Android 11 (API 30) too, for Supernote's
+        // tablets. Anything newer is asked for where it is used.
+        minSdk = 30
         targetSdk = 31
-        versionCode = 40
-        versionName = "0.9.9"
+        versionCode = 41
+        versionName = "0.9.10"
     }
 
     // A real keystore in signing/ signs every build type when it is present, so the

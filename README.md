@@ -1,8 +1,8 @@
 # 棚 tana — Cabinet
 
 A file manager for an E Ink phone, and for the drives on the servers at home. Built for the
-[Mudita Kompakt](https://mudita.com/products/kompakt/), and it will install on any Android 12
-device.
+[Mudita Kompakt](https://mudita.com/products/kompakt/), and it will install on any Android 11 or newer
+device, Supernote's tablets among them.
 
 *Tana* is 棚 — a shelf. Not a cabinet with a lock, not an archive: the plank on the wall where
 things are put so they can be found again and taken down.
