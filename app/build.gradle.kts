@@ -47,6 +47,8 @@ android {
             realSigningConfig?.let { signingConfig = it }
         }
         getByName("release") {
+            // Release APKs carry arm64-v8a only: every device this app is for is arm64. Debug builds keep the emulator's.
+            ndk { abiFilters += listOf("arm64-v8a") }
             // AGP otherwise stamps the git revision of the build into META-INF, which
             // publishes a little more about how a release was made than a release needs to
             // - and it is also the one thing that differs between a release built on the
