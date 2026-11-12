@@ -52,6 +52,24 @@ object PathGuard {
     fun within(path: String, top: String): Boolean =
         path == top || path.startsWith(if (top.endsWith("/")) top else "$top/")
 
+    /**
+     * The paths from [top] down to [path], both included: for "/a/b/c/d.txt" under "/a/b",
+     * "/a/b", "/a/b/c", "/a/b/c/d.txt". Null when [path] is not at or below [top], so a place
+     * outside a folder is never described from inside it. Both are real paths, as [resolve]
+     * gives them.
+     */
+    fun chain(path: String, top: String): List<String>? {
+        if (!within(path, top)) return null
+        val out = mutableListOf(top)
+        var at = top
+        for (name in path.substring(top.length).split('/')) {
+            if (name.isEmpty()) continue
+            at = if (at.endsWith("/")) at + name else "$at/$name"
+            out.add(at)
+        }
+        return out
+    }
+
     /** Another app's own folders, which sit under shared storage but are not for sharing. */
     private fun private(real: String, top: String): Boolean =
         listOf("android/data", "android/obb").any { within(real.lowercase(), File(top, it).path.lowercase()) }

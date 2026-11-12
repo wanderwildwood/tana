@@ -97,6 +97,33 @@ class PathGuardTest {
         assertTrue(PathGuard.within("/a/b", "/"))
     }
 
+    @Test fun chainNamesEveryFolderFromTheTopDown() {
+        assertEquals(listOf("/a/b", "/a/b/c", "/a/b/c/d.txt"), PathGuard.chain("/a/b/c/d.txt", "/a/b"))
+        assertEquals(listOf("/a/b", "/a/b/d.txt"), PathGuard.chain("/a/b/d.txt", "/a/b"))
+        // The folder itself is a path of one.
+        assertEquals(listOf("/a/b"), PathGuard.chain("/a/b", "/a/b"))
+        assertEquals(listOf("/", "/a", "/a/b"), PathGuard.chain("/a/b", "/"))
+    }
+
+    @Test fun chainNeverLeavesTheFolderItStartsFrom() {
+        // Above it, beside it, and a sibling whose name only starts the same.
+        assertNull(PathGuard.chain("/a", "/a/b"))
+        assertNull(PathGuard.chain("/a/c/d.txt", "/a/b"))
+        assertNull(PathGuard.chain("/a/bc/d.txt", "/a/b"))
+    }
+
+    @Test fun chainOfAResolvedFileStartsAtTheGrantedFolder() {
+        val album = File(storage, "Music/Glass Orchard").apply { mkdirs() }
+        val song = File(album, "01 Lantern.mp3").apply { writeText("x") }
+        val granted = resolve(File(storage, "Music").path)!!
+        assertEquals(
+            listOf(granted, album.path, song.path),
+            PathGuard.chain(resolve(song.path)!!, granted),
+        )
+        // A file elsewhere in storage is not under the granted folder.
+        assertNull(PathGuard.chain(resolve(File(storage, "a.txt").path)!!, granted))
+    }
+
     private fun may(p: String) = PathGuard.mayGrantFolder(p, listOf(storage.path))
 
     @Test fun theTopOfStorageCannotBeGivenAway() {

@@ -6,6 +6,7 @@ import android.os.CancellationSignal
 import android.os.Environment
 import android.os.ParcelFileDescriptor
 import android.os.storage.StorageManager
+import android.provider.DocumentsContract
 import android.provider.DocumentsContract.Document
 import android.provider.DocumentsProvider
 import java.io.File
@@ -92,6 +93,34 @@ class PickedProvider : DocumentsProvider() {
         return PathGuard.within(child, parent)
     }
 
+    /**
+     * Where a document sits: the ids from the folder the asking app was given down to the
+     * document, both included. An app that edits a file in place asks this to find the folder
+     * the file is in (a music player saving a song's details, for one).
+     *
+     * For an address under a granted folder, Android passes that folder as [parentDocumentId]
+     * and has already refused, through [isChildDocument], a document outside it; the same
+     * boundary is checked here again, so nothing above the granted folder is ever named. With
+     * no parent (only Android itself, holding MANAGE_DOCUMENTS, can ask that way) the answer
+     * starts at the top of the storage the document is on; there is no root id to give, as
+     * this provider lists no roots.
+     */
+    override fun findDocumentPath(parentDocumentId: String?, childDocumentId: String?): DocumentsContract.Path {
+        val child = file(childDocumentId)
+        if (!child.exists()) throw FileNotFoundException("No such document")
+        if (parentDocumentId == null) {
+            val top = roots().mapNotNull { runCatching { File(it).canonicalPath }.getOrNull() }
+                .filter { PathGuard.within(child.path, it) }
+                .maxByOrNull { it.length }
+            val ids = top?.let { PathGuard.chain(child.path, it) } ?: throw FileNotFoundException("No such document")
+            return DocumentsContract.Path(null, ids)
+        }
+        val parent = file(parentDocumentId)
+        val ids = PathGuard.chain(child.path, parent.path) ?: throw FileNotFoundException("Not in that folder")
+        // The first id is the folder as the asking app named it, which is what Android compares.
+        return DocumentsContract.Path(null, listOf(parentDocumentId) + ids.drop(1))
+    }
+
     override fun openDocument(documentId: String?, mode: String?, signal: CancellationSignal?): ParcelFileDescriptor {
         val f = file(documentId)
         if (f.isDirectory) throw FileNotFoundException("A folder cannot be opened as a file")
@@ -107,6 +136,8 @@ class PickedProvider : DocumentsProvider() {
         }
         // A name already taken is never overwritten here: the new one is "name (1)".
         val target = freeName(parent, name)
+        // Checked before it is made, not after: a name that is not for sharing is never created.
+        file(target.absolutePath)
         val made = if (mimeType == Document.MIME_TYPE_DIR) target.mkdir() else target.createNewFile()
         if (!made) throw FileNotFoundException("Could not make ${target.name}")
         return file(target.absolutePath).path
@@ -127,6 +158,9 @@ class PickedProvider : DocumentsProvider() {
             throw IllegalArgumentException("Not a usable name")
         }
         val target = File(f.parentFile, name)
+        // Checked before the move, not after: a file is never renamed to somewhere it could
+        // then not be reached.
+        file(target.absolutePath)
         if (target.exists() || !f.renameTo(target)) throw FileNotFoundException("Could not rename ${f.name}")
         return file(target.absolutePath).path
     }
