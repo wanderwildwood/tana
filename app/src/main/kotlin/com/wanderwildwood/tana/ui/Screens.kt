@@ -836,7 +836,7 @@ fun PreviewScreen(preview: Preview, chosen: Boolean, several: Boolean, vm: Brows
                     bitmap = remember(image) { image.asImageBitmap() },
                     contentDescription = preview.entry.name,
                     contentScale = androidx.compose.ui.layout.ContentScale.Fit,
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().keepColors(),
                 )
                 preview.failure != null -> TextMMD(
                     text = stringResource(R.string.preview_failed),
