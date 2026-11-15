@@ -27,6 +27,11 @@ class Prefs(context: Context) {
         get() = prefs.getInt("text_size", DEFAULT_TEXT_SIZE).coerceIn(0, TEXT_SIZES.lastIndex)
         set(value) = prefs.edit().putInt("text_size", value.coerceIn(0, TEXT_SIZES.lastIndex)).apply()
 
+    /** Folders as a grid of small pictures. */
+    var grid: Boolean
+        get() = prefs.getBoolean("grid", false)
+        set(value) = prefs.edit().putBoolean("grid", value).apply()
+
     var showHidden: Boolean
         get() = prefs.getBoolean("show_hidden", false)
         set(value) = prefs.edit().putBoolean("show_hidden", value).apply()

@@ -76,4 +76,13 @@ class PagePositionTest {
         assertEquals(4, at.first)
         assertEquals(4, at.last)
     }
+
+    @Test fun aGridCountsThingsNotRows() {
+        // Rows 1 to 4 of 34 rows of three, 102 things in all.
+        assertEquals(PagePosition(1, 12, 102, 1, 9), PagePosition(1, 4, 34, 1, 9).inItems(3, 102))
+        // The last row holds one: 100 things, rows 31 to 34.
+        assertEquals(PagePosition(91, 100, 100, 9, 9), PagePosition(31, 34, 34, 9, 9).inItems(3, 100))
+        // A list is left as it is.
+        assertEquals(PagePosition(5, 8, 20, 2, 5), PagePosition(5, 8, 20, 2, 5).inItems(1, 20))
+    }
 }

@@ -27,6 +27,15 @@ data class Picking(
     val caller: String = "",
 ) {
 
+    /**
+     * Asked for pictures, or pictures and videos, and nothing else: what a messaging app's
+     * "add a picture" asks. The browser then opens on the camera's folder, as a grid, newest
+     * first, instead of on the start page. See [Photos].
+     */
+    val pictures: Boolean
+        get() = ask == Ask.FILE && types.isNotEmpty() &&
+            types.all { it.startsWith("image/", ignoreCase = true) || it.startsWith("video/", ignoreCase = true) }
+
     /** Whether a file of this name is one the asking app will take. */
     fun accepts(name: String): Boolean = acceptsMime(Names.mime(name))
 

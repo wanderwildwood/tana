@@ -27,6 +27,7 @@ import com.wanderwildwood.tana.work.PathGuard
 import com.wanderwildwood.tana.work.Pdfs
 import com.wanderwildwood.tana.work.Texts
 import com.wanderwildwood.tana.work.Ask
+import com.wanderwildwood.tana.work.Photos
 import com.wanderwildwood.tana.work.Picking
 import com.wanderwildwood.tana.work.Pin
 import com.wanderwildwood.tana.work.Prefs
@@ -145,6 +146,8 @@ data class UiState(
     val clashing: Clashing? = null,
     val sort: Sort = Sort(),
     val showHidden: Boolean = false,
+    /** Folders shown as a grid of small pictures rather than a list of names. */
+    val grid: Boolean = false,
     val volumes: List<Volume> = emptyList(),
     val servers: List<Server> = emptyList(),
     val others: List<SafRoot> = emptyList(),
@@ -192,6 +195,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         UiState(
             sort = prefs.sort,
             showHidden = prefs.showHidden,
+            grid = prefs.grid,
             servers = prefs.servers,
             others = prefs.others,
             pins = prefs.pins,
@@ -201,6 +205,40 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
     /** Set when another app opened this to choose a file; see [Picking]. */
     var picking: Picking? = null
+
+    /**
+     * Another app is asking. One asking for pictures ([Picking.pictures]) is taken straight to
+     * the camera's folder, as a grid, newest first, with the start page one Back behind it; the
+     * order and the grid are for this errand only, and what the reader has set for the app's own
+     * window is neither used nor changed. Any other request opens on the start page.
+     */
+    fun startPicking(p: Picking) {
+        if (picking != null) return
+        picking = p
+        saveField = androidx.compose.ui.text.input.TextFieldValue(p.title)
+        if (!p.pictures) return
+        _state.update { it.copy(sort = Sort(SortBy.DATE), grid = true) }
+        Photos.folder()?.let { openAt(Loc(LocalStore.ID, Stores.phone.pathOf(it))) }
+    }
+
+    /** What is set while choosing pictures for another app is not kept; see [startPicking]. */
+    private val keepsView: Boolean get() = picking?.pictures != true
+
+    /**
+     * The list's place in the folder on screen. Kept here, not by the screen, so a picture
+     * looked at and put back returns to the page it was on; a folder newly opened starts at
+     * its top, as before.
+     */
+    private var listPlace: Place? = null
+    private var listState = androidx.compose.foundation.lazy.LazyListState()
+
+    fun listStateFor(place: Place): androidx.compose.foundation.lazy.LazyListState {
+        if (place != listPlace) {
+            listPlace = place
+            listState = androidx.compose.foundation.lazy.LazyListState()
+        }
+        return listState
+    }
 
     private val _picked = kotlinx.coroutines.flow.MutableSharedFlow<List<java.io.File>>(extraBufferCapacity = 1)
     /** The files chosen for the app that asked, as files on the phone. */
@@ -1025,8 +1063,16 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
     fun sortBy(by: SortBy) {
         val sort = _state.value.sort.pressed(by)
-        prefs.sort = sort
+        if (keepsView) prefs.sort = sort
         _state.update { s -> s.copy(sort = sort, entries = if (s.place == Place.Recent) s.entries else sort.apply(s.entries)) }
+    }
+
+    fun toggleGrid() {
+        val grid = !_state.value.grid
+        if (keepsView) prefs.grid = grid
+        // The same folder laid out afresh: a row of the list is not a row of the grid.
+        listPlace = null
+        _state.update { it.copy(grid = grid) }
     }
 
     fun toggleHidden() {

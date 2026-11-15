@@ -355,7 +355,17 @@ fun FolderScreen(state: UiState, work: com.wanderwildwood.tana.work.Work, vm: Br
                             onPullAtTop = vm::pull,
                             showCutRow = true,
                         ) {
-                            items(shown, key = { it.loc.path }) { entry ->
+                            if (state.grid) {
+                                items(shown.chunked(GRID_COLUMNS), key = { it.first().loc.path }) { row ->
+                                    GridRow(
+                                        row = row,
+                                        selecting = state.selecting,
+                                        selection = state.selection,
+                                        onPress = vm::press,
+                                        onLongPress = vm::toggle,
+                                    )
+                                }
+                            } else items(shown, key = { it.loc.path }) { entry ->
                                 EntryRow(
                                     entry = entry,
                                     selecting = state.selecting,
@@ -390,7 +400,7 @@ fun FolderScreen(state: UiState, work: com.wanderwildwood.tana.work.Work, vm: Br
             onDismiss = { more = false },
         )
     }
-    if (sorting) SortDialog(state.sort, state.showHidden, vm::sortBy, vm::toggleHidden) { sorting = false }
+    if (sorting) SortDialog(state.sort, state.showHidden, state.grid, vm::sortBy, vm::toggleHidden, vm::toggleGrid) { sorting = false }
     if (naming) {
         NameDialog(stringResource(R.string.new_folder_title), stringResource(R.string.new_folder_confirm), "", vm::newFolder) { naming = false }
     }
@@ -405,7 +415,9 @@ private fun FolderList(state: UiState, vm: BrowserViewModel, list: @Composable (
     val shown = vm.shown(state.entries)
     // Each folder opens at its top: one state shared by every folder kept the row number of the
     // last, and a folder opened from far down another came up already scrolled.
-    val listState = remember(state.place) { LazyListState() }
+    // Kept by the view model, so a picture looked at and closed comes back to the same page.
+    val listState = vm.listStateFor(state.place)
+    val per = if (state.grid) GRID_COLUMNS else 1
     // Shown for a file another app asked to have revealed: paged to the page that holds it.
     val target = state.revealed
     LaunchedEffect(target, shown) {
@@ -413,11 +425,11 @@ private fun FolderList(state: UiState, vm: BrowserViewModel, list: @Composable (
         val index = shown.indexOfFirst { it.loc == target }
         if (index >= 0) {
             // The page that holds the file starts at it: whole rows, so no row is cut.
-            listState.scrollToItem(index)
+            listState.scrollToItem(index / per)
         }
         vm.revealShown()
     }
-    WithPageFoot(listState, shown.size) { list(shown, listState) }
+    WithPageFoot(listState, (shown.size + per - 1) / per, per, shown.size) { list(shown, listState) }
 }
 
 /**

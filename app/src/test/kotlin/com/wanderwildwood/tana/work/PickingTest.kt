@@ -80,4 +80,15 @@ class PickingTest {
         assertEquals("", of(Intent.ACTION_OPEN_DOCUMENT_TREE)!!.caller)
         assertEquals("Messaging", of(Intent.ACTION_OPEN_DOCUMENT_TREE)!!.copy(caller = "Messaging").caller)
     }
+
+    @Test fun picturesIsOnlyPicturesAndVideos() {
+        assertTrue(of(Intent.ACTION_GET_CONTENT, "image/*")!!.pictures)
+        assertTrue(of(Intent.ACTION_PICK, "image/jpeg")!!.pictures)
+        // What Messaging's "add a picture" asks.
+        assertTrue(of(Intent.ACTION_GET_CONTENT, "*/*", listOf("image/*", "video/*"), many = true)!!.pictures)
+        assertFalse(of(Intent.ACTION_GET_CONTENT, "*/*")!!.pictures)
+        assertFalse(of(Intent.ACTION_GET_CONTENT, "*/*", listOf("image/*", "application/pdf"))!!.pictures)
+        assertFalse(of(Intent.ACTION_CREATE_DOCUMENT, "image/png", title = "a.png")!!.pictures)
+        assertFalse(of(Intent.ACTION_OPEN_DOCUMENT_TREE, null)!!.pictures)
+    }
 }

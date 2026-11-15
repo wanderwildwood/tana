@@ -56,6 +56,13 @@ internal fun pagePosition(rows: List<LaidRow>, rowCount: Int, viewport: Int): Pa
     return PagePosition(first + 1, last + 1, rowCount, page, pages)
 }
 
+/**
+ * The same place counted in things rather than rows, for a grid whose rows hold [perRow] each:
+ * the foot says "1–12 of 102" photographs, not "1–4 of 34" rows.
+ */
+internal fun PagePosition.inItems(perRow: Int, total: Int): PagePosition =
+    if (perRow <= 1) this else copy(first = (first - 1) * perRow + 1, last = minOf(last * perRow, total), total = total)
+
 /** [pagePosition] of a lazy list as it is laid out now; its blank room after the last row is not a row. */
 private fun LazyListState.position(rowCount: Int): PagePosition? {
     val info = layoutInfo
@@ -72,8 +79,10 @@ private fun LazyListState.position(rowCount: Int): PagePosition? {
  * changes only when a page is turned.
  */
 @Composable
-internal fun WithPageFoot(listState: LazyListState, rowCount: Int, list: @Composable () -> Unit) {
-    val position by remember(listState, rowCount) { derivedStateOf { listState.position(rowCount) } }
+internal fun WithPageFoot(listState: LazyListState, rowCount: Int, perRow: Int = 1, total: Int = rowCount, list: @Composable () -> Unit) {
+    val position by remember(listState, rowCount, perRow, total) {
+        derivedStateOf { listState.position(rowCount)?.inItems(perRow, total) }
+    }
     Column(Modifier.fillMaxSize()) {
         Box(Modifier.weight(1f)) { list() }
         position?.let { PageFoot(it) }

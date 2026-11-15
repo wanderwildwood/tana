@@ -261,6 +261,8 @@
     <string name="sort_size_reversed">Smallest first</string>
     <string name="sort_type_forward">By extension, A to Z</string>
     <string name="sort_type_reversed">By extension, Z to A</string>
+    <string name="sort_grid">Show as a grid</string>
+    <string name="sort_grid_note">Pictures and videos on the phone show as small pictures.</string>
     <string name="sort_hidden">Show hidden files</string>
     <string name="sort_hidden_note">Names beginning with a dot, which apps keep their own things in.</string>
 

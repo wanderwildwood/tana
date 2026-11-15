@@ -173,7 +173,15 @@ fun PageDialog(pages: Int, onGo: (Int) -> Unit, onDismiss: () -> Unit) {
 
 /** How a folder is laid out, and whether hidden files show. A press changes it at once. */
 @Composable
-fun SortDialog(sort: Sort, showHidden: Boolean, onSort: (SortBy) -> Unit, onHidden: () -> Unit, onDismiss: () -> Unit) {
+fun SortDialog(
+    sort: Sort,
+    showHidden: Boolean,
+    grid: Boolean,
+    onSort: (SortBy) -> Unit,
+    onHidden: () -> Unit,
+    onGrid: () -> Unit,
+    onDismiss: () -> Unit,
+) {
     EInkDialog(onDismiss = onDismiss) {
         Title(stringResource(R.string.sort_title))
         Spacer(Modifier.height(8.dp))
@@ -204,6 +212,17 @@ fun SortDialog(sort: Sort, showHidden: Boolean, onSort: (SortBy) -> Unit, onHidd
             }
         }
         HorizontalDividerMMD(Modifier.padding(vertical = 8.dp))
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().clickable(onClick = onGrid).padding(vertical = 8.dp),
+        ) {
+            Column(Modifier.weight(1f)) {
+                TextMMD(text = stringResource(R.string.sort_grid), style = MaterialTheme.typography.bodyMedium)
+                TextMMD(text = stringResource(R.string.sort_grid_note), style = MaterialTheme.typography.labelSmall)
+            }
+            Spacer(Modifier.width(12.dp))
+            SwitchMMD(checked = grid, onCheckedChange = null)
+        }
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth().clickable(onClick = onHidden).padding(vertical = 8.dp),

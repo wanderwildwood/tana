@@ -130,12 +130,17 @@ as places like any other.
   picker answers the same requests, so the first time Android asks which to use; choose Cabinet with
   *Always*. Apps that carry a small client for it ask for Cabinet by name, and use Android's
   picker when Cabinet is not installed.
+- **A grid of small pictures**, when you want one: *Sort and show → Show as a grid* lays any
+  folder out three across, with photographs and videos on the phone as their own pictures and
+  everything else as its icon and name. An app asking for a picture (a messaging app's "add a
+  picture") gets the camera's folder as a grid, newest first; a press shows the picture whole,
+  with *Choose* under it.
 - **Rename, new folder, show hidden files**, and a path along the top where each step is a press
   back to it.
 
 ## What it does not do
 
-No thumbnails: a photograph at the size of a list row is a gray smudge on this screen. No
+No small pictures of files on a server: each would have to be fetched whole to be drawn. No
 `Android/data`: Android 12 lets no app into another app's private folders. A zip is read, never
 rewritten: to change what is in one, extract it, change that, and compress it again. A
 spreadsheet is read, never edited, and the old Excel format (xls) is not read at all. A PDF is
