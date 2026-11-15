@@ -151,6 +151,12 @@ data class UiState(
     val volumes: List<Volume> = emptyList(),
     val servers: List<Server> = emptyList(),
     val others: List<SafRoot> = emptyList(),
+    /**
+     * The folder from another app the reading just failed in, when that folder itself can no
+     * longer be reached (deleted, or the phone took the app's way in back). It is kept on the
+     * start page, pins and all, until it is chosen again or taken off.
+     */
+    val lostOther: SafRoot? = null,
     val pins: List<Pin> = emptyList(),
     val notice: Notice? = null,
     val info: Info? = null,
@@ -498,14 +504,15 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
             _state.update { it.copy(reading = Reading.DONE) }
             return
         }
-        _state.update { it.copy(reading = Reading.NOT_YET, failure = null, pulled = null) }
+        _state.update { it.copy(reading = Reading.NOT_YET, failure = null, pulled = null, lostOther = null) }
         listing = viewModelScope.launch {
             val hidden = _state.value.showHidden
             val result = withContext(Dispatchers.IO) { runCatching { read(place, hidden) } }
+            val lost = if (result.isFailure) withContext(Dispatchers.IO) { unreachableOther(place) } else null
             if (!isActive || _state.value.place != place) return@launch
             result.fold(
                 onSuccess = { list -> show(place, list) },
-                onFailure = { e -> _state.update { it.copy(reading = Reading.FAILED, failure = e, entries = emptyList()) } },
+                onFailure = { e -> _state.update { it.copy(reading = Reading.FAILED, failure = e, entries = emptyList(), lostOther = lost) } },
             )
         }
     }
@@ -996,7 +1003,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
      * A folder the reader picked in Android's own picker. The grant is made to last, then the
      * folder is kept on the start page under its own name, with the app it belongs to beneath.
      */
-    fun addOther(uri: android.net.Uri) {
+    fun addOther(uri: android.net.Uri, replacing: SafRoot? = null) {
         runCatching {
             app.contentResolver.takePersistableUriPermission(
                 uri,
@@ -1014,11 +1021,50 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
             val info = app.packageManager.resolveContentProvider(uri.authority ?: "", 0)
             info?.applicationInfo?.loadLabel(app.packageManager)?.toString()
         }.getOrNull() ?: uri.authority.orEmpty()
-        val others = _state.value.others.filterNot { it.uri == uri.toString() } +
-            SafRoot(UUID.randomUUID().toString(), label, note, uri.toString())
+        val current = _state.value.others
+        // Chosen again in place of one that could not be reached: it keeps its place on the
+        // start page and its id, so its pins and the folder on screen still lead into it.
+        val old = replacing?.let { r -> current.firstOrNull { it.id == r.id } }
+        if (old != null && old.uri != uri.toString()) {
+            runCatching {
+                app.contentResolver.releasePersistableUriPermission(
+                    android.net.Uri.parse(old.uri),
+                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+                )
+            }
+        }
+        val others = if (old != null) {
+            current.filterNot { it.uri == uri.toString() && it.id != old.id }
+                .map { if (it.id == old.id) SafRoot(old.id, label, note, uri.toString()) else it }
+        } else {
+            current.filterNot { it.uri == uri.toString() } +
+                SafRoot(UUID.randomUUID().toString(), label, note, uri.toString())
+        }
         prefs.others = others
         Stores.setOthers(others, app.contentResolver)
         _state.update { it.copy(others = others) }
+        if (old != null) refresh()
+    }
+
+    /**
+     * The folder from another app that [place] is in, when that folder itself cannot be reached
+     * now: the way in the phone gave is gone, or the folder no longer answers. Null for anything
+     * else, a subfolder gone from a folder that is still there included.
+     */
+    private fun unreachableOther(place: Place): SafRoot? {
+        val loc = (place as? Place.Folder)?.loc ?: return null
+        val root = _state.value.others.firstOrNull { it.storeId == loc.store } ?: return null
+        val tree = android.net.Uri.parse(root.uri)
+        val resolver = app.contentResolver
+        val granted = resolver.persistedUriPermissions.any { it.uri == tree && it.isReadPermission }
+        val answers = granted && runCatching {
+            val top = android.provider.DocumentsContract.buildDocumentUriUsingTree(
+                tree, android.provider.DocumentsContract.getTreeDocumentId(tree),
+            )
+            resolver.query(top, arrayOf(android.provider.DocumentsContract.Document.COLUMN_DOCUMENT_ID), null, null, null)
+                ?.use { it.moveToFirst() } == true
+        }.getOrDefault(false)
+        return if (answers) null else root
     }
 
     fun removeOther(root: SafRoot) {

@@ -57,6 +57,9 @@
     <string name="page_range">%1$d–%2$d of %3$d</string>
     <string name="page_of">Page %1$d of %2$d</string>
     <string name="folder_try_again">Try again</string>
+    <!-- A folder added from another app (in Android's folder picker) can no longer be reached. %1$s is its name -->
+    <string name="other_lost">“%1$s” cannot be reached now: the folder may have been deleted, or the phone no longer lets this app into it. Choose the folder again. It stays on the start page until you do.</string>
+    <string name="other_choose_again">Choose the folder again</string>
     <!-- One line above a server folder after a swipe down on its first page -->
     <string name="folder_pull_asking">Reading the folder again…</string>
     <string name="folder_pull_done">Up to date</string>

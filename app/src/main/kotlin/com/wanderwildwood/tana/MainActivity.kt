@@ -84,6 +84,16 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         asked = intent
     }
+    // A notice stays until the next press; see NextPress.
+    override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean {
+        com.wanderwildwood.tana.ui.NextPress.seen(ev)
+        return super.dispatchTouchEvent(ev)
+    }
+
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+        com.wanderwildwood.tana.ui.NextPress.seen(event)
+        return super.dispatchKeyEvent(event)
+    }
 }
 
 @Composable
@@ -154,8 +164,11 @@ private fun Browser(
     val work by Transfers.work.collectAsStateWithLifecycle()
     var editing by remember { mutableStateOf<Server?>(null) }
     // Android's own folder picker, which is how another app's storage is reached at all.
+    // A folder chosen again, in place of one that could not be reached, comes back as that one.
+    var replacingOther by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) }
     val pickOther = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
-        if (uri != null) vm.addOther(uri)
+        if (uri != null) vm.addOther(uri, vm.state.value.others.firstOrNull { it.id == replacingOther })
+        replacingOther = null
     }
     var about by remember { mutableStateOf(false) }
 
@@ -208,7 +221,10 @@ private fun Browser(
             onAddOther = { runCatching { pickOther.launch(null) } },
             onAbout = { about = true },
         )
-        else -> FolderScreen(state, work, vm)
+        else -> FolderScreen(state, work, vm, onChooseAgain = { lost ->
+            replacingOther = lost.id
+            runCatching { pickOther.launch(Uri.parse(lost.uri)) }.onFailure { replacingOther = null }
+        })
     }
 
     state.info?.let { InfoDialog(it, vm::hash, vm::closeInfo) }

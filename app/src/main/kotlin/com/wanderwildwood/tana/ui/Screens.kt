@@ -56,7 +56,6 @@ import com.wanderwildwood.tana.store.Stores
 import com.wanderwildwood.tana.work.Kind
 import com.wanderwildwood.tana.work.TRASH_DAYS
 import com.wanderwildwood.tana.work.Volumes
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
@@ -254,7 +253,12 @@ fun HomeScreen(
 /** A folder, on the phone or on a server — or the list of recent files, which reads the same. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FolderScreen(state: UiState, work: com.wanderwildwood.tana.work.Work, vm: BrowserViewModel) {
+fun FolderScreen(
+    state: UiState,
+    work: com.wanderwildwood.tana.work.Work,
+    vm: BrowserViewModel,
+    onChooseAgain: (com.wanderwildwood.tana.store.SafRoot) -> Unit = {},
+) {
     val context = LocalContext.current
     var more by remember { mutableStateOf(false) }
     var sorting by remember { mutableStateOf(false) }
@@ -312,7 +316,7 @@ fun FolderScreen(state: UiState, work: com.wanderwildwood.tana.work.Work, vm: Br
             // again too quickly to need saying.
             val onServer = folder != null && com.wanderwildwood.tana.store.Stores.server(folder.store) != null
             val pulled = state.pulled
-            LaunchedEffect(pulled) { if (pulled == Pulled.Done) { delay(3000); vm.clearPulled() } }
+            LaunchedEffect(pulled) { if (pulled == Pulled.Done) { NextPress.await(); vm.clearPulled() } }
             val pullLine = when (pulled) {
                 Pulled.Asking -> if (onServer) stringResource(R.string.folder_pull_asking) else null
                 Pulled.Done -> if (onServer) stringResource(R.string.folder_pull_done) else null
@@ -333,8 +337,18 @@ fun FolderScreen(state: UiState, work: com.wanderwildwood.tana.work.Work, vm: Br
             Box(Modifier.weight(1f)) {
                 when {
                     state.reading == Reading.FAILED -> Column(Modifier.padding(16.dp)) {
-                        TextMMD(text = describe(context, state.failure ?: Exception()), style = MaterialTheme.typography.bodySmall)
+                        val lost = state.lostOther
+                        TextMMD(
+                            text = if (lost != null) stringResource(R.string.other_lost, lost.label) else describe(context, state.failure ?: Exception()),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
                         Spacer(Modifier.height(14.dp))
+                        if (lost != null) {
+                            OutlinedButtonMMD(onClick = { onChooseAgain(lost) }, modifier = Modifier.fillMaxWidth().height(48.dp)) {
+                                TextMMD(text = stringResource(R.string.other_choose_again), style = MaterialTheme.typography.bodySmall)
+                            }
+                            Spacer(Modifier.height(10.dp))
+                        }
                         OutlinedButtonMMD(onClick = vm::refresh, modifier = Modifier.fillMaxWidth().height(48.dp)) {
                             TextMMD(text = stringResource(R.string.folder_try_again), style = MaterialTheme.typography.bodySmall)
                         }

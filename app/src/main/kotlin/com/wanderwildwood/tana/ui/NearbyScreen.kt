@@ -278,11 +278,11 @@ private fun ErrandStrip(errand: Errand, onOpenDownloads: () -> Unit) {
             errand.who,
         )
     }
-    // An ending stays until it is read and pressed away, or the next one starts; one that sent
-    // nothing anywhere is not worth leaving up long.
+    // An ending stays until it is read and pressed away, or the next one starts. One that went
+    // well or was declined goes at the next press, not on a timer, so it is read first.
     if (errand is Errand.Sent || errand is Errand.Declined) {
         LaunchedEffect(errand) {
-            delay(8000)
+            NextPress.await()
             Nearby.errandSeen()
         }
     }

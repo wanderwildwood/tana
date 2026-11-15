@@ -31,6 +31,17 @@ import com.wanderwildwood.tana.ui.ArmedScope
  * asking app reads as "cancelled".
  */
 class PickActivity : ComponentActivity() {
+    // A notice stays until the next press; see NextPress.
+    override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean {
+        com.wanderwildwood.tana.ui.NextPress.seen(ev)
+        return super.dispatchTouchEvent(ev)
+    }
+
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+        com.wanderwildwood.tana.ui.NextPress.seen(event)
+        return super.dispatchKeyEvent(event)
+    }
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

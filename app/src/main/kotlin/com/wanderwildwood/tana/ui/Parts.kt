@@ -45,7 +45,6 @@ import com.wanderwildwood.tana.work.Mode
 import com.wanderwildwood.tana.work.TRASH_DAYS
 import com.wanderwildwood.tana.work.Transfers
 import com.wanderwildwood.tana.work.Work
-import kotlinx.coroutines.delay
 
 @Composable
 internal fun BarButton(icon: ImageVector, description: String, onClick: () -> Unit) {
@@ -398,10 +397,10 @@ internal fun WorkStrip(work: Work) {
         else -> return
     }
 
-    // A result stays long enough to read and then goes; a failure is a dialog instead.
+    // A result stays until the next press, so it is read before it goes; a failure is a dialog instead.
     if (work is Work.Finished || work is Work.Stopped) {
         LaunchedEffect(work) {
-            delay(10_000)
+            NextPress.await()
             Transfers.seen()
         }
     }
@@ -419,11 +418,11 @@ internal fun WorkStrip(work: Work) {
     }
 }
 
-/** A short thing to say, along the foot, gone after a few seconds. */
+/** A short thing to say, along the foot, until the next press. */
 @Composable
 internal fun NoticeStrip(text: String, onSeen: () -> Unit) {
     LaunchedEffect(text) {
-        delay(10_000)
+        NextPress.await()
         onSeen()
     }
     HorizontalDividerMMD()
