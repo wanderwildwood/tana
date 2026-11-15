@@ -40,6 +40,10 @@ import com.mudita.mmd.components.text_field.TextFieldMMD
 import com.mudita.mmd.components.top_app_bar.TopAppBarMMD
 import com.wanderwildwood.tana.R
 import java.text.NumberFormat
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 
 /**
  * A spreadsheet, looked through: a line of words to find at the top, and the rows holding
@@ -110,7 +114,7 @@ private fun androidx.compose.foundation.layout.ColumnScope.Rows(view: SheetView,
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = if (i == view.at) FontWeight.Bold else null,
                     textDecoration = if (i == view.at) TextDecoration.Underline else null,
-                    modifier = Modifier.clickable { vm.showSheet(i) }.padding(horizontal = 6.dp, vertical = 8.dp),
+                    modifier = Modifier.semantics { role = Role.RadioButton; selected = i == view.at }.clickable { vm.showSheet(i) }.padding(horizontal = 6.dp, vertical = 8.dp),
                 )
             }
         }

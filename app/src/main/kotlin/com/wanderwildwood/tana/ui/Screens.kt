@@ -513,7 +513,7 @@ fun SearchScreen(search: SearchState, state: UiState, work: com.wanderwildwood.t
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = if (k == kind) FontWeight.Bold else null,
                         textDecoration = if (k == kind) androidx.compose.ui.text.style.TextDecoration.Underline else null,
-                        modifier = Modifier.clickable {
+                        modifier = Modifier.semantics { role = Role.RadioButton; selected = k == kind }.clickable {
                             kind = k
                             if (search.ran || words.isNotBlank() || k != Kind.ANY) vm.searchFor(words, k)
                         }.padding(horizontal = 6.dp, vertical = 8.dp),
