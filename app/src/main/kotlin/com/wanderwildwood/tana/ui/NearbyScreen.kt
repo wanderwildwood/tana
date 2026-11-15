@@ -52,6 +52,8 @@ import com.wanderwildwood.tana.nearby.Why
 import com.wanderwildwood.tana.store.Entry
 import com.wanderwildwood.tana.work.Volumes
 import kotlinx.coroutines.delay
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 
 /**
  * Other devices on the same Wi-Fi running LocalSend. While this page is open the phone can be
@@ -343,11 +345,19 @@ private fun IncomingDialog(incoming: Incoming) {
 private fun PinDialog(asked: Errand.NeedsPin) {
     var pin by remember { mutableStateOf("") }
     val focus = remember { FocusRequester() }
-    LaunchedEffect(Unit) { focus.requestFocus() }
     val go = { if (pin.isNotBlank()) Nearby.pin(pin.trim()) }
     EInkDialog(onDismiss = Nearby::stopErrand) {
         TextMMD(
             text = stringResource(if (asked.wrong) R.string.nearby_pin_wrong else R.string.nearby_pin_title, asked.to),
+        // The field is what the dialog is for: it takes the focus as it opens and the keyboard
+        // comes up. Asked from inside the dialog, a frame after it is drawn: the field lives in
+        // the dialog's own window, which a request from the screen beneath does not reach.
+        val keyboardNow = LocalSoftwareKeyboardController.current
+        LaunchedEffect(Unit) {
+            withFrameNanos { }
+            runCatching { focus.requestFocus() }
+            keyboardNow?.show()
+        }
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.Medium,
         )

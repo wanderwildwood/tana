@@ -51,6 +51,8 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 
 @Composable
 private fun Title(text: String) {
@@ -86,7 +88,6 @@ fun NameDialog(title: String, confirm: String, initial: String, onDone: (String)
     }
     var value by remember(initial) { mutableStateOf(TextFieldValue(initial, TextRange(0, stem))) }
     val focus = remember { FocusRequester() }
-    LaunchedEffect(Unit) { focus.requestFocus() }
     val ok = Names.valid(value.text) != null
     val commit = {
         if (ok) {
@@ -96,6 +97,15 @@ fun NameDialog(title: String, confirm: String, initial: String, onDone: (String)
     }
     EInkDialog(onDismiss = onDismiss) {
         Title(title)
+        // The field is what the dialog is for: it takes the focus as it opens and the keyboard
+        // comes up. Asked from inside the dialog, a frame after it is drawn: the field lives in
+        // the dialog's own window, which a request from the screen beneath does not reach.
+        val keyboardNow = LocalSoftwareKeyboardController.current
+        LaunchedEffect(Unit) {
+            withFrameNanos { }
+            runCatching { focus.requestFocus() }
+            keyboardNow?.show()
+        }
         Spacer(Modifier.height(14.dp))
         TextFieldMMD(
             value = value,
@@ -137,7 +147,6 @@ fun NameDialog(title: String, confirm: String, initial: String, onDone: (String)
 fun PageDialog(pages: Int, onGo: (Int) -> Unit, onDismiss: () -> Unit) {
     var typed by remember { mutableStateOf("") }
     val focus = remember { FocusRequester() }
-    LaunchedEffect(Unit) { focus.requestFocus() }
     val page = Pdfs.pageFrom(typed, pages)
     val count = java.text.NumberFormat.getIntegerInstance()
     val commit = {
@@ -148,6 +157,15 @@ fun PageDialog(pages: Int, onGo: (Int) -> Unit, onDismiss: () -> Unit) {
     }
     EInkDialog(onDismiss = onDismiss) {
         Title(stringResource(R.string.pdf_go_title))
+        // The field is what the dialog is for: it takes the focus as it opens and the keyboard
+        // comes up. Asked from inside the dialog, a frame after it is drawn: the field lives in
+        // the dialog's own window, which a request from the screen beneath does not reach.
+        val keyboardNow = LocalSoftwareKeyboardController.current
+        LaunchedEffect(Unit) {
+            withFrameNanos { }
+            runCatching { focus.requestFocus() }
+            keyboardNow?.show()
+        }
         Spacer(Modifier.height(14.dp))
         TextFieldMMD(
             value = typed,
