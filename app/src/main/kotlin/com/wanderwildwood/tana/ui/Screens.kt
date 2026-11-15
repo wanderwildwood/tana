@@ -58,6 +58,10 @@ import com.wanderwildwood.tana.work.TRASH_DAYS
 import com.wanderwildwood.tana.work.Volumes
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 
 /** What another app is asking for, as the top bar says it. */
 @Composable
@@ -752,7 +756,7 @@ fun ServerScreen(initial: Server, vm: BrowserViewModel, onDone: () -> Unit) {
 @Composable
 private fun ChoiceRow(title: String, chosen: Boolean, onClick: () -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 4.dp),
+        modifier = Modifier.fillMaxWidth().semantics { role = Role.RadioButton; selected = chosen }.clickable(onClick = onClick).padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         RadioButtonMMD(selected = chosen, onClick = null)

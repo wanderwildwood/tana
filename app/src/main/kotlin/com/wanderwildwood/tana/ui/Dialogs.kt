@@ -45,6 +45,12 @@ import com.wanderwildwood.tana.work.Pdfs
 import com.wanderwildwood.tana.work.Printer
 import com.wanderwildwood.tana.work.Sort
 import com.wanderwildwood.tana.work.SortBy
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.state.ToggleableState
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
 
 @Composable
 private fun Title(text: String) {
@@ -194,7 +200,7 @@ fun SortDialog(
             val chosen = sort.by == by
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth().clickable { onSort(by) }.padding(vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth().semantics { role = Role.RadioButton; selected = chosen }.clickable { onSort(by) }.padding(vertical = 8.dp),
             ) {
                 RadioButtonMMD(selected = chosen, onClick = null)
                 Spacer(Modifier.width(12.dp))
@@ -214,7 +220,7 @@ fun SortDialog(
         HorizontalDividerMMD(Modifier.padding(vertical = 8.dp))
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().clickable(onClick = onGrid).padding(vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth().semantics { role = Role.Switch; toggleableState = ToggleableState(grid) }.clickable(onClick = onGrid).padding(vertical = 8.dp),
         ) {
             Column(Modifier.weight(1f)) {
                 TextMMD(text = stringResource(R.string.sort_grid), style = MaterialTheme.typography.bodyMedium)
@@ -225,7 +231,7 @@ fun SortDialog(
         }
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().clickable(onClick = onHidden).padding(vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth().semantics { role = Role.Switch; toggleableState = ToggleableState(showHidden) }.clickable(onClick = onHidden).padding(vertical = 8.dp),
         ) {
             Column(Modifier.weight(1f)) {
                 TextMMD(text = stringResource(R.string.sort_hidden), style = MaterialTheme.typography.bodyMedium)
