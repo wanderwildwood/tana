@@ -349,16 +349,23 @@ fun FolderScreen(state: UiState, work: com.wanderwildwood.tana.work.Work, vm: Br
                         modifier = Modifier.padding(16.dp),
                     )
                     else -> FolderList(state, vm) { shown, listState ->
+                        androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+                        // The grid's rows are fitted to the page, so every page holds whole rows.
+                        val rowHeight = with(androidx.compose.ui.platform.LocalDensity.current) {
+                            gridRowPx(maxWidth.roundToPx(), maxHeight.roundToPx(), GRID_BAR.roundToPx()).toDp()
+                        }
                         PagedColumn(
                             Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface),
                             state = listState,
                             onPullAtTop = vm::pull,
-                            showCutRow = true,
+                            // A list shows the row its foot cuts; the grid has none to show.
+                            showCutRow = !state.grid,
                         ) {
                             if (state.grid) {
                                 items(shown.chunked(GRID_COLUMNS), key = { it.first().loc.path }) { row ->
                                     GridRow(
                                         row = row,
+                                        height = rowHeight,
                                         selecting = state.selecting,
                                         selection = state.selection,
                                         onPress = vm::press,
@@ -375,6 +382,7 @@ fun FolderScreen(state: UiState, work: com.wanderwildwood.tana.work.Work, vm: Br
                                     onLongPress = { vm.toggle(entry) },
                                 )
                             }
+                        }
                         }
                     }
                 }

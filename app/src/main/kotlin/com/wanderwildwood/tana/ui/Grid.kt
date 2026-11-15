@@ -11,7 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -45,19 +45,38 @@ import com.wanderwildwood.tana.work.Thumbs
 /** Three across: on the Kompakt each is about as wide as a thumb, and a page holds twelve. */
 internal const val GRID_COLUMNS = 3
 
+/** The room the list's scrollbar takes beside the rows, near enough for counting rows. */
+internal val GRID_BAR = 36.dp
+
 /**
- * One row of the grid view: up to [GRID_COLUMNS] squares, the last row's spare places left
- * empty. A row of the paged list, so the grid turns its pages on whole rows as every list does.
+ * How tall a row of the grid is, in pixels, so that a page holds whole rows exactly: the list
+ * is [height] tall and [width] wide, [bar] of it the scrollbar's. A square would be a third of
+ * the width across; as many rows as come nearest to that are fitted to the height, so a square
+ * is at most a little taller or shorter than it is wide, and no row is cut at the foot (on the
+ * Kompakt a square row missed fitting by a pixel, and every page began by repeating the last
+ * row of the page before).
+ */
+internal fun gridRowPx(width: Int, height: Int, bar: Int): Int {
+    val square = ((width - bar) / GRID_COLUMNS).coerceAtLeast(1)
+    val rows = ((height + square / 2) / square).coerceAtLeast(1)
+    return (height / rows).coerceAtLeast(1)
+}
+
+/**
+ * One row of the grid view, [height] tall (see [gridRowPx]): up to [GRID_COLUMNS] squares, the
+ * last row's spare places left empty. A row of the paged list, so the grid turns its pages on
+ * whole rows.
  */
 @Composable
 internal fun GridRow(
     row: List<Entry>,
+    height: androidx.compose.ui.unit.Dp,
     selecting: Boolean,
     selection: Set<Loc>,
     onPress: (Entry) -> Unit,
     onLongPress: (Entry) -> Unit,
 ) {
-    Row(Modifier.fillMaxWidth().padding(horizontal = 2.dp)) {
+    Row(Modifier.fillMaxWidth().height(height).padding(horizontal = 2.dp)) {
         row.forEach { entry ->
             Tile(entry, selecting, entry.loc in selection, { onPress(entry) }, { onLongPress(entry) }, Modifier.weight(1f))
         }
@@ -96,7 +115,7 @@ private fun Tile(
     val (image, settled) = thumb
     Box(
         modifier
-            .aspectRatio(1f)
+            .fillMaxHeight()
             .padding(2.dp)
             .semantics { contentDescription = entry.name }
             .combinedClickable(onClick = onPress, onLongClick = onLongPress)
