@@ -347,8 +347,6 @@ private fun PinDialog(asked: Errand.NeedsPin) {
     val focus = remember { FocusRequester() }
     val go = { if (pin.isNotBlank()) Nearby.pin(pin.trim()) }
     EInkDialog(onDismiss = Nearby::stopErrand) {
-        TextMMD(
-            text = stringResource(if (asked.wrong) R.string.nearby_pin_wrong else R.string.nearby_pin_title, asked.to),
         // The field is what the dialog is for: it takes the focus as it opens and the keyboard
         // comes up. Asked from inside the dialog, a frame after it is drawn: the field lives in
         // the dialog's own window, which a request from the screen beneath does not reach.
@@ -358,6 +356,8 @@ private fun PinDialog(asked: Errand.NeedsPin) {
             runCatching { focus.requestFocus() }
             keyboardNow?.show()
         }
+        TextMMD(
+            text = stringResource(if (asked.wrong) R.string.nearby_pin_wrong else R.string.nearby_pin_title, asked.to),
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.Medium,
         )
