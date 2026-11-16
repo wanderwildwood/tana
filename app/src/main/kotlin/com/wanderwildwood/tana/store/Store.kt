@@ -111,5 +111,6 @@ class StoreException(
         READ_ONLY,
         NOT_WEBDAV,
         UNTRUSTED,
+        PLAIN_HTTP,
     }
 }

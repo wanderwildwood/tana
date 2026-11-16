@@ -236,6 +236,36 @@ class DavStore(override val server: Server, private val spool: File) : ServerSto
         private fun hostOnly(address: String) = address.toHttpUrlOrNull()?.host ?: address
 
         /**
+         * Whether [address] may be used: any https one, or an http one whose host is on a home or
+         * VPN network (a private or Tailscale address, "localhost", a name with no dots, or one
+         * ending .local, .lan, .home.arpa, .internal or .ts.net). Memo's and Datebook's rule.
+         */
+        fun plainHttpAllowed(address: String): Boolean {
+            val url = address.toHttpUrlOrNull() ?: return false
+            if (url.scheme == "https") return true
+            val host = url.host.lowercase()
+            if (host.contains(':') || host.matches(Regex("^\\d{1,3}(\\.\\d{1,3}){3}$"))) return isPrivateAddress(host)
+            return !host.contains('.') || listOf(".local", ".lan", ".home.arpa", ".internal", ".ts.net").any { host.endsWith(it) }
+        }
+
+        /** A private, loopback, link-local or Tailscale (100.64/10) address literal; never a name. */
+        internal fun isPrivateAddress(literal: String): Boolean {
+            val addr = literal.substringBefore('%').lowercase().trim()
+            val v4 = Regex("^\\d{1,3}(\\.\\d{1,3}){3}$").matches(addr)
+            val v6 = ':' in addr && Regex("^[0-9a-f.:]+$").matches(addr)
+            if (!v4 && !v6) return false
+            val bytes = runCatching { java.net.InetAddress.getByName(addr).address }.getOrNull() ?: return false
+            val a = bytes[0].toInt() and 0xFF
+            val b = bytes[1].toInt() and 0xFF
+            if (bytes.size == 4) {
+                return a == 10 || a == 127 || (a == 172 && b in 16..31) || (a == 192 && b == 168) ||
+                    (a == 169 && b == 254) || (a == 100 && b in 64..127)
+            }
+            val loopback = bytes.take(15).all { it.toInt() == 0 } && bytes[15].toInt() == 1
+            return loopback || (a and 0xFE) == 0xFC || (a == 0xFE && (b and 0xC0) == 0x80)
+        }
+
+        /**
          * What was typed, as an address: "https://" put in front if no scheme was given, and one
          * slash at the end. Null if it is not an address at all.
          */

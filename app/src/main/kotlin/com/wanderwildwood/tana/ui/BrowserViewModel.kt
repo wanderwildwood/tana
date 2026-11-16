@@ -1156,6 +1156,12 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         // network timeouts; nothing waits for it.
         val attempt = viewModelScope.async(Dispatchers.IO) {
             if (server.isDav) {
+                // Plain http only to a server at home or on a VPN: to one out on the internet the
+                // password would cross it in the clear, so nothing is sent to it at all.
+                val typed = DavStore.normalise(server.host)
+                if (typed != null && !DavStore.plainHttpAllowed(typed)) {
+                    return@async StoreException(StoreException.Reason.PLAIN_HTTP, typed.trimEnd('/'))
+                }
                 // A Nextcloud given by its address alone is kept as the folder its files are in.
                 return@async try {
                     server = server.copy(host = DavStore.resolve(server, java.io.File(getApplication<Application>().cacheDir, "spool")))
@@ -1330,6 +1336,7 @@ fun describe(app: android.content.Context, problem: Throwable): String {
         StoreException.Reason.READ_ONLY -> R.string.problem_read_only
         StoreException.Reason.NOT_WEBDAV -> R.string.problem_not_webdav
         StoreException.Reason.UNTRUSTED -> R.string.problem_untrusted
+        StoreException.Reason.PLAIN_HTTP -> R.string.problem_plain_http
     }
     return app.getString(id, e.subject)
 }

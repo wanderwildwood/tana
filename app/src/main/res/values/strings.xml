@@ -376,6 +376,7 @@
     <string name="problem_read_only">Nothing inside “%1$s” can be changed. Copy it out first.</string>
     <string name="problem_not_webdav">Nothing at %1$s answers as a WebDAV folder. For a Nextcloud, its address alone is enough.</string>
     <string name="problem_untrusted">The certificate of %1$s cannot be trusted, so nothing was sent to it.</string>
+    <string name="problem_plain_http">%1$s starts with http:// and is out on the internet, so your password would travel unprotected. Use an https:// address, or an address on your home network or VPN.</string>
     <string name="problem_other">That did not work: %1$s</string>
 
     <!-- ============================================================ -->

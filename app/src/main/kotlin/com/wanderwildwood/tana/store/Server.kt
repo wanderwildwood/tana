@@ -29,6 +29,9 @@ data class Server(
 
     val storeId: String get() = (if (isDav) DAV_PREFIX else PREFIX) + id
 
+    /** Never the password, wherever a server is printed. */
+    override fun toString() = "Server(id=$id, name=$name, host=$host, share=$share, user=$user, kind=$kind)"
+
     fun toJson(): JSONObject = JSONObject()
         .put("id", id)
         .put("name", name)

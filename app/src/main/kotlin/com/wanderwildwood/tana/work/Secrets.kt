@@ -37,12 +37,21 @@ object Secrets {
 
     fun isSealed(stored: String) = stored.startsWith(SEALED)
 
+    /**
+     * The sealed form, or "" when the keystore will not seal it: better to keep no password, and
+     * ask for it again, than to write it in the clear or stop the app.
+     */
     fun seal(plain: String): String {
         if (plain.isEmpty()) return ""
-        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-        cipher.init(Cipher.ENCRYPT_MODE, key())
-        val out = cipher.iv + cipher.doFinal(plain.toByteArray(Charsets.UTF_8))
-        return SEALED + Base64.encodeToString(out, Base64.NO_WRAP)
+        return runCatching {
+            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+            cipher.init(Cipher.ENCRYPT_MODE, key())
+            val out = cipher.iv + cipher.doFinal(plain.toByteArray(Charsets.UTF_8))
+            SEALED + Base64.encodeToString(out, Base64.NO_WRAP)
+        }.getOrElse {
+            android.util.Log.w("Secrets", "could not seal a server password", it)
+            ""
+        }
     }
 
     /**

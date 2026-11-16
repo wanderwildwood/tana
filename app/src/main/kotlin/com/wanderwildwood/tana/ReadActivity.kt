@@ -31,6 +31,9 @@ class ReadActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val uri = intent.data ?: run { finish(); return }
+        // Any app can ask for a file:// address to be shown. One inside this app's own storage
+        // (its settings, its keys) is never shown, whoever asks.
+        if (uri.scheme == "file" && insideOwnStorage(uri.path)) { finish(); return }
         val source = PdfSource.OfUri(uri)
         val type = intent.type
         // A PDF unless it was asked for as text: by its type, or, when the type is a general
@@ -54,6 +57,13 @@ class ReadActivity : ComponentActivity() {
                 }
             } }
         }
+    }
+
+    private fun insideOwnStorage(path: String?): Boolean {
+        val asked = runCatching { File(path ?: return true).canonicalPath }.getOrNull() ?: return true
+        val own = listOfNotNull(applicationInfo.dataDir, applicationInfo.deviceProtectedDataDir)
+            .mapNotNull { runCatching { File(it).canonicalPath }.getOrNull() }
+        return own.any { asked == it || asked.startsWith("$it/") }
     }
 
     private fun handOn(uri: Uri, mime: String = Pdfs.MIME) {
