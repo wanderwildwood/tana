@@ -37,7 +37,15 @@ class DavStore(override val server: Server, private val spool: File) : ServerSto
     private fun url(path: String, folder: Boolean = false): String =
         base + encodePath(path) + if (folder && path.isNotEmpty()) "/" else ""
 
-    private fun request(url: String) = Request.Builder().url(url).header("Authorization", auth)
+    /**
+     * Every request carries the password, so none is made to a plain http address out on the
+     * internet: a server saved that way by an earlier version is kept, with its password, but
+     * opens nothing until its address is changed to https or to one at home.
+     */
+    private fun request(url: String): Request.Builder {
+        if (!plainHttpAllowed(url)) throw StoreException(StoreException.Reason.PLAIN_HTTP, server.host.trimEnd('/'))
+        return Request.Builder().url(url).header("Authorization", auth)
+    }
 
     override fun list(path: String): List<Entry> {
         val asked = url(path, folder = true)
