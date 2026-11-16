@@ -67,22 +67,82 @@ internal class Identity private constructor(private val key: PrivateKey, val cer
     fun clientContext(trust: X509TrustManager): SSLContext = SSLContext.getInstance("TLS").apply { init(keyManagers, arrayOf(trust), null) }
 
     companion object {
-        private val PASSWORD = "tana".toCharArray()
+        /** What versions up to 0.9.19 locked the key file with; read only to carry such a file over. */
+        private val LEGACY_PASSWORD = "tana".toCharArray()
         private const val ALIAS = "nearby"
         private const val DAY = 24L * 60 * 60 * 1000
 
         /** The kept one, or a new one when there is none yet. Slow the first time: an RSA key is made. */
-        fun load(context: Context): Identity {
-            val file = File(context.noBackupFilesDir, "nearby.p12")
+        fun load(context: Context): Identity =
+            load(context.noBackupFilesDir, seal = { com.wanderwildwood.tana.work.Secrets.seal(it) }, open = { com.wanderwildwood.tana.work.Secrets.open(it) })
+
+        /**
+         * The identity kept in [dir]: `nearby.p12`, locked with a random password made for this
+         * phone, which is kept beside it in `nearby.p12.key` sealed with the keystore ([seal],
+         * [open]; passed in so this can be tested off the phone). A file from an earlier version,
+         * locked with the fixed password, is read and written again under a new one, so the
+         * certificate and its fingerprint stay the same for devices that know this phone.
+         *
+         * When the file cannot be opened at all (the keystore's key went with a reinstall or a
+         * restore), a new identity is made in its place: other devices then see this phone as a
+         * new device under the same name. When the keystore will not seal, the identity lasts
+         * only until the app is closed, and nothing readable is written.
+         */
+        internal fun load(dir: File, seal: (String) -> String, open: (String) -> String): Identity {
+            val file = File(dir, "nearby.p12")
+            val keyFile = File(dir, "nearby.p12.key")
             if (file.isFile) {
-                runCatching {
-                    val ks = KeyStore.getInstance("PKCS12").apply { file.inputStream().use { load(it, PASSWORD) } }
-                    val key = ks.getKey(ALIAS, PASSWORD) as PrivateKey
-                    val cert = ks.getCertificate(ALIAS) as X509Certificate
-                    cert.checkValidity()
-                    return Identity(key, cert)
+                val sealed = runCatching { keyFile.readText().trim() }.getOrNull().orEmpty()
+                val password = sealed.takeIf { it.isNotEmpty() }?.let { runCatching { open(it) }.getOrNull() }.orEmpty()
+                read(file, password.toCharArray())?.let { return it }
+                read(file, LEGACY_PASSWORD)?.let { old ->
+                    keep(dir, old.key, old.certificate, seal)
+                    return old
                 }
             }
+            val made = make()
+            if (!keep(dir, made.key, made.certificate, seal)) {
+                // Nothing kept: an old file is no use to anyone, and a new one cannot be locked.
+                file.delete()
+                keyFile.delete()
+            }
+            return made
+        }
+
+        private fun read(file: File, password: CharArray): Identity? = runCatching {
+            if (password.isEmpty()) return null
+            val ks = KeyStore.getInstance("PKCS12").apply { file.inputStream().use { load(it, password) } }
+            val key = ks.getKey(ALIAS, password) as PrivateKey
+            val cert = ks.getCertificate(ALIAS) as X509Certificate
+            cert.checkValidity()
+            Identity(key, cert)
+        }.getOrNull()
+
+        /**
+         * Writes the key under a new random password, sealed. The sealed password goes first, then
+         * the file replaces the old one in one rename; a stop between the two leaves the old file,
+         * still readable as it was. False, with nothing changed, when the keystore will not seal.
+         */
+        private fun keep(dir: File, key: PrivateKey, cert: X509Certificate, seal: (String) -> String): Boolean {
+            val password = ByteArray(24).also(SecureRandom()::nextBytes)
+                .let { java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(it) }
+            val sealed = runCatching { seal(password) }.getOrDefault("")
+            if (sealed.isEmpty()) return false
+            val file = File(dir, "nearby.p12")
+            val keyFile = File(dir, "nearby.p12.key")
+            return runCatching {
+                val part = File(dir, "nearby.p12.part")
+                part.outputStream().use { store(key, cert, password.toCharArray()).store(it, password.toCharArray()) }
+                val keyPart = File(dir, "nearby.p12.key.part")
+                keyPart.writeText(sealed)
+                // Old file, new password: read() falls back to the fixed one, which still opens it.
+                check(keyPart.renameTo(keyFile))
+                check(part.renameTo(file))
+                true
+            }.getOrDefault(false)
+        }
+
+        private fun make(): Identity {
             val pair = KeyPairGenerator.getInstance("RSA").apply { initialize(2048) }.generateKeyPair()
             val now = System.currentTimeMillis()
             val name = X500Name("CN=Files")
@@ -110,17 +170,21 @@ internal class Identity private constructor(private val key: PrivateKey, val cer
                 add(DERBitString(signature))
             }).getEncoded(ASN1Encoding.DER)
             val cert = CertificateFactory.getInstance("X.509").generateCertificate(der.inputStream()) as X509Certificate
-            val part = File(file.parentFile, file.name + ".part")
-            part.outputStream().use { store(pair.private, cert).store(it, PASSWORD) }
-            part.renameTo(file)
             return Identity(pair.private, cert)
         }
 
-        private fun store(key: PrivateKey, cert: X509Certificate): KeyStore =
+        private fun store(key: PrivateKey, cert: X509Certificate, password: CharArray): KeyStore =
             KeyStore.getInstance("PKCS12").apply {
                 load(null, null)
-                setKeyEntry(ALIAS, key, PASSWORD, arrayOf(cert))
+                setKeyEntry(ALIAS, key, password, arrayOf(cert))
             }
+
+        /** Test only: a file as versions up to 0.9.19 wrote it, under the fixed password. */
+        internal fun writeLegacy(dir: File): String {
+            val made = make()
+            File(dir, "nearby.p12").outputStream().use { store(made.key, made.certificate, LEGACY_PASSWORD).store(it, LEGACY_PASSWORD) }
+            return made.fingerprint
+        }
 
         fun fingerprintOf(cert: X509Certificate): String =
             MessageDigest.getInstance("SHA-256").digest(cert.encoded).joinToString("") { "%02X".format(it) }
