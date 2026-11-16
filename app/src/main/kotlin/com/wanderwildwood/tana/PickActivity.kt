@@ -21,6 +21,7 @@ import com.wanderwildwood.tana.work.Picking
 import com.wanderwildwood.tana.work.Volumes
 import java.io.File
 import com.wanderwildwood.tana.ui.ArmedScope
+import com.wanderwildwood.tana.ui.DarkSelection
 
 /**
  * The browser, opened by another app to choose a file (`GET_CONTENT`, `OPEN_DOCUMENT`), choose
@@ -47,13 +48,13 @@ class PickActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val picking = (Picking.from(intent) ?: run { finish(); return }).copy(caller = callerName())
         setContent {
-            ThemeMMD(colorScheme = monochrome, typography = houseTypography) {
+            ThemeMMD(colorScheme = monochrome, typography = houseTypography) { DarkSelection {
                 ArmedScope {
                     CompositionLocalProvider(LocalCursorBlinkEnabled provides false) {
                         Files(this, null, {}, picking) { files -> answer(picking, files) }
                     }
                 }
-            }
+            } }
         }
     }
 
