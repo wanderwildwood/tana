@@ -49,8 +49,19 @@ class Prefs(context: Context) {
             return opened
         }
         set(value) {
+            // A sealed password the keystore could not open just now reads as empty; saving the
+            // list must not turn it into an empty one for good. It is written back as it was.
+            val before = Server.listFromJson(prefs.getString("servers", null)).associate { it.id to it.password }
+            val sealed = value.map { s ->
+                val old = before[s.id]
+                if (s.password.isEmpty() && old != null && Secrets.isSealed(old) && Secrets.open(old).isEmpty()) {
+                    s.copy(password = old)
+                } else {
+                    s.copy(password = Secrets.seal(s.password))
+                }
+            }
             prefs.edit()
-                .putString("servers", Server.listToJson(value.map { it.copy(password = Secrets.seal(it.password)) }))
+                .putString("servers", Server.listToJson(sealed))
                 .apply()
             // Android's picker lists them too, and has to be told.
             ServersProvider.rootsChanged(app)
