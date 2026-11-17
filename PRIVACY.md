@@ -13,7 +13,8 @@ policy that cannot be checked is just a promise.
 - **All files access** (`MANAGE_EXTERNAL_STORAGE`) — to see and change what is on the phone's
   storage and SD card, which is what a file manager is for. Android asks you for this on a page
   of its own; the app cannot grant it to itself, and you can take it back there at any time.
-- **Internet** (`INTERNET`) — to reach the servers you add. The only addresses the app ever
+- **Internet** (`INTERNET`) — to reach the servers you add and, on the Nearby page, the nearby
+  devices you send to or receive from. Apart from those devices, the only addresses the app ever
   connects to are the ones you typed into it. There is no analytics, no crash reporting, no
   update check and no advertising.
 - **Install packages** (`REQUEST_INSTALL_PACKAGES`) — so that tapping an APK hands it to

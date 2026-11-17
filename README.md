@@ -149,7 +149,7 @@ sent anywhere but to the servers you add and the nearby devices you send to.
 
 ## Where this is up to
 
-Version 0.8.2. The copy, move, delete and search engine is unit tested against real folders —
+The copy, move, delete and search engine is unit tested against real folders —
 including a copy stopped half way, and a write that fails while replacing a file, where the old
 file has to survive. Zips are made and read back byte for byte, and an archive that tries to
 write outside the folder it is extracted into has those entries left out. A second suite runs against a real Samba share when one is named, and
