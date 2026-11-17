@@ -90,10 +90,10 @@ class ServersProvider : DocumentsProvider() {
         val source = Stores.get(store)
         runCatching { onNetwork { source.stat(path) } }
             .onSuccess { if (it != null) return it }
-            .onFailure { android.util.Log.w(TAG, "stat failed for a server file", it) }
+            .onFailure { warn("stat failed for a server file", it) }
         val parent = path.substringBeforeLast('/', "")
         return runCatching { onNetwork { source.list(parent) } }
-            .onFailure { android.util.Log.w(TAG, "listing failed for a server folder", it) }
+            .onFailure { warn("listing failed for a server folder", it) }
             .getOrNull()
             ?.firstOrNull { it.loc.path == path }
     }
@@ -129,7 +129,7 @@ class ServersProvider : DocumentsProvider() {
         val (store, parentPath) = split(parentDocumentId)
         servers()
         val source = Stores.get(store)
-        val clean = displayName.replace('/', '_').trim().ifEmpty { "New file" }
+        val clean = displayName.replace('/', '_').trim().ifEmpty { context!!.getString(R.string.provider_new_file) }
         if (!Names.isPlainName(clean)) throw FileNotFoundException("not a name: $displayName")
         val folder = mimeType == Document.MIME_TYPE_DIR
         try {
@@ -151,7 +151,7 @@ class ServersProvider : DocumentsProvider() {
                 idOf(store, path)
             }
         } catch (e: Exception) {
-            android.util.Log.w(TAG, "could not create on a server", e)
+            warn("could not create on a server", e)
             throw FileNotFoundException("could not create $displayName: ${e.message}")
         }
     }
@@ -163,7 +163,7 @@ class ServersProvider : DocumentsProvider() {
         try {
             onNetwork { deleteTree(Stores.get(store), path) }
         } catch (e: Exception) {
-            android.util.Log.w(TAG, "could not delete on a server", e)
+            warn("could not delete on a server", e)
             throw FileNotFoundException("could not delete ${path.substringAfterLast('/')}: ${e.message}")
         }
         forget(documentId)
@@ -190,7 +190,7 @@ class ServersProvider : DocumentsProvider() {
         try {
             onNetwork { Stores.get(store).rename(path, to) }
         } catch (e: Exception) {
-            android.util.Log.w(TAG, "could not rename on a server", e)
+            warn("could not rename on a server", e)
             throw FileNotFoundException("could not rename: ${e.message}")
         }
         forget(documentId)
@@ -297,7 +297,7 @@ class ServersProvider : DocumentsProvider() {
         try {
             onNetwork { Stores.get(store).stat(path) }
         } catch (e: Exception) {
-            android.util.Log.w(TAG, "stat failed for a server file", e)
+            warn("stat failed for a server file", e)
             throw FileNotFoundException("could not reach the server: ${e.message}")
         }
 
@@ -340,7 +340,7 @@ class ServersProvider : DocumentsProvider() {
                             unsent = ctx.getString(R.string.unsent_changed)
                         }
                     } catch (e: Exception) {
-                        android.util.Log.w(TAG, "a save to a server failed", e)
+                        warn("a save to a server failed", e)
                         failed[documentId] = e.message ?: e.javaClass.simpleName
                         unsent = ctx.getString(R.string.unsent_failed, e.message ?: e.javaClass.simpleName)
                     } finally {
@@ -492,6 +492,18 @@ class ServersProvider : DocumentsProvider() {
             context.contentResolver.notifyChange(
                 DocumentsContract.buildRootsUri(context.packageName + ".servers"), null,
             )
+        }
+    }
+
+    /**
+     * A failure, for the log. A release build names only its kind: the full exception carries
+     * file names and the server's address.
+     */
+    private fun warn(message: String, e: Throwable) {
+        if (com.wanderwildwood.tana.BuildConfig.DEBUG) {
+            android.util.Log.w(TAG, message, e)
+        } else {
+            android.util.Log.w(TAG, "$message: ${(e as? com.wanderwildwood.tana.store.StoreException)?.reason ?: e.javaClass.simpleName}")
         }
     }
 }

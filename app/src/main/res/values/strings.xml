@@ -70,6 +70,8 @@
          (aikotoba) recognises the words "changed on the server", so they stay as they are. -->
     <string name="provider_changed" translatable="false">“%1$s” changed on the server since it was read, so it was not replaced</string>
     <string name="provider_save_failed">“%1$s” did not reach the server: %2$s</string>
+    <!-- The name a new file gets on a server when the app saving it gives none -->
+    <string name="provider_new_file">New file</string>
     <string name="provider_unreachable">The server did not answer. Is it on, and is this phone on its network?</string>
     <!-- A notification when a save from another app did not reach the server. %1$s is the file's name -->
     <string name="unsent_channel">Saves that did not reach a server</string>
