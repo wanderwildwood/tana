@@ -33,6 +33,31 @@ class NamesAndSortTest {
         assertNull(Names.valid("a/b"))
     }
 
+    @Test fun listedNamesThatLeadOutAreNotPlain() {
+        assertTrue(Names.isPlainName("Holiday.jpg"))
+        assertTrue(Names.isPlainName(".nomedia"))
+        assertTrue(Names.isPlainName("..."))
+        for (bad in listOf("", ".", "..", "a/b", "a\\b", "a\u0000b")) assertFalse(bad, Names.isPlainName(bad))
+        assertTrue(Names.isPlainPath(""))
+        assertTrue(Names.isPlainPath("Granted/Holiday/a.jpg"))
+        for (bad in listOf("Granted/../Other", "../Other", "Granted/.", "Granted//x", "/Granted", "Granted/")) {
+            assertFalse(bad, Names.isPlainPath(bad))
+        }
+    }
+
+    @Test fun aServerDocumentIdWithDotStepsIsRefused() {
+        assertEquals("dav:1" to "Granted/a.txt", ServersProvider.split("dav:1|Granted/a.txt"))
+        assertEquals("dav:1" to "", ServersProvider.split("dav:1|"))
+        for (bad in listOf("dav:1|Granted/../Other", "dav:1|..", "dav:1|Granted/./a", "dav:1|Granted//a")) {
+            try {
+                ServersProvider.split(bad)
+                throw AssertionError("taken: $bad")
+            } catch (e: java.io.FileNotFoundException) {
+                // refused, as it should be
+            }
+        }
+    }
+
     @Test fun kindsGoByExtensionAndNeverMatchFolders() {
         assertTrue(Kind.DOCUMENTS.matches("book.EPUB", false))
         assertFalse(Kind.DOCUMENTS.matches("book.epub", true))

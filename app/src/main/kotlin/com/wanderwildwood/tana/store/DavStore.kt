@@ -1,5 +1,6 @@
 package com.wanderwildwood.tana.store
 
+import com.wanderwildwood.tana.work.Names
 import okhttp3.Credentials
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
@@ -34,8 +35,11 @@ class DavStore(override val server: Server, private val spool: File) : ServerSto
     private val base = server.host.trimEnd('/') + "/"
     private val auth = Credentials.basic(server.user, server.password, Charsets.UTF_8)
 
-    private fun url(path: String, folder: Boolean = false): String =
-        base + encodePath(path) + if (folder && path.isNotEmpty()) "/" else ""
+    /** A path with an empty, "." or ".." step is never asked for: it would lead above [base]. */
+    private fun url(path: String, folder: Boolean = false): String {
+        if (!Names.isPlainPath(path)) throw StoreException(StoreException.Reason.GONE, path.substringAfterLast('/'))
+        return base + encodePath(path) + if (folder && path.isNotEmpty()) "/" else ""
+    }
 
     /**
      * Every request carries the password, so none is made to a plain http address out on the

@@ -130,6 +130,7 @@ class ServersProvider : DocumentsProvider() {
         servers()
         val source = Stores.get(store)
         val clean = displayName.replace('/', '_').trim().ifEmpty { "New file" }
+        if (!Names.isPlainName(clean)) throw FileNotFoundException("not a name: $displayName")
         val folder = mimeType == Document.MIME_TYPE_DIR
         try {
             return onNetwork {
@@ -182,7 +183,7 @@ class ServersProvider : DocumentsProvider() {
         if (path.isEmpty()) throw FileNotFoundException("a server cannot be renamed here")
         servers()
         val clean = displayName.replace('/', '_').trim()
-        if (clean.isEmpty()) throw FileNotFoundException("no name")
+        if (!Names.isPlainName(clean)) throw FileNotFoundException("no name")
         val parent = path.substringBeforeLast('/', "")
         val to = if (parent.isEmpty()) clean else "$parent/$clean"
         if (to == path) return null
@@ -212,8 +213,8 @@ class ServersProvider : DocumentsProvider() {
 
     override fun isChildDocument(parentDocumentId: String, documentId: String): Boolean {
         if (parentDocumentId == TOP) return documentId != TOP
-        val (parentStore, parentPath) = split(parentDocumentId)
-        val (store, path) = split(documentId)
+        val (parentStore, parentPath) = try { split(parentDocumentId) } catch (e: FileNotFoundException) { return false }
+        val (store, path) = try { split(documentId) } catch (e: FileNotFoundException) { return false }
         return store == parentStore && (parentPath.isEmpty() || path.startsWith("$parentPath/"))
     }
 
@@ -466,8 +467,16 @@ class ServersProvider : DocumentsProvider() {
         /** A document is "<store>|<path>"; a store id never has a bar in it, a path might. */
         fun idOf(store: String, path: String) = "$store|$path"
 
-        fun split(id: String): Pair<String, String> =
-            id.substringBefore('|') to id.substringAfter('|', "")
+        /**
+         * The store and path of a document id. An id whose path has an empty, "." or ".."
+         * step is refused: the server would resolve it to a place outside the folder another
+         * app was given.
+         */
+        fun split(id: String): Pair<String, String> {
+            val path = id.substringAfter('|', "")
+            if (!Names.isPlainPath(path)) throw FileNotFoundException("no such document")
+            return id.substringBefore('|') to path
+        }
 
         private val ROOT_COLUMNS = arrayOf(
             Root.COLUMN_ROOT_ID, Root.COLUMN_DOCUMENT_ID, Root.COLUMN_TITLE, Root.COLUMN_SUMMARY,

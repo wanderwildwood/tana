@@ -8,6 +8,17 @@ import java.util.Locale
  */
 object Names {
 
+    /**
+     * Whether [name], as a server or another app lists it, may be used as one step of a path:
+     * not empty, not "." or "..", and with no slash, backslash or NUL in it. Anything else
+     * would lead somewhere other than inside the folder it was listed in.
+     */
+    fun isPlainName(name: String): Boolean =
+        name.isNotEmpty() && name != "." && name != ".." && name.none { it == '/' || it == '\\' || it == '\u0000' }
+
+    /** Whether every step of [path] is a [isPlainName]; the empty path, a top, is too. */
+    fun isPlainPath(path: String): Boolean = path.isEmpty() || path.split('/').all(::isPlainName)
+
     fun extension(name: String): String {
         val dot = name.lastIndexOf('.')
         // A leading dot is a hidden file's name, not an extension: ".nomedia" has none.
