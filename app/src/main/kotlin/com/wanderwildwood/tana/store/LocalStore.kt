@@ -52,7 +52,9 @@ class LocalStore(private val root: File = File("/")) : Store {
 
     override fun rename(from: String, to: String) {
         val target = file(to)
-        if (target.exists()) throw StoreException(StoreException.Reason.ALREADY_THERE, target.name)
+        if (target.exists() && !onlyCaseDiffers(file(from), target)) {
+            throw StoreException(StoreException.Reason.ALREADY_THERE, target.name)
+        }
         // Fails across the line between internal storage and the SD card, which are two
         // filesystems; a move then falls back to copying and deleting.
         if (!file(from).renameTo(target)) throw StoreException(StoreException.Reason.CANNOT_RENAME, file(from).name)
@@ -88,3 +90,13 @@ class LocalStore(private val root: File = File("/")) : Store {
         const val ID = "phone"
     }
 }
+
+/**
+ * [target] "exists" only because the storage ignores case and it names [source] itself, as in
+ * notes.txt to Notes.txt: no file of exactly that name is in the folder.
+ */
+internal fun onlyCaseDiffers(source: java.io.File, target: java.io.File): Boolean =
+    source.parentFile == target.parentFile &&
+        source.name != target.name &&
+        source.name.equals(target.name, ignoreCase = true) &&
+        target.parentFile?.list()?.contains(target.name) == false

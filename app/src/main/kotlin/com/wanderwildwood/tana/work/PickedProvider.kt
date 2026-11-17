@@ -161,7 +161,7 @@ class PickedProvider : DocumentsProvider() {
         // Checked before the move, not after: a file is never renamed to somewhere it could
         // then not be reached.
         file(target.absolutePath)
-        if (target.exists() || !f.renameTo(target)) throw FileNotFoundException("Could not rename ${f.name}")
+        if ((target.exists() && !com.wanderwildwood.tana.store.onlyCaseDiffers(f, target)) || !f.renameTo(target)) throw FileNotFoundException("Could not rename ${f.name}")
         return file(target.absolutePath).path
     }
 
