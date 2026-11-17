@@ -268,14 +268,15 @@ object Nearby {
                 launch {
                     gate.withPermit {
                         val ip = "${b[0]}.${b[1]}.${b[2]}.$last"
-                        if (!ask(client, ip, https = true)) ask(client, ip, https = false)
+                        // HTTPS only: a device that answers only in plain HTTP is not listed.
+                        ask(client, ip, https = true)
                     }
                 }
             }.joinAll()
         }
     }
 
-    /** False only when something answered at [ip] but not in TLS, which is when plain HTTP is worth a try. */
+    /** False only when something answered at [ip] but not in TLS. */
     private fun ask(client: OkHttpClient, ip: String, https: Boolean): Boolean {
         val m = me ?: return true
         val at = Device(alias = "", model = null, type = null, fingerprint = "", port = Wire.PORT, https = https, address = ip)
@@ -313,7 +314,13 @@ object Nearby {
         }
     }
 
+    /**
+     * Lists [d], unless it asks for plain HTTP: nothing is ever sent unencrypted, and an
+     * announcement saying "http" is how someone else on the Wi-Fi could take a device's name
+     * and fingerprint and have its sends come to them in the clear.
+     */
     private fun put(d: Device) {
+        if (!d.https) return
         devices[d.fingerprint.uppercase()] = d
         publish()
     }
