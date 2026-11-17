@@ -71,6 +71,17 @@
     <string name="provider_changed" translatable="false">“%1$s” changed on the server since it was read, so it was not replaced</string>
     <string name="provider_save_failed">“%1$s” did not reach the server: %2$s</string>
     <string name="provider_unreachable">The server did not answer. Is it on, and is this phone on its network?</string>
+    <!-- A notification when a save from another app did not reach the server. %1$s is the file's name -->
+    <string name="unsent_channel">Saves that did not reach a server</string>
+    <string name="unsent_title">“%1$s” was not saved to the server</string>
+    <!-- Why, given as %1$s in the lines below, when the server's file changed since it was read -->
+    <string name="unsent_changed">The file changed on the server since it was opened, so it was not replaced.</string>
+    <!-- %1$s is why; %2$s is where the copy is, such as Download/Unsent saves/notes (not sent 2026-11-17 14.05).txt -->
+    <string name="unsent_kept">%1$s What you saved is kept on this phone in %2$s.</string>
+    <string name="unsent_kept_app">%1$s What you saved is kept inside this app, as the Download folder had no room.</string>
+    <string name="unsent_not_kept">%1$s No copy could be kept on this phone. Save it again from the app you used.</string>
+    <!-- Why, when the server could not be reached; %1$s is the error -->
+    <string name="unsent_failed">It could not be sent (%1$s).</string>
     <plurals name="pick_attach">
         <item quantity="one">Choose %1$d file</item>
         <item quantity="other">Choose %1$d files</item>

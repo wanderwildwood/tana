@@ -307,7 +307,9 @@ class ServersProvider : DocumentsProvider() {
      * [WriteBack], which refuses to replace a file someone else saved since it was read. A
      * refusal cannot be said to the app's close, which has already returned, so it is said to
      * its next read of the file: an app that reads back what it saved (a careful one does)
-     * is told the file changed on the server and was not replaced. Until the upload is done,
+     * is told the file changed on the server and was not replaced. What it wrote is never
+     * thrown away on a save that did not go through: it is kept in Download, and a
+     * notification says where ([UnsentSaves]). Until the upload is done,
      * any other open of the file waits for it.
      */
     private fun openForWriting(documentId: String, store: String, path: String, mode: String, signal: CancellationSignal?): ParcelFileDescriptor {
@@ -324,16 +326,26 @@ class ServersProvider : DocumentsProvider() {
         }
         val done = java.util.concurrent.CompletableFuture<Unit>()
         writing[documentId] = done
+        val ctx = context!!
         return try {
             ParcelFileDescriptor.open(local, flags, closer()) { problem ->
                 NETWORK.execute {
+                    // Why what the app wrote did not reach the server, if it did not. Then the
+                    // copy here is the only one, and it is kept where the reader can find it
+                    // ([UnsentSaves]) before this one goes.
+                    var unsent: String? = null
                     try {
-                        if (problem == null) upload(documentId, store, path, local, base)
+                        if (problem == null && !upload(documentId, store, path, local, base)) {
+                            unsent = ctx.getString(R.string.unsent_changed)
+                        }
                     } catch (e: Exception) {
                         android.util.Log.w(TAG, "a save to a server failed", e)
                         failed[documentId] = e.message ?: e.javaClass.simpleName
+                        unsent = ctx.getString(R.string.unsent_failed, e.message ?: e.javaClass.simpleName)
                     } finally {
-                        local.parentFile?.deleteRecursively()
+                        val safe = unsent == null || UnsentSaves.keep(ctx, local, name, unsent)
+                        // Kept back only when it could be kept nowhere else.
+                        if (safe) local.parentFile?.deleteRecursively()
                         writing.remove(documentId, done)
                         done.complete(Unit)
                     }
@@ -347,11 +359,13 @@ class ServersProvider : DocumentsProvider() {
         }
     }
 
-    private fun upload(documentId: String, store: String, path: String, local: File, base: Version?) {
-        when (val outcome = WriteBack.put(Stores.get(store), path, local, base)) {
+    /** True when the file is on the server; false when the server's file changed and was left as it was. */
+    private fun upload(documentId: String, store: String, path: String, local: File, base: Version?): Boolean {
+        return when (val outcome = WriteBack.put(Stores.get(store), path, local, base)) {
             WriteBack.Outcome.Changed -> {
                 android.util.Log.w(TAG, "a save was refused: the server's file changed since it was read")
                 conflicts[documentId] = path.substringAfterLast('/')
+                false
             }
             is WriteBack.Outcome.Saved -> {
                 // What was sent is what the server has now: kept as the fetched copy, so the
@@ -362,6 +376,7 @@ class ServersProvider : DocumentsProvider() {
                 if (outcome.entry.modified > 0) file.setLastModified(outcome.entry.modified)
                 read[documentId] = Version.of(outcome.entry)
                 seen[documentId] = outcome.entry
+                true
             }
         }
     }
