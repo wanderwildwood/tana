@@ -61,7 +61,8 @@ class DavStore(override val server: Server, private val spool: File) : ServerSto
         val skip = items.firstOrNull { it.path.trimEnd('/') == self } ?: items.minByOrNull { it.path.length }
         return items.filter { it !== skip }.mapNotNull { item ->
             val name = item.path.trimEnd('/').substringAfterLast('/')
-            if (name.isEmpty()) null else entry(SmbStore.join(path, name), item)
+            // A name that is empty, "." or ".." or holds a slash is not a file in this folder.
+            if (!Names.isPlainName(name)) null else entry(SmbStore.join(path, name), item)
         }
     }
 

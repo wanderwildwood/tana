@@ -194,6 +194,26 @@ class TransferTest {
         assertFalse(File(into.parentFile, "film.mkv.part").exists())
     }
 
+    @Test fun aServerListingDotDotCannotLeadACopyOutOfItsFolder() {
+        write("a/one.txt", "1", serverRoot)
+        write("escape.txt", "x", serverRoot)
+        val plain = Renamed(LocalStore(serverRoot), SERVER)
+        // A server that lies: inside "a" it lists a folder called "..", and in that, a file.
+        val lying = object : Store by plain {
+            override fun list(path: String): List<Entry> = when (path) {
+                "a" -> plain.list("a") + plain.stat("a")!!.copy(loc = Loc(SERVER, "a/.."))
+                "a/.." -> listOf(plain.stat("escape.txt")!!.copy(loc = Loc(SERVER, "a/../escape.txt")))
+                else -> plain.list(path)
+            }
+        }
+        File(root, "dst").mkdir()
+        val t = Transfer({ if (it == LocalStore.ID) phone else lying })
+        t.paste(listOf(lying.stat("a")!!), Loc(LocalStore.ID, "dst"), Mode.COPY, Clash.KEEP_BOTH)
+        assertEquals("1", File(root, "dst/a/one.txt").readText())
+        assertFalse("nothing lands beside the folder", File(root, "dst/escape.txt").exists())
+        assertFalse(File(root, "escape.txt").exists())
+    }
+
     /** A LocalStore under another id, so the engine sees two stores. */
     private class Renamed(private val inner: LocalStore, override val id: String) : Store by inner {
         override fun list(path: String) = inner.list(path).map { it.copy(loc = Loc(id, it.loc.path)) }

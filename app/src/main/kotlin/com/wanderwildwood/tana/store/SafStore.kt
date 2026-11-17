@@ -4,6 +4,7 @@ import android.content.ContentResolver
 import android.net.Uri
 import android.provider.DocumentsContract
 import android.provider.DocumentsContract.Document
+import com.wanderwildwood.tana.work.Names
 import java.io.FileNotFoundException
 import java.io.InputStream
 import java.io.OutputStream
@@ -60,7 +61,9 @@ class SafStore(val root: SafRoot, private val resolver: ContentResolver) : Store
         )?.use { c ->
             while (c.moveToNext()) {
                 val childId = c.getString(0) ?: continue
-                val name = c.getString(1)?.takeIf { it.isNotEmpty() && '/' !in it } ?: continue
+                // Another app's listing is taken at its word only for plain names: "." or ".."
+                // would lead a copy out of the folder it is going into.
+                val name = c.getString(1)?.takeIf { Names.isPlainName(it) } ?: continue
                 val childPath = if (path.isEmpty()) name else "$path/$name"
                 val isFolder = c.getString(2) == Document.MIME_TYPE_DIR
                 ids[childPath] = childId

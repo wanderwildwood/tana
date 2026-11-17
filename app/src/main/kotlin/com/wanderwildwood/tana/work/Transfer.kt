@@ -270,6 +270,7 @@ class Transfer(
             out += relative to e
             if (e.isFolder) {
                 for (child in resolve(e.loc.store).list(e.loc.path)) {
+                    if (!Names.isPlainName(child.name)) continue
                     walk(child, if (relative.isEmpty()) child.name else "$relative/${child.name}")
                 }
             }
@@ -281,6 +282,8 @@ class Transfer(
     private fun copyTree(from: Store, to: Store, target: Loc, items: List<Pair<String, Entry>>, replacing: Boolean) {
         for ((relative, item) in items) {
             checkCancelled()
+            // Whatever a store listed, a copy never lands outside the folder it is going into.
+            if (!Names.isPlainPath(relative)) throw StoreException(StoreException.Reason.CANNOT_WRITE, item.name)
             val dest = if (relative.isEmpty()) target else Loc(target.store, "${target.path}/$relative")
             if (item.isFolder) {
                 if (to.stat(dest.path)?.isFolder != true) to.makeFolder(dest.path)
