@@ -341,7 +341,8 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     private val history = ArrayDeque<Place>()
     private var listing: CoroutineJob? = null
     private var searching: CoroutineJob? = null
-    @Volatile private var searchCancelled = false
+    /** The running search's own stop: each search has one, so stopping an old one never reaches a new one. */
+    @Volatile private var searchStop = java.util.concurrent.atomic.AtomicBoolean(true)
 
     init {
         Stores.setServers(_state.value.servers)
@@ -419,7 +420,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
      * whatever the reader had open before belongs to a different errand.
      */
     fun openAt(loc: Loc) {
-        searchCancelled = true
+        searchStop.set(true)
         searching?.cancel()
         history.clear()
         _state.update { it.copy(search = null, info = null, selection = emptySet()) }
@@ -1274,23 +1275,28 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun closeSearch() {
-        searchCancelled = true
+        searchStop.set(true)
         searching?.cancel()
         _state.update { it.copy(search = null, selection = emptySet()) }
     }
 
     fun searchFor(words: String, kind: Kind) {
         val search = _state.value.search ?: return
-        searchCancelled = true
+        searchStop.set(true)
         searching?.cancel()
         _state.update { it.copy(search = search.copy(words = words, kind = kind, results = emptyList(), running = true, ran = true), selection = emptySet()) }
-        searchCancelled = false
+        val stop = java.util.concurrent.atomic.AtomicBoolean(false)
+        searchStop = stop
         val hidden = _state.value.showHidden
         searching = viewModelScope.launch(Dispatchers.IO) {
-            Search(Stores::get, isCancelled = { searchCancelled }).run(search.roots, words, kind, hidden) { found ->
-                _state.update { s -> s.search?.let { s.copy(search = it.copy(results = Sort().apply(it.results + found))) } ?: s }
+            Search(Stores::get, isCancelled = { stop.get() }).run(search.roots, words, kind, hidden) { found ->
+                // A search stopped while it was inside a folder listing still finds that folder's
+                // things: they are not added to the search that took its place.
+                if (!stop.get()) {
+                    _state.update { s -> s.search?.let { s.copy(search = it.copy(results = Sort().apply(it.results + found))) } ?: s }
+                }
             }
-            _state.update { s -> s.search?.let { s.copy(search = it.copy(running = false)) } ?: s }
+            if (!stop.get()) _state.update { s -> s.search?.let { s.copy(search = it.copy(running = false)) } ?: s }
         }
     }
 
