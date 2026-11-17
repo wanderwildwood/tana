@@ -7,6 +7,7 @@ import android.net.wifi.p2p.WifiP2pManager
 import android.os.Environment
 import android.os.PowerManager
 import android.os.StatFs
+import com.wanderwildwood.tana.BuildConfig
 import com.wanderwildwood.tana.store.Entry
 import com.wanderwildwood.tana.store.LocalStore
 import com.wanderwildwood.tana.store.Loc
@@ -415,8 +416,10 @@ object Nearby {
         val files = o.optJSONObject("files") ?: return Response(400)
         val offers = files.keys().asSequence().mapNotNull { files.optJSONObject(it)?.let(Offer::from) }.associateBy { it.id }
         if (offers.isEmpty()) return Response(400)
-        val bytes = offers.values.sumOf { it.size }
-        val fits = runCatching { StatFs(downloads().path).availableBytes > bytes + ROOM }.getOrDefault(false)
+        // Sizes are the sender's word: added with a check, so a sum past Long cannot wrap round
+        // to a small number and pass for one that fits.
+        val bytes = runCatching { offers.values.fold(0L) { sum, o -> Math.addExact(sum, o.size) } }.getOrDefault(Long.MAX_VALUE)
+        val fits = runCatching { bytes < Long.MAX_VALUE - ROOM && StatFs(downloads().path).availableBytes > bytes + ROOM }.getOrDefault(false)
         val ask = CompletableFuture<Boolean>()
         synchronized(lock) {
             if (asking != null || _state.value.errand?.underWay == true) return Response(409)
@@ -475,7 +478,7 @@ object Nearby {
             PartJournal.started(app, loc)
             try {
                 val digest = offer.sha256?.let { MessageDigest.getInstance("SHA-256") }
-                val count = part.outputStream().use { out -> pump(r.body, s) { b, n -> out.write(b, 0, n); digest?.update(b, 0, n) } }
+                val count = part.outputStream().use { out -> pump(r.body, s, offer.size) { b, n -> out.write(b, 0, n); digest?.update(b, 0, n) } }
                 status = when {
                     count != offer.size -> 400
                     digest != null && !digest.digest().joinToString("") { "%02x".format(it) }.equals(offer.sha256, ignoreCase = true) -> 422
@@ -503,13 +506,15 @@ object Nearby {
         return Response(status)
     }
 
-    private inline fun pump(input: InputStream, s: Session, write: (ByteArray, Int) -> Unit): Long {
+    /** Reads a file's body, and stops as soon as it runs past the [limit] its sender offered. */
+    private inline fun pump(input: InputStream, s: Session, limit: Long, write: (ByteArray, Int) -> Unit): Long {
         val buffer = ByteArray(256 * 1024)
         var count = 0L
         while (true) {
             if (s.over) throw IOException("stopped")
             val n = input.read(buffer)
             if (n < 0) return count
+            if (count + n > limit) return count + n
             write(buffer, n)
             count += n
             s.bytes.addAndGet(n.toLong())
@@ -683,7 +688,7 @@ object Nearby {
             // A stop pressed here cancels the call, which arrives as an IOException; the errand
             // was already put away by then.
             if (coroutineContext.isActive) {
-                android.util.Log.w(TAG, "send to ${d.address}:${d.port} failed", e)
+                if (BuildConfig.DEBUG) android.util.Log.w(TAG, "send to ${d.address}:${d.port} failed", e) else android.util.Log.w(TAG, "send failed: ${e.javaClass.simpleName}")
                 finish(Errand.Failed(Why.UNREACHABLE, d.alias))
             }
         } finally {
@@ -757,7 +762,7 @@ object Nearby {
                 val info = intent.getParcelableExtra<android.net.NetworkInfo>(WifiP2pManager.EXTRA_NETWORK_INFO)
                 val group = intent.getParcelableExtra<android.net.wifi.p2p.WifiP2pGroup>(WifiP2pManager.EXTRA_WIFI_P2P_GROUP)
                 val connected = info?.isConnected == true && group != null
-                android.util.Log.i(TAG, "p2p connection changed: connected=$connected group=${group?.networkName}")
+                android.util.Log.i(TAG, "p2p connection changed: connected=$connected" + if (BuildConfig.DEBUG) " group=${group?.networkName}" else "")
                 if (connected) return
                 val away = _state.value.away
                 if (away is Away.Hosting && away.up) keeper?.groupRemoved()
