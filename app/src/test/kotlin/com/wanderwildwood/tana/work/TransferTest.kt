@@ -178,6 +178,23 @@ class TransferTest {
         assertFalse(File(root, "a").exists())
     }
 
+    @Test fun twoOfOneNameReplacingDoNotReplaceEachOther() {
+        write("one/x.txt", "first")
+        write("two/x.txt", "second")
+        File(root, "dst").mkdir()
+        val dst = Loc(LocalStore.ID, "dst")
+        transfer().paste(listOf(entry("one/x.txt"), entry("two/x.txt")), dst, Mode.MOVE, Clash.REPLACE)
+        assertEquals("first", File(root, "dst/x.txt").readText())
+        assertEquals("second", File(root, "dst/x (1).txt").readText())
+    }
+
+    @Test fun aFolderAndSomethingInItAreDeletedTogether() {
+        write("a/b/c.txt", "c")
+        val out = transfer().delete(listOf(entry("a"), entry("a/b/c.txt")))
+        assertEquals(Outcome(1, 0), out)
+        assertFalse(File(root, "a").exists())
+    }
+
     @Test fun keepsTheDateOfWhatItCopies() {
         val f = write("old.txt", "o")
         f.setLastModified(1_000_000_000_000)

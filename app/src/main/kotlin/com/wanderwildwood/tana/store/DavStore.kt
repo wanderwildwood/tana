@@ -99,8 +99,13 @@ class DavStore(override val server: Server, private val spool: File) : ServerSto
         val name = path.substringAfterLast('/')
         spool.mkdirs()
         val held = File.createTempFile("put-", ".part", spool)
-        return object : FilterOutputStream(FileOutputStream(held)) {
+        return object : FilterOutputStream(FileOutputStream(held)), AbortableOutput {
             private var closed = false
+            private var aborted = false
+
+            override fun abort() {
+                aborted = true
+            }
 
             override fun write(b: ByteArray, off: Int, len: Int) {
                 out.write(b, off, len)
@@ -111,6 +116,8 @@ class DavStore(override val server: Server, private val spool: File) : ServerSto
                 closed = true
                 try {
                     super.close()
+                    // A copy stopped or failed half way is not sent: only the whole file is.
+                    if (aborted) return
                     val put = request(url(path)).put(held.asRequestBody(OCTETS)).build()
                     send(put, name).use { response ->
                         if (!response.isSuccessful) throw problem(response.code, name)

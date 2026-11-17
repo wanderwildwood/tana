@@ -114,3 +114,16 @@ class StoreException(
         PLAIN_HTTP,
     }
 }
+
+/**
+ * A write stream that holds what is written and sends it only on close, such as a WebDAV PUT.
+ * Told [abort] first, its close sends nothing.
+ */
+interface AbortableOutput {
+    fun abort()
+}
+
+/** The write did not finish: a stream that would send on close is told not to. */
+fun OutputStream.abortWrite() {
+    (this as? AbortableOutput)?.abort()
+}

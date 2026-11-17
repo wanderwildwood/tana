@@ -5,6 +5,7 @@ import com.wanderwildwood.tana.store.LocalStore
 import com.wanderwildwood.tana.store.Loc
 import com.wanderwildwood.tana.store.Store
 import com.wanderwildwood.tana.store.StoreException
+import com.wanderwildwood.tana.store.abortWrite
 import java.io.BufferedOutputStream
 import java.io.File
 import java.util.zip.ZipEntry
@@ -63,7 +64,8 @@ class Transfer(
         return sources.filter { it.loc.parent != dest && it.name in here }.map { it.name }
     }
 
-    fun paste(sources: List<Entry>, dest: Loc, mode: Mode, clash: Clash): Outcome {
+    fun paste(picked: List<Entry>, dest: Loc, mode: Mode, clash: Clash): Outcome {
+        val sources = outermost(picked)
         for (source in sources) {
             if (source.isFolder && dest.isWithin(source.loc)) {
                 throw StoreException(StoreException.Reason.INTO_ITSELF, source.name)
@@ -77,6 +79,10 @@ class Transfer(
         val to = resolve(dest.store)
         var done = 0
         var skipped = 0
+        // Names this paste has put in [dest] itself. Two sources of one name (picked from
+        // search results) must not have the second replace the first: Replace is for what was
+        // there before.
+        val placed = mutableSetOf<String>()
 
         for ((source, items) in plans) {
             checkCancelled()
@@ -90,6 +96,7 @@ class Transfer(
             }
 
             val name = when {
+                source.name in placed -> Names.unique(source.name) { to.stat(dest.child(it).path) != null }
                 mode == Mode.COPY && source.loc.parent == dest -> Names.unique(source.name) { to.stat(dest.child(it).path) != null }
                 to.stat(dest.child(source.name).path) == null -> source.name
                 clash == Clash.SKIP -> null
@@ -102,6 +109,7 @@ class Transfer(
                 continue
             }
             val target = dest.child(name)
+            placed += name
 
             // A file replacing a file keeps the old one until the new one has fully arrived
             // (see copyFile). Anything involving a folder is copied in beside the old one under
@@ -180,22 +188,28 @@ class Transfer(
         try {
             to.openWrite(part.path).use { raw ->
                 ZipOutputStream(BufferedOutputStream(raw, BUFFER)).use { zip ->
-                    for ((source, items) in plans) {
-                        val from = resolve(source.loc.store)
-                        for ((relative, item) in items) {
-                            checkCancelled()
-                            val entryName = if (relative.isEmpty()) source.name else "${source.name}/$relative"
-                            if (item.isFolder) {
-                                zip.putNextEntry(ZipEntry("$entryName/").also { if (item.modified > 0) it.time = item.modified })
-                                zip.closeEntry()
-                            } else {
-                                zip.putNextEntry(ZipEntry(entryName).also { if (item.modified > 0) it.time = item.modified })
-                                from.openRead(item.loc.path).use { input -> pump(input, zip, item.name) }
-                                zip.closeEntry()
-                                filesDone++
-                                report(item.name)
+                    try {
+                        for ((source, items) in plans) {
+                            val from = resolve(source.loc.store)
+                            for ((relative, item) in items) {
+                                checkCancelled()
+                                val entryName = if (relative.isEmpty()) source.name else "${source.name}/$relative"
+                                if (item.isFolder) {
+                                    zip.putNextEntry(ZipEntry("$entryName/").also { if (item.modified > 0) it.time = item.modified })
+                                    zip.closeEntry()
+                                } else {
+                                    zip.putNextEntry(ZipEntry(entryName).also { if (item.modified > 0) it.time = item.modified })
+                                    from.openRead(item.loc.path).use { input -> pump(input, zip, item.name) }
+                                    zip.closeEntry()
+                                    filesDone++
+                                    report(item.name)
+                                }
                             }
                         }
+                    } catch (e: Throwable) {
+                        // Stopped or failed: a server copy holding the archive so far sends nothing.
+                        raw.abortWrite()
+                        throw e
                     }
                 }
             }
@@ -213,7 +227,8 @@ class Transfer(
      * good. Anything else (a server, another app's folder, something already in the trash) is
      * removed for good.
      */
-    fun delete(entries: List<Entry>): Outcome {
+    fun delete(picked: List<Entry>): Outcome {
+        val entries = outermost(picked)
         val binned = entries.associateWith { binFile(it) }
         val plans = entries.filter { binned[it] == null }.map { it to flatten(it) }
         filesTotal = plans.sumOf { (_, items) -> items.size } + binned.values.count { it != null }
@@ -234,6 +249,13 @@ class Transfer(
         }
         return Outcome(entries.size, 0)
     }
+
+    /**
+     * [entries] without any that lie inside another of them: a folder and something in it,
+     * both picked from search results, go with the folder.
+     */
+    internal fun outermost(entries: List<Entry>): List<Entry> =
+        entries.filterNot { e -> entries.any { o -> o !== e && o.isFolder && o.loc != e.loc && e.loc.isWithin(o.loc) } }
 
     /** The file on the phone this entry is, when it is to go to the trash; null when it is deleted for good. */
     private fun binFile(entry: Entry): File? {
@@ -301,7 +323,14 @@ class Transfer(
         onPart(part, true)
         try {
             from.openRead(item.loc.path).use { input ->
-                to.openWrite(part.path).use { output -> pump(input, output, item.name) }
+                to.openWrite(part.path).use { output ->
+                    try {
+                        pump(input, output, item.name)
+                    } catch (e: Throwable) {
+                        output.abortWrite()
+                        throw e
+                    }
+                }
             }
             val written = to.stat(part.path)?.size
             if (written != item.size) throw StoreException(StoreException.Reason.CANNOT_WRITE, item.name)
