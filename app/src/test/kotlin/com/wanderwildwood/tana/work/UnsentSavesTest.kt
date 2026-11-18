@@ -1,9 +1,15 @@
 package com.wanderwildwood.tana.work
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 
 class UnsentSavesTest {
+
+    @get:Rule val tmp = TemporaryFolder()
 
     private val stamp = "2026-11-17 14.05"
 
@@ -22,5 +28,19 @@ class UnsentSavesTest {
     @Test fun keptNameHasNoColonOrSlash() {
         val name = UnsentSaves.keptName("a.txt", stamp)
         assertEquals(false, name.contains(':') || name.contains('/'))
+    }
+
+    @Test fun aSaveLeftUnclosedIsKeptOnlyWhenSomethingInItIsNew() {
+        val start = tmp.newFile("start.txt").apply { writeText("Ada Whitlock\n") }
+        val same = tmp.newFile("same.txt").apply { writeText("Ada Whitlock\n") }
+        val changed = tmp.newFile("changed.txt").apply { writeText("Ada Whitlocx\n") }
+        val longer = tmp.newFile("longer.txt").apply { writeText("Ada Whitlock\nTomas Reyes\n") }
+        val size = start.length()
+        assertTrue(ServersProvider.sameBytes(same, start, size))
+        assertFalse(ServersProvider.sameBytes(changed, start, size))
+        assertFalse(ServersProvider.sameBytes(longer, start, size))
+        // The copy it started from changed under it: not the same as when it started.
+        start.writeText("Ada Whitlock\nmore\n")
+        assertFalse(ServersProvider.sameBytes(same, start, size))
     }
 }

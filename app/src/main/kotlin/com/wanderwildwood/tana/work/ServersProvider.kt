@@ -12,6 +12,7 @@ import android.provider.DocumentsProvider
 import com.wanderwildwood.tana.R
 import com.wanderwildwood.tana.store.Entry
 import com.wanderwildwood.tana.store.Server
+import com.wanderwildwood.tana.store.StoreException
 import com.wanderwildwood.tana.store.Stores
 import java.io.File
 import java.io.FileNotFoundException
@@ -311,10 +312,11 @@ class ServersProvider : DocumentsProvider() {
         val name = path.substringAfterLast('/')
         val local = File(File(context!!.cacheDir, "writing"), java.util.UUID.randomUUID().toString()).apply { mkdirs() }.let { File(it, name) }
         val flags = ParcelFileDescriptor.parseMode(mode)
-        if (flags and ParcelFileDescriptor.MODE_TRUNCATE == 0 && existing != null) {
-            // "rw" and "wa" keep what is there, so they start from it.
-            fetch(documentId, store, path, signal).copyTo(local, overwrite = true)
-        }
+        // "rw" and "wa" keep what is there, so they start from it.
+        val start = if (flags and ParcelFileDescriptor.MODE_TRUNCATE == 0 && existing != null) {
+            fetch(documentId, store, path, signal).also { it.copyTo(local, overwrite = true) }
+        } else null
+        val startSize = start?.length() ?: 0L
         val done = java.util.concurrent.CompletableFuture<Unit>()
         writing[documentId] = done
         val ctx = context!!
@@ -326,13 +328,25 @@ class ServersProvider : DocumentsProvider() {
                     // ([UnsentSaves]) before this one goes.
                     var unsent: String? = null
                     try {
-                        if (problem == null && !upload(documentId, store, path, local, base)) {
+                        if (problem != null) {
+                            // The app's side ended with an error, went away, or let the file go
+                            // without closing it: what it wrote may be whole or half done. Half a
+                            // file must never replace the server's, so it is not sent, but kept
+                            // as any unsent save is -- unless there is nothing new in it.
+                            warn("a save was not closed cleanly", problem)
+                            if (local.length() > 0 && !(start != null && sameBytes(local, start, startSize))) {
+                                val why = ctx.getString(R.string.unsent_unfinished)
+                                failed[documentId] = why
+                                unsent = why
+                            }
+                        } else if (!upload(documentId, store, path, local, base)) {
                             unsent = ctx.getString(R.string.unsent_changed)
                         }
                     } catch (e: Exception) {
                         warn("a save to a server failed", e)
-                        failed[documentId] = e.message ?: e.javaClass.simpleName
-                        unsent = ctx.getString(R.string.unsent_failed, e.message ?: e.javaClass.simpleName)
+                        val why = whyNotSent(ctx, e)
+                        failed[documentId] = why
+                        unsent = why
                     } finally {
                         val safe = unsent == null || UnsentSaves.keep(ctx, local, name, unsent)
                         // Kept back only when it could be kept nowhere else.
@@ -348,6 +362,23 @@ class ServersProvider : DocumentsProvider() {
             local.parentFile?.deleteRecursively()
             throw FileNotFoundException("could not open $documentId for writing: ${e.message}")
         }
+    }
+
+    /**
+     * Why a save did not reach the server, in words from strings.xml. Never the exception's
+     * own message, which names the server's address and the file, and which a notification
+     * would show on the lock screen.
+     */
+    private fun whyNotSent(ctx: android.content.Context, e: Exception): String {
+        val reason = ((e as? StoreException) ?: (e.cause as? StoreException))?.reason
+        return ctx.getString(
+            when {
+                reason == StoreException.Reason.LOGIN_REFUSED -> R.string.problem_login_refused
+                reason == StoreException.Reason.SERVER_UNREACHABLE -> R.string.unsent_unreachable
+                reason == null && e is java.io.IOException -> R.string.unsent_unreachable
+                else -> R.string.unsent_refused
+            },
+        )
     }
 
     /** True when the file is on the server; false when the server's file changed and was left as it was. */
@@ -475,6 +506,24 @@ class ServersProvider : DocumentsProvider() {
             return id.substringBefore('|') to path
         }
 
+        /** Whether [a] holds what [b] held when it was [size] bytes long: the same bytes, start to end. */
+        fun sameBytes(a: File, b: File, size: Long): Boolean {
+            if (a.length() != size || b.length() != size) return false
+            val x = a.inputStream().buffered()
+            val y = b.inputStream().buffered()
+            try {
+                var c: Int
+                do {
+                    c = x.read()
+                    if (c != y.read()) return false
+                } while (c >= 0)
+                return true
+            } finally {
+                x.close()
+                y.close()
+            }
+        }
+
         /** As [split], and refused unless the store is one of [servers] (their store ids). */
         fun split(id: String, servers: Set<String>): Pair<String, String> {
             val parts = split(id)
@@ -519,7 +568,7 @@ class ServersProvider : DocumentsProvider() {
         if (com.wanderwildwood.tana.BuildConfig.DEBUG) {
             android.util.Log.w(TAG, message, e)
         } else {
-            android.util.Log.w(TAG, "$message: ${(e as? com.wanderwildwood.tana.store.StoreException)?.reason ?: e.javaClass.simpleName}")
+            android.util.Log.w(TAG, "$message: ${(e as? StoreException)?.reason ?: e.javaClass.simpleName}")
         }
     }
 }

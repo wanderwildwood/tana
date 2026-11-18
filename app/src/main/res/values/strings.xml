@@ -82,8 +82,11 @@
     <string name="unsent_kept">%1$s What you saved is kept on this phone in %2$s.</string>
     <string name="unsent_kept_app">%1$s What you saved is kept inside this app, as the Download folder had no room.</string>
     <string name="unsent_not_kept">%1$s No copy could be kept on this phone. Save it again from the app you used.</string>
-    <!-- Why, when the server could not be reached; %1$s is the error -->
-    <string name="unsent_failed">It could not be sent (%1$s).</string>
+    <!-- Why, when the server could not be reached, or did not take the file -->
+    <string name="unsent_unreachable">The server could not be reached.</string>
+    <string name="unsent_refused">The server did not take it.</string>
+    <!-- Why, when the app that saved the file let it go without closing it properly -->
+    <string name="unsent_unfinished">The app that saved it did not finish closing the file, so it was not sent.</string>
     <plurals name="pick_attach">
         <item quantity="one">Choose %1$d file</item>
         <item quantity="other">Choose %1$d files</item>
