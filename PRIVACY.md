@@ -58,7 +58,8 @@ access back.
 
 To open or share a file that lives on a server, the app copies it into its own cache on the
 phone first and hands the copy to the app that will open it. Those copies are deleted the next
-time the app starts, once they are a day old.
+time the app starts, once they are a day old. The one copy that stays is a save that did not
+reach the server, below under "Other apps and your servers".
 
 ## PDFs
 
@@ -114,6 +115,13 @@ renames, deletes), only through a file or folder you pick in that picker; Cabine
 sends it with the sign-in you gave, and never hands the password to the app. Deleting through
 the picker removes the file from the server for good.
 
+When an app saves a server's file and the save does not get there (the server cannot be
+reached, someone else changed the file meanwhile, or the app does not finish closing it), what
+the app wrote is kept on the phone so it is not lost: in Download/Unsent saves, or, if Download
+has no room, inside Cabinet's own storage. A notification says where. That copy is a plain file
+in shared storage, which other apps with storage access can read, and it stays until you delete
+it: clearing Cabinet's data or uninstalling leaves the copy in Download.
+
 ## Other apps asking for a file
 
 When another app asks for a file to open, a place to save one, or a folder, Cabinet shows its own
@@ -155,7 +163,7 @@ If you are in the EU, the EEA or the UK, the GDPR gives you the right to:
 
 Similar laws elsewhere, such as the CCPA in California, give you the right to know, delete and correct, and to opt out of the sale or sharing of your data. Nothing from Cabinet is sold or shared.
 
-Since Cabinet keeps what it stores only on your phone, you can exercise most of these rights yourself: remove a server, and the sign-in kept for it, on the start page, empty the trash on the Trash page (it sits on the phone's storage, so clearing the app's data or uninstalling leaves it there), clear the app's data in Android's settings, or uninstall the app, which deletes all of it. For anything you cannot do yourself, write to the address above.
+Since Cabinet keeps what it stores only on your phone, you can exercise most of these rights yourself: remove a server, and the sign-in kept for it, on the start page, empty the trash on the Trash page (it sits on the phone's storage, so clearing the app's data or uninstalling leaves it there), delete any copies in Download/Unsent saves (they are left there too), clear the app's data in Android's settings, or uninstall the app, which deletes all of it. For anything you cannot do yourself, write to the address above.
 
 If you point Cabinet at a server of your own, what that server keeps is yours to manage.
 <!-- /shared-about privacy section -->
