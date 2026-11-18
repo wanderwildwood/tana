@@ -19,6 +19,13 @@ class NamesAndSortTest {
         assertEquals("", Names.extension("trailing."))
     }
 
+    @Test fun namesFetchedSideBySideAreEachTheirOwn() {
+        assertEquals(
+            listOf("IMG_0001.jpg", "a.txt", "IMG_0001 (1).jpg", "img_0001 (2).jpg"),
+            Names.eachUnique(listOf("IMG_0001.jpg", "a.txt", "IMG_0001.jpg", "img_0001.jpg")),
+        )
+    }
+
     @Test fun uniqueNamesKeepTheExtension() {
         val taken = setOf("a.txt", "a (1).txt", "notes")
         assertEquals("b.txt", Names.unique("b.txt") { it in taken })

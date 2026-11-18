@@ -26,6 +26,17 @@ object Names {
     }
 
     /**
+     * [names] made fit to sit in one folder: a name met again, in any case, is numbered as
+     * [unique] numbers it. Files of one name picked from two folders, fetched side by side.
+     */
+    fun eachUnique(names: List<String>): List<String> {
+        val used = mutableSetOf<String>()
+        return names.map { name ->
+            unique(name) { it.lowercase(Locale.ROOT) in used }.also { used += it.lowercase(Locale.ROOT) }
+        }
+    }
+
+    /**
      * "photo.jpg" → "photo (1).jpg", then "(2)", and so on, until [taken] says no. The number
      * goes before the extension so the copy still opens in the same app.
      */

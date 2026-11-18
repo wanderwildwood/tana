@@ -139,8 +139,10 @@ class TransferService : Service() {
                 is Job.Delete -> Work.Finished(job, transfer.delete(job.entries))
                 is Job.Fetch -> {
                     val folder = File(cacheDir, "fetched/${System.currentTimeMillis()}")
-                    val files = job.entries.map { entry ->
-                        File(folder, entry.name).also { transfer.fetch(entry, it) }
+                    // Two picked from different folders may share a name; each needs its own file.
+                    val names = Names.eachUnique(job.entries.map { it.name })
+                    val files = job.entries.zip(names).map { (entry, name) ->
+                        File(folder, name).also { transfer.fetch(entry, it) }
                     }
                     Work.Finished(job, Outcome(files.size, 0), files)
                 }
