@@ -123,7 +123,9 @@ internal class HttpServer(private val tls: SSLContext, private val handle: (Requ
                 write(output, response)
                 if (!drained || headers["connection"].equals("close", ignoreCase = true) || parts[2] != "HTTP/1.1") return
             }
-        } catch (_: IOException) {
+        } catch (_: Exception) {
+            // Whatever a request does -- a broken line, a hang-up, something no handler
+            // expected -- ends this connection only, never the app.
         } finally {
             open -= socket
             runCatching { socket.close() }
@@ -171,12 +173,17 @@ internal class HttpServer(private val tls: SSLContext, private val handle: (Requ
             }
         }
 
+        /** The query's pairs. One with a broken escape ("%zz", a "%" at the end) is left out. */
         fun query(q: String): Map<String, String> =
-            q.split('&').filter { it.isNotEmpty() }.associate {
+            q.split('&').filter { it.isNotEmpty() }.mapNotNull {
                 val k = it.substringBefore('=')
                 val v = it.substringAfter('=', "")
-                java.net.URLDecoder.decode(k, "UTF-8") to java.net.URLDecoder.decode(v, "UTF-8")
-            }
+                try {
+                    java.net.URLDecoder.decode(k, "UTF-8") to java.net.URLDecoder.decode(v, "UTF-8")
+                } catch (_: IllegalArgumentException) {
+                    null
+                }
+            }.toMap()
 
         private fun reason(status: Int) = when (status) {
             200 -> "OK"
