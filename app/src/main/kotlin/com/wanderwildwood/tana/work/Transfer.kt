@@ -79,9 +79,10 @@ class Transfer(
         val to = resolve(dest.store)
         var done = 0
         var skipped = 0
-        // Names this paste has put in [dest] itself. Two sources of one name (picked from
-        // search results) must not have the second replace the first: Replace is for what was
-        // there before.
+        // Names this paste has put in [dest] itself, in lower case. Two sources of one name
+        // (picked from search results) must not have the second replace the first: Replace is
+        // for what was there before. Phone storage and a card ignore case, so "IMG_1.JPG" and
+        // "img_1.jpg" are one name there.
         val placed = mutableSetOf<String>()
 
         for ((source, items) in plans) {
@@ -96,7 +97,7 @@ class Transfer(
             }
 
             val name = when {
-                source.name in placed -> Names.unique(source.name) { to.stat(dest.child(it).path) != null }
+                source.name.lowercase() in placed -> Names.unique(source.name) { to.stat(dest.child(it).path) != null }
                 mode == Mode.COPY && source.loc.parent == dest -> Names.unique(source.name) { to.stat(dest.child(it).path) != null }
                 to.stat(dest.child(source.name).path) == null -> source.name
                 clash == Clash.SKIP -> null
@@ -109,7 +110,7 @@ class Transfer(
                 continue
             }
             val target = dest.child(name)
-            placed += name
+            placed += name.lowercase()
 
             // A file replacing a file keeps the old one until the new one has fully arrived
             // (see copyFile). Anything involving a folder is copied in beside the old one under

@@ -188,6 +188,20 @@ class TransferTest {
         assertEquals("second", File(root, "dst/x (1).txt").readText())
     }
 
+    @Test fun twoNamesThatDifferOnlyByCaseDoNotReplaceEachOtherOnStorageThatIgnoresCase() {
+        write("one/x.txt", "first")
+        write("two/X.TXT", "second")
+        val blindRoot = tmp.newFolder("blind")
+        File(blindRoot, "dst").mkdir()
+        val blind = CaseBlind(LocalStore(blindRoot))
+        val dst = Loc(BLIND, "dst")
+        val resolveAll = { id: String -> if (id == BLIND) blind else resolve(id) }
+        Transfer(resolveAll, isCancelled = { false }, onProgress = {})
+            .paste(listOf(entry("one/x.txt"), entry("two/X.TXT")), dst, Mode.MOVE, Clash.REPLACE)
+        assertEquals("first", File(blindRoot, "dst/x.txt").readText())
+        assertEquals("second", File(blindRoot, "dst/x (1).txt").readText())
+    }
+
     @Test fun aFolderAndSomethingInItAreDeletedTogether() {
         write("a/b/c.txt", "c")
         val out = transfer().delete(listOf(entry("a"), entry("a/b/c.txt")))
@@ -238,7 +252,24 @@ class TransferTest {
         override fun openRead(path: String): InputStream = inner.openRead(path)
     }
 
+    /** Storage that ignores case, as phone storage and a card do: every path is taken in lower case. */
+    private class CaseBlind(private val inner: LocalStore) : Store by inner {
+        override val id: String = BLIND
+        private fun at(path: String) = path.lowercase()
+        override fun list(path: String) = inner.list(at(path)).map { it.copy(loc = Loc(id, it.loc.path)) }
+        override fun stat(path: String) = inner.stat(at(path))?.let { it.copy(loc = Loc(id, it.loc.path)) }
+        override fun openRead(path: String): InputStream = inner.openRead(at(path))
+        override fun openWrite(path: String): OutputStream = inner.openWrite(at(path))
+        override fun makeFolder(path: String) = inner.makeFolder(at(path))
+        override fun rename(from: String, to: String) = inner.rename(at(from), at(to))
+        override fun replace(from: String, to: String) = inner.replace(at(from), at(to))
+        override fun deleteFile(path: String) = inner.deleteFile(at(path))
+        override fun deleteFolder(path: String) = inner.deleteFolder(at(path))
+        override fun setModified(path: String, time: Long) = inner.setModified(at(path), time)
+    }
+
     companion object {
         const val SERVER = "smb:test"
+        const val BLIND = "blind:test"
     }
 }
