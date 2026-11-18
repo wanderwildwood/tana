@@ -134,12 +134,16 @@ and refuses any path that climbs out of the phone's shared storage. You can see 
 an app was granted in Android's settings for that app. Cabinet learns nothing from this beyond the
 request itself, and sends nothing anywhere.
 
-## The one other address in the app
+## Links that leave the app
 
 The llama at the foot of the About opens `square.link/u/AGu8oT10` in whatever browser you
 have. That is a hand-off: this app does not fetch the page, and it learns nothing about
 whether you went there. The page is Square's, and what Square learns from a visit is covered by
 Square's own privacy policy.
+
+The About also has the author's website (wanderthe.dev), the contact address, which opens your
+mail app, and the app's source code on GitHub; the Licenses page links each library's website.
+Each is handed to your browser or mail app in the same way, only when you press it.
 
 <!-- shared-about privacy section -->
 ## Who we are
