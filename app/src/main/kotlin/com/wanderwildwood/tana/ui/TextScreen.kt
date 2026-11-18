@@ -57,7 +57,7 @@ import kotlinx.coroutines.withContext
 
 /**
  * A text file, read a screen at a time: its lines in a list that turns by whole rows, like
- * every list here, with the rows on the page and the page out of all at the foot. Plain text
+ * every list here, its scrollbar showing where the page is. Plain text
  * is shown as it is written; Markdown ([markdown]) as plain reading, with headings, bullets,
  * quotes and code set apart. The two buttons in the bar make the text smaller or larger,
  * from 16sp up (the house floor), and the choice is kept.
@@ -129,25 +129,23 @@ fun TextScreen(source: PdfSource?, title: String?, markdown: Boolean, onBack: ()
 private fun Lines(book: TextBook, markdown: Boolean, sp: Int) {
     val state = rememberLazyListState()
     val ink = MaterialTheme.colorScheme.onSurface
-    WithPageFoot(state, book.lineCount) {
-        PagedColumn(
-            Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface),
-            state = state,
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 6.dp),
-            showCutRow = true,
-        ) {
-            items(count = book.lineCount, key = { it }) { i ->
-                val raw = remember(book, i) { book.line(i) }
-                if (markdown) {
-                    MarkdownLine(Markdown.row(raw, book.isFence(i), book.isCode(i)), sp, ink)
-                } else {
-                    TextMMD(
-                        text = raw.replace("\t", "    ").ifEmpty { " " },
-                        fontSize = sp.sp,
-                        lineHeight = (sp * 1.35f).sp,
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 1.dp),
-                    )
-                }
+    PagedColumn(
+        Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface),
+        state = state,
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 6.dp),
+        showCutRow = true,
+    ) {
+        items(count = book.lineCount, key = { it }) { i ->
+            val raw = remember(book, i) { book.line(i) }
+            if (markdown) {
+                MarkdownLine(Markdown.row(raw, book.isFence(i), book.isCode(i)), sp, ink)
+            } else {
+                TextMMD(
+                    text = raw.replace("\t", "    ").ifEmpty { " " },
+                    fontSize = sp.sp,
+                    lineHeight = (sp * 1.35f).sp,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 1.dp),
+                )
             }
         }
     }

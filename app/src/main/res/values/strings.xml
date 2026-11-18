@@ -54,8 +54,6 @@
     <string name="cd_clear_selection">Clear the selection</string>
     <string name="folder_reading">Reading…</string>
     <string name="folder_empty">Nothing here.</string>
-    <string name="page_range">%1$d–%2$d of %3$d</string>
-    <string name="page_of">Page %1$d of %2$d</string>
     <string name="folder_try_again">Try again</string>
     <!-- A folder added from another app (in Android's folder picker) can no longer be reached. %1$s is its name -->
     <string name="other_lost">“%1$s” cannot be reached now: the folder may have been deleted, or the phone no longer lets this app into it. Choose the folder again. It stays on the start page until you do.</string>

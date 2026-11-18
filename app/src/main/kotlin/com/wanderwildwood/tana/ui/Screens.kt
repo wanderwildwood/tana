@@ -455,7 +455,7 @@ private fun FolderList(state: UiState, vm: BrowserViewModel, list: @Composable (
         }
         vm.revealShown()
     }
-    WithPageFoot(listState, (shown.size + per - 1) / per, per, shown.size) { list(shown, listState) }
+    list(shown, listState)
 }
 
 /**
@@ -543,20 +543,18 @@ fun SearchScreen(search: SearchState, state: UiState, work: com.wanderwildwood.t
                         onClick = go,
                         modifier = Modifier.fillMaxWidth().padding(16.dp).height(48.dp),
                     ) { TextMMD(text = stringResource(R.string.search_go), style = MaterialTheme.typography.bodySmall) }
-                    else -> WithPageFoot(resultsState, search.results.size) {
-                        PagedColumn(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface), state = resultsState, showCutRow = true) {
-                            items(search.results, key = { it.loc.store + it.loc.path }) { entry ->
-                                EntryRow(
-                                    entry = entry,
-                                    selecting = state.selecting,
-                                    selected = entry.loc in state.selection,
-                                    showFolder = vm.folderLabel(entry.loc),
-                                    onPress = { if (state.selecting) vm.toggle(entry) else vm.pressResult(entry) },
-                                    onLongPress = { vm.toggle(entry) },
-                                )
-                            }
-                            if (search.running) item { Status(stringResource(R.string.search_running)) }
+                    else -> PagedColumn(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface), state = resultsState, showCutRow = true) {
+                        items(search.results, key = { it.loc.store + it.loc.path }) { entry ->
+                            EntryRow(
+                                entry = entry,
+                                selecting = state.selecting,
+                                selected = entry.loc in state.selection,
+                                showFolder = vm.folderLabel(entry.loc),
+                                onPress = { if (state.selecting) vm.toggle(entry) else vm.pressResult(entry) },
+                                onLongPress = { vm.toggle(entry) },
+                            )
                         }
+                        if (search.running) item { Status(stringResource(R.string.search_running)) }
                     }
                 }
             }
