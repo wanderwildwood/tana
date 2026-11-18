@@ -76,11 +76,13 @@
     <!-- A notification when a save from another app did not reach the server. %1$s is the file's name -->
     <string name="unsent_channel">Saves that did not reach a server</string>
     <string name="unsent_title">“%1$s” was not saved to the server</string>
+    <!-- The same notification on the lock screen, which names no file -->
+    <string name="unsent_public">A save did not reach the server</string>
     <!-- Why, given as %1$s in the lines below, when the server's file changed since it was read -->
     <string name="unsent_changed">The file changed on the server since it was opened, so it was not replaced.</string>
     <!-- %1$s is why; %2$s is where the copy is, such as Download/Unsent saves/notes (not sent 2026-11-17 14.05).txt -->
     <string name="unsent_kept">%1$s What you saved is kept on this phone in %2$s.</string>
-    <string name="unsent_kept_app">%1$s What you saved is kept inside this app, as the Download folder had no room.</string>
+    <string name="unsent_kept_app">%1$s What you saved is kept inside this app, as the Download folder had no room. Tap here to see it.</string>
     <string name="unsent_not_kept">%1$s No copy could be kept on this phone. Save it again from the app you used.</string>
     <!-- Why, when the server could not be reached, or did not take the file -->
     <string name="unsent_unreachable">The server could not be reached.</string>

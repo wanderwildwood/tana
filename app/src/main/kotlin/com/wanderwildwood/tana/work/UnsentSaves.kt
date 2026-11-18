@@ -11,6 +11,7 @@ import android.os.Environment
 import android.provider.MediaStore
 import com.wanderwildwood.tana.MainActivity
 import com.wanderwildwood.tana.R
+import com.wanderwildwood.tana.store.Stores
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -35,14 +36,39 @@ object UnsentSaves {
     fun keep(context: Context, local: File, name: String, why: String): Boolean {
         val kept = keptName(name, SimpleDateFormat("yyyy-MM-dd HH.mm", Locale.US).format(Date()))
         val where = runCatching { intoDownloads(context, local, kept) }
-            .onFailure { android.util.Log.w(TAG, "could not keep an unsent save in Download", it) }
+            .onFailure { warn("could not keep an unsent save in Download", it) }
             .getOrNull()
             ?: runCatching { intoApp(context, local, kept) }
-                .onFailure { android.util.Log.w(TAG, "could not keep an unsent save in the app", it) }
+                .onFailure { warn("could not keep an unsent save in the app", it) }
                 .getOrNull()
         runCatching { tell(context, name, why, where) }
-            .onFailure { android.util.Log.w(TAG, "could not tell of an unsent save", it) }
+            .onFailure { warn("could not tell of an unsent save", it) }
         return where != null
+    }
+
+    /**
+     * A failure, for the log. A release build names only its kind: the full exception carries
+     * the kept file's name.
+     */
+    private fun warn(message: String, e: Throwable) {
+        if (com.wanderwildwood.tana.BuildConfig.DEBUG) {
+            android.util.Log.w(TAG, message, e)
+        } else {
+            android.util.Log.w(TAG, "$message: ${e.javaClass.simpleName}")
+        }
+    }
+
+    /**
+     * The kept copy as a path on the phone, for opening its folder with the copy picked out:
+     * [where] as [keep] gives it, under Download or inside the app.
+     */
+    private fun fileOf(where: String): File {
+        val downloads = Environment.DIRECTORY_DOWNLOADS + "/"
+        return if (where.startsWith(downloads)) {
+            File(Stores.phone.file(Volumes.downloads().path), where.removePrefix(downloads))
+        } else {
+            File(where)
+        }
     }
 
     /**
@@ -80,7 +106,11 @@ object UnsentSaves {
         return Environment.DIRECTORY_DOWNLOADS + "/" + FOLDER + "/" + shown
     }
 
-    /** Failing Download (a full phone), into the app's own storage, which is not cleared as its cache is. */
+    /**
+     * Failing Download (a full phone), into the app's own storage, which is not cleared as its
+     * cache is. The notification opens this folder in the app, where the copy can be moved or
+     * shared out once there is room.
+     */
     private fun intoApp(context: Context, local: File, kept: String): String {
         val folder = File(context.filesDir, "unsent").apply { mkdirs() }
         val file = File(folder, Names.unique(kept) { File(folder, it).exists() })
@@ -97,14 +127,26 @@ object UnsentSaves {
         manager.createNotificationChannel(
             NotificationChannel(CHANNEL, context.getString(R.string.unsent_channel), NotificationManager.IMPORTANCE_DEFAULT),
         )
+        val id = NOTIFICATION_BASE + (System.currentTimeMillis() % 100_000).toInt()
+        // Opens the folder the copy is in, with the copy picked out (Asked.reveal).
+        val show = Intent(context, MainActivity::class.java)
+        if (where != null) {
+            show.action = Asked.SHOW_FILE
+            show.putExtra(Asked.EXTRA_PATH, fileOf(where).absolutePath)
+        }
         val open = PendingIntent.getActivity(
-            context, 0, Intent(context, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE,
+            context, id, show, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         val text = when {
             where == null -> context.getString(R.string.unsent_not_kept, why)
             where.startsWith(Environment.DIRECTORY_DOWNLOADS + "/") -> context.getString(R.string.unsent_kept, why, where)
             else -> context.getString(R.string.unsent_kept_app, why)
         }
+        // On the lock screen, only that a save did not go: not the file's name or where it is.
+        val shown = Notification.Builder(context, CHANNEL)
+            .setSmallIcon(R.drawable.ic_notify)
+            .setContentTitle(context.getString(R.string.unsent_public))
+            .build()
         val notification = Notification.Builder(context, CHANNEL)
             .setSmallIcon(R.drawable.ic_notify)
             .setContentTitle(context.getString(R.string.unsent_title, name))
@@ -112,9 +154,11 @@ object UnsentSaves {
             .setStyle(Notification.BigTextStyle().bigText(text))
             .setContentIntent(open)
             .setAutoCancel(true)
+            .setVisibility(Notification.VISIBILITY_PRIVATE)
+            .setPublicVersion(shown)
             .build()
         // One per save, so a second failure does not hide the first.
-        manager.notify(NOTIFICATION_BASE + (System.currentTimeMillis() % 100_000).toInt(), notification)
+        manager.notify(id, notification)
     }
 
     private const val TAG = "tana.unsent"
