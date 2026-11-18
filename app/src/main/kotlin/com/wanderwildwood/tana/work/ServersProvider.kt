@@ -69,13 +69,12 @@ class ServersProvider : DocumentsProvider() {
             folderRow(cursor, TOP, context!!.getString(R.string.app_name))
             return cursor
         }
-        val (store, path) = split(documentId)
+        val (store, path) = ours(documentId)
         if (path.isEmpty()) {
             val server = servers().firstOrNull { it.storeId == store } ?: throw FileNotFoundException(documentId)
             folderRow(cursor, documentId, label(server))
             return cursor
         }
-        servers()
         val entry = find(store, path) ?: throw FileNotFoundException(documentId)
         row(cursor, entry)
         return cursor
@@ -104,8 +103,7 @@ class ServersProvider : DocumentsProvider() {
             servers().forEach { folderRow(cursor, idOf(it.storeId, ""), label(it)) }
             return cursor
         }
-        val (store, path) = split(parentDocumentId)
-        servers()
+        val (store, path) = ours(parentDocumentId)
         val hidden = Prefs(context!!).showHidden
         runCatching { onNetwork { Stores.get(store).list(path) } }
             .onSuccess { entries ->
@@ -126,8 +124,7 @@ class ServersProvider : DocumentsProvider() {
 
     override fun createDocument(parentDocumentId: String, mimeType: String, displayName: String): String {
         if (parentDocumentId == TOP) throw FileNotFoundException("a server is chosen first")
-        val (store, parentPath) = split(parentDocumentId)
-        servers()
+        val (store, parentPath) = ours(parentDocumentId)
         val source = Stores.get(store)
         val clean = displayName.replace('/', '_').trim().ifEmpty { context!!.getString(R.string.provider_new_file) }
         if (!Names.isPlainName(clean)) throw FileNotFoundException("not a name: $displayName")
@@ -157,9 +154,8 @@ class ServersProvider : DocumentsProvider() {
     }
 
     override fun deleteDocument(documentId: String) {
-        val (store, path) = split(documentId)
+        val (store, path) = ours(documentId)
         if (path.isEmpty()) throw FileNotFoundException("a server cannot be removed here")
-        servers()
         try {
             onNetwork { deleteTree(Stores.get(store), path) }
         } catch (e: Exception) {
@@ -179,9 +175,8 @@ class ServersProvider : DocumentsProvider() {
     }
 
     override fun renameDocument(documentId: String, displayName: String): String? {
-        val (store, path) = split(documentId)
+        val (store, path) = ours(documentId)
         if (path.isEmpty()) throw FileNotFoundException("a server cannot be renamed here")
-        servers()
         val clean = displayName.replace('/', '_').trim()
         if (!Names.isPlainName(clean)) throw FileNotFoundException("no name")
         val parent = path.substringBeforeLast('/', "")
@@ -211,16 +206,11 @@ class ServersProvider : DocumentsProvider() {
         )
     }
 
-    override fun isChildDocument(parentDocumentId: String, documentId: String): Boolean {
-        if (parentDocumentId == TOP) return documentId != TOP
-        val (parentStore, parentPath) = try { split(parentDocumentId) } catch (e: FileNotFoundException) { return false }
-        val (store, path) = try { split(documentId) } catch (e: FileNotFoundException) { return false }
-        return store == parentStore && (parentPath.isEmpty() || path.startsWith("$parentPath/"))
-    }
+    override fun isChildDocument(parentDocumentId: String, documentId: String): Boolean =
+        isChild(parentDocumentId, documentId, servers().map { it.storeId }.toSet())
 
     override fun openDocument(documentId: String, mode: String, signal: CancellationSignal?): ParcelFileDescriptor {
-        val (store, path) = split(documentId)
-        servers()
+        val (store, path) = ours(documentId)
         // A save of this file still going up: whatever comes next is about the file after it.
         awaitWriting(documentId)
         if (!mode.contains('w')) {
@@ -394,6 +384,13 @@ class ServersProvider : DocumentsProvider() {
 
     private fun path(documentId: String) = split(documentId).second.substringAfterLast('/')
 
+    /**
+     * The store and path of a document on one of the servers added here. Nothing else this
+     * app can reach -- the phone's storage, a zip, folders other apps gave it -- is ever a
+     * document of this place, whatever id an app makes up.
+     */
+    private fun ours(id: String): Pair<String, String> = split(id, servers().map { it.storeId }.toSet())
+
     /** Where the closing of a file being written is heard. One thread, started when first needed. */
     private fun closer(): android.os.Handler = synchronized(this) {
         handler ?: android.os.HandlerThread("tana-writeback").let { thread ->
@@ -476,6 +473,25 @@ class ServersProvider : DocumentsProvider() {
             val path = id.substringAfter('|', "")
             if (!Names.isPlainPath(path)) throw FileNotFoundException("no such document")
             return id.substringBefore('|') to path
+        }
+
+        /** As [split], and refused unless the store is one of [servers] (their store ids). */
+        fun split(id: String, servers: Set<String>): Pair<String, String> {
+            val parts = split(id)
+            if (parts.first !in servers) throw FileNotFoundException("no such document")
+            return parts
+        }
+
+        /**
+         * Whether [id] is inside [parent], for a folder an app was given. Inside the place
+         * itself ([TOP]) are only the servers added here and what is on them.
+         */
+        fun isChild(parent: String, id: String, servers: Set<String>): Boolean {
+            if (id == TOP) return false
+            val (store, path) = try { split(id, servers) } catch (e: FileNotFoundException) { return false }
+            if (parent == TOP) return true
+            val (parentStore, parentPath) = try { split(parent, servers) } catch (e: FileNotFoundException) { return false }
+            return store == parentStore && (parentPath.isEmpty() || path.startsWith("$parentPath/"))
         }
 
         private val ROOT_COLUMNS = arrayOf(

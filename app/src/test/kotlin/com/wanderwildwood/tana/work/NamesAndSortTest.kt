@@ -58,6 +58,27 @@ class NamesAndSortTest {
         }
     }
 
+    @Test fun onlyTheServersAddedHereAreInsideTheServersPlace() {
+        val servers = setOf("dav:1", "smb:2")
+        assertTrue(ServersProvider.isChild("servers", "dav:1|", servers))
+        assertTrue(ServersProvider.isChild("servers", "smb:2|Granted/a.txt", servers))
+        assertTrue(ServersProvider.isChild("dav:1|Granted", "dav:1|Granted/a.txt", servers))
+        assertFalse(ServersProvider.isChild("dav:1|Granted", "dav:1|Other/a.txt", servers))
+        for (bad in listOf(
+            "servers", "${LocalStore.ID}|storage/emulated/0", "${LocalStore.ID}|data/user/0/x",
+            "zip:/storage/emulated/0/a.zip|", "dav:9|Granted", "dav:1|Granted/../x",
+        )) {
+            assertFalse(bad, ServersProvider.isChild("servers", bad, servers))
+            try {
+                ServersProvider.split(bad, servers)
+                throw AssertionError("taken: $bad")
+            } catch (e: java.io.FileNotFoundException) {
+                // refused, as it should be
+            }
+        }
+        assertFalse(ServersProvider.isChild("${LocalStore.ID}|", "${LocalStore.ID}|storage", servers))
+    }
+
     @Test fun kindsGoByExtensionAndNeverMatchFolders() {
         assertTrue(Kind.DOCUMENTS.matches("book.EPUB", false))
         assertFalse(Kind.DOCUMENTS.matches("book.epub", true))
