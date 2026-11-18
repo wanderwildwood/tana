@@ -64,6 +64,8 @@ as places like any other.
   phone; when it closes the file, the copy goes up under a name of its own and then takes the old
   one's place in one step, and only if nobody else saved the file on the server meanwhile.
   If someone did, theirs is left as it is and the app is told on its next read.
+  If a save does not reach the server, a copy is kept on the phone, in Download/Unsent saves,
+  and a notification says where.
 - **Nearby: send and receive with [LocalSend](https://localsend.org).** Choose files or folders,
   *More → Send nearby*, and tap a computer or phone on the same Wi-Fi that has LocalSend open;
   its owner is asked to accept. To receive, open *Nearby* on the start page and choose this
