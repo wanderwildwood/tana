@@ -29,6 +29,9 @@ object UnsentSaves {
     const val FOLDER = "Unsent saves"
     private const val CHANNEL = "unsent"
 
+    /** Inside the app's own files, where a copy goes when Download has no room. */
+    private const val APP_FOLDER = "unsent"
+
     /**
      * Keeps [local], the copy the app wrote to [name], and tells the reader why it did not reach
      * the server. True when the copy is safe somewhere other than [local], which may then go.
@@ -41,7 +44,12 @@ object UnsentSaves {
             ?: runCatching { intoApp(context, local, kept) }
                 .onFailure { warn("could not keep an unsent save in the app", it) }
                 .getOrNull()
-        runCatching { tell(context, name, why, where) }
+        val text = when {
+            where == null -> context.getString(R.string.unsent_not_kept, why)
+            where.startsWith(Environment.DIRECTORY_DOWNLOADS + "/") -> context.getString(R.string.unsent_kept, why, where)
+            else -> context.getString(R.string.unsent_kept_app, why)
+        }
+        runCatching { tell(context, context.getString(R.string.unsent_title, name), text, where) }
             .onFailure { warn("could not tell of an unsent save", it) }
         return where != null
     }
@@ -63,6 +71,24 @@ object UnsentSaves {
         writing.listFiles().orEmpty()
             .filter { it.isDirectory && it.listFiles().isNullOrEmpty() && now - it.lastModified() >= SETTLE_MS }
             .forEach { it.delete() }
+    }
+
+    /**
+     * Copies kept inside the app because Download had no room ([intoApp]) go to Download once
+     * there is room, at a later start: inside the app, only the notification leads to them,
+     * and uninstalling would take them with it.
+     */
+    fun retryIntoDownloads(context: Context) {
+        val folder = File(context.filesDir, APP_FOLDER)
+        for (file in folder.listFiles().orEmpty().filter { it.isFile }) {
+            val where = runCatching { intoDownloads(context, file, file.name) }
+                .onFailure { warn("could not move an unsent save to Download", it) }
+                .getOrNull() ?: continue
+            file.delete()
+            runCatching {
+                tell(context, context.getString(R.string.unsent_moved_title), context.getString(R.string.unsent_moved, where), where)
+            }.onFailure { warn("could not tell of a moved save", it) }
+        }
     }
 
     /** The saved files in [writing]'s folders that have not changed for [SETTLE_MS]. */
@@ -137,10 +163,10 @@ object UnsentSaves {
     /**
      * Failing Download (a full phone), into the app's own storage, which is not cleared as its
      * cache is. The notification opens this folder in the app, where the copy can be moved or
-     * shared out once there is room.
+     * shared out; a later start moves it to Download once there is room ([retryIntoDownloads]).
      */
     private fun intoApp(context: Context, local: File, kept: String): String {
-        val folder = File(context.filesDir, "unsent").apply { mkdirs() }
+        val folder = File(context.filesDir, APP_FOLDER).apply { mkdirs() }
         val file = File(folder, Names.unique(kept) { File(folder, it).exists() })
         local.copyTo(file)
         if (file.length() != local.length()) {
@@ -150,7 +176,8 @@ object UnsentSaves {
         return file.path
     }
 
-    private fun tell(context: Context, name: String, why: String, where: String?) {
+    /** A notification with [title] and [text], which opens [where] (as [keep] gives it) when there is one. */
+    private fun tell(context: Context, title: String, text: String, where: String?) {
         val manager = context.getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(
             NotificationChannel(CHANNEL, context.getString(R.string.unsent_channel), NotificationManager.IMPORTANCE_DEFAULT),
@@ -165,11 +192,6 @@ object UnsentSaves {
         val open = PendingIntent.getActivity(
             context, id, show, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
-        val text = when {
-            where == null -> context.getString(R.string.unsent_not_kept, why)
-            where.startsWith(Environment.DIRECTORY_DOWNLOADS + "/") -> context.getString(R.string.unsent_kept, why, where)
-            else -> context.getString(R.string.unsent_kept_app, why)
-        }
         // On the lock screen, only that a save did not go: not the file's name or where it is.
         val shown = Notification.Builder(context, CHANNEL)
             .setSmallIcon(R.drawable.ic_notify)
@@ -177,7 +199,7 @@ object UnsentSaves {
             .build()
         val notification = Notification.Builder(context, CHANNEL)
             .setSmallIcon(R.drawable.ic_notify)
-            .setContentTitle(context.getString(R.string.unsent_title, name))
+            .setContentTitle(title)
             .setContentText(text)
             .setStyle(Notification.BigTextStyle().bigText(text))
             .setContentIntent(open)

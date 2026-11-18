@@ -118,7 +118,8 @@ the picker removes the file from the server for good.
 When an app saves a server's file and the save does not get there (the server cannot be
 reached, someone else changed the file meanwhile, or the app does not finish closing it), what
 the app wrote is kept on the phone so it is not lost: in Download/Unsent saves, or, if Download
-has no room, inside Cabinet's own storage. A notification says where. That copy is a plain file
+has no room, inside Cabinet's own storage until a later start finds room in Download and moves
+it there. A notification says where. That copy is a plain file
 in shared storage, which other apps with storage access can read, and it stays until you delete
 it: clearing Cabinet's data or uninstalling leaves the copy in Download.
 

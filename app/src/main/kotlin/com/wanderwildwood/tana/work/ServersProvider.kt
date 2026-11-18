@@ -42,12 +42,15 @@ class ServersProvider : DocumentsProvider() {
         val ctx = context!!
         Stores.spool = File(ctx.cacheDir, "spool")
         // Saves still going up when the app was last stopped: kept, not left in the cache.
+        // And copies kept inside the app for want of room go to Download once there is some.
         val writing = File(ctx.cacheDir, WRITING)
-        if (writing.isDirectory) {
-            NETWORK.execute {
+        NETWORK.execute {
+            if (writing.isDirectory) {
                 runCatching { UnsentSaves.rescue(ctx, writing) }
                     .onFailure { warn("could not look for saves left unsent", it) }
             }
+            runCatching { UnsentSaves.retryIntoDownloads(ctx) }
+                .onFailure { warn("could not move unsent saves to Download", it) }
         }
         return true
     }
