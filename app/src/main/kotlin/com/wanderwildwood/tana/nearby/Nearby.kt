@@ -138,21 +138,38 @@ object Nearby {
         _state.value = NearbyState(running = true, alias = alias)
         watchDirect()
         sc.launch {
+            // Each step below blocks (the first open makes a key), and the page may be closed
+            // during any of them. What a step started is kept only while this start is still
+            // the current one; otherwise it is stopped here, as stop() could not see it.
             val id = identity ?: runCatching { Identity.load(app) }.getOrNull()?.also { identity = it } ?: return@launch
+            if (!isActive) return@launch
             val s = HttpServer(id.serverContext(), ::handle)
             val port = runCatching { s.start(Wire.PORT) }.getOrNull() ?: return@launch
-            server = s
-            me = Device(
-                alias = _state.value.alias,
-                model = android.os.Build.MODEL,
-                type = "mobile",
-                fingerprint = id.fingerprint,
-                port = port,
-                https = true,
-            )
+            val kept = synchronized(lock) {
+                (scope === sc).also { current ->
+                    if (current) {
+                        server = s
+                        me = Device(
+                            alias = _state.value.alias,
+                            model = android.os.Build.MODEL,
+                            type = "mobile",
+                            fingerprint = id.fingerprint,
+                            port = port,
+                            https = true,
+                        )
+                    }
+                }
+            }
+            if (!kept) {
+                s.stop()
+                return@launch
+            }
             val d = Discovery(app.getSystemService(WifiManager::class.java), ::heard)
             val heard = d.open()
-            discovery = d
+            if (!synchronized(lock) { (scope === sc).also { if (it) discovery = d } }) {
+                d.stop()
+                return@launch
+            }
             _state.update { it.copy(portTaken = !heard) }
             // The networks are looked at again every few seconds: the reader may be joining the
             // Wi-Fi now, and a Wi-Fi Direct network comes and goes. A new one is announced on.
@@ -194,13 +211,19 @@ object Nearby {
         }
         waitingToJoin = false
         pendingInvite = null
-        server?.stop()
-        server = null
-        discovery?.stop()
-        discovery = null
-        scope?.cancel()
-        scope = null
-        me = null
+        // Taken under the lock that start's steps publish under, so each is either seen and
+        // stopped here or, once this has run, stopped by start itself.
+        val (s, d, sc) = synchronized(lock) {
+            val taken = Triple(server, discovery, scope)
+            server = null
+            discovery = null
+            scope = null
+            me = null
+            taken
+        }
+        s?.stop()
+        d?.stop()
+        sc?.cancel()
         devices.clear()
         letGo()
         _state.value = NearbyState()
