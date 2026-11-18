@@ -30,6 +30,21 @@ class UnsentSavesTest {
         assertEquals(false, name.contains(':') || name.contains('/'))
     }
 
+    @Test fun leftoverSavesAreThoseUntouchedForAWhile() {
+        val writing = tmp.newFolder("writing")
+        val now = 10_000_000L
+        val old = java.io.File(java.io.File(writing, "a").apply { mkdirs() }, "notes.txt").apply {
+            writeText("Ada Whitlock\n")
+            setLastModified(now - UnsentSaves.SETTLE_MS - 1000)
+        }
+        java.io.File(java.io.File(writing, "b").apply { mkdirs() }, "vault.kdbx").apply {
+            writeText("Tomas Reyes\n")
+            setLastModified(now - 1000)
+        }
+        java.io.File(writing, "stray.txt").apply { writeText("x"); setLastModified(now - UnsentSaves.SETTLE_MS - 1000) }
+        assertEquals(listOf(old), UnsentSaves.leftovers(writing, now))
+    }
+
     @Test fun aSaveLeftUnclosedIsKeptOnlyWhenSomethingInItIsNew() {
         val start = tmp.newFile("start.txt").apply { writeText("Ada Whitlock\n") }
         val same = tmp.newFile("same.txt").apply { writeText("Ada Whitlock\n") }

@@ -39,7 +39,16 @@ import java.io.FileNotFoundException
 class ServersProvider : DocumentsProvider() {
 
     override fun onCreate(): Boolean {
-        Stores.spool = File(context!!.cacheDir, "spool")
+        val ctx = context!!
+        Stores.spool = File(ctx.cacheDir, "spool")
+        // Saves still going up when the app was last stopped: kept, not left in the cache.
+        val writing = File(ctx.cacheDir, WRITING)
+        if (writing.isDirectory) {
+            NETWORK.execute {
+                runCatching { UnsentSaves.rescue(ctx, writing) }
+                    .onFailure { warn("could not look for saves left unsent", it) }
+            }
+        }
         return true
     }
 
@@ -310,7 +319,7 @@ class ServersProvider : DocumentsProvider() {
         // What the app read, or, if it never read it through here, the file as it is now.
         val base = read[documentId] ?: existing?.let { Version.of(it) }
         val name = path.substringAfterLast('/')
-        val local = File(File(context!!.cacheDir, "writing"), java.util.UUID.randomUUID().toString()).apply { mkdirs() }.let { File(it, name) }
+        val local = File(File(context!!.cacheDir, WRITING), java.util.UUID.randomUUID().toString()).apply { mkdirs() }.let { File(it, name) }
         val flags = ParcelFileDescriptor.parseMode(mode)
         // "rw" and "wa" keep what is there, so they start from it.
         val start = if (flags and ParcelFileDescriptor.MODE_TRUNCATE == 0 && existing != null) {
@@ -486,6 +495,9 @@ class ServersProvider : DocumentsProvider() {
     companion object {
         private const val TAG = "tana.provider"
         private val NETWORK = java.util.concurrent.Executors.newCachedThreadPool()
+
+        /** Under the cache: one folder per save from another app until it has gone up. */
+        private const val WRITING = "writing"
 
         private const val ROOT_ID = "servers"
 

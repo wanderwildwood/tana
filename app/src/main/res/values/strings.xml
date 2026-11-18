@@ -87,6 +87,8 @@
     <string name="unsent_refused">The server did not take it.</string>
     <!-- Why, when the app that saved the file let it go without closing it properly -->
     <string name="unsent_unfinished">The app that saved it did not finish closing the file, so it was not sent.</string>
+    <!-- Why, when this app was stopped (by Android, or swiped away) before the save went to the server -->
+    <string name="unsent_stopped">This app was stopped before the save was sent, so it may not have reached the server.</string>
     <plurals name="pick_attach">
         <item quantity="one">Choose %1$d file</item>
         <item quantity="other">Choose %1$d files</item>

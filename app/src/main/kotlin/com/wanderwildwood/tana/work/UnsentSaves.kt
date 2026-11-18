@@ -47,6 +47,34 @@ object UnsentSaves {
     }
 
     /**
+     * Saves left in [writing] (ServersProvider's folder, one folder per save) when the app was
+     * last stopped: killed by Android or swiped away while a save was still going up. What the
+     * other app wrote is there and nowhere else, so each is kept as any unsent save is. A
+     * copy changed in the last [SETTLE_MS] may still be being written by the app that opened
+     * it, and waits for a later start; so does one that could not be kept anywhere.
+     */
+    fun rescue(context: Context, writing: File, now: Long = System.currentTimeMillis()) {
+        for (file in leftovers(writing, now)) {
+            val safe = file.length() == 0L ||
+                keep(context, file, file.name, context.getString(R.string.unsent_stopped))
+            if (safe) file.parentFile?.deleteRecursively()
+        }
+        // A folder made for a save whose file never came (the app stopped in between).
+        writing.listFiles().orEmpty()
+            .filter { it.isDirectory && it.listFiles().isNullOrEmpty() && now - it.lastModified() >= SETTLE_MS }
+            .forEach { it.delete() }
+    }
+
+    /** The saved files in [writing]'s folders that have not changed for [SETTLE_MS]. */
+    fun leftovers(writing: File, now: Long): List<File> =
+        writing.listFiles().orEmpty().filter { it.isDirectory }.flatMap { folder ->
+            folder.listFiles().orEmpty().filter { it.isFile && now - it.lastModified() >= SETTLE_MS }
+        }
+
+    /** How long a leftover save must lie untouched before it is taken for one: two minutes. */
+    const val SETTLE_MS = 2 * 60 * 1000L
+
+    /**
      * A failure, for the log. A release build names only its kind: the full exception carries
      * the kept file's name.
      */
