@@ -58,10 +58,12 @@ class Transfer(
 
     /** The names among [sources] that are already taken in [dest], and so need a decision. */
     fun clashes(sources: List<Entry>, dest: Loc): List<String> {
-        val here = resolve(dest.store).list(dest.path).map { it.name }.toSet()
+        // In lower case: phone storage, a card and most servers take "Readme.txt" for
+        // "README.txt", so pasting the one replaces the other, and the reader is asked first.
+        val here = resolve(dest.store).list(dest.path).map { it.name.lowercase() }.toSet()
         // Pasting a copy into the folder it came from is not a clash: it can only mean
         // "another one", so it always becomes "name (1)" without asking.
-        return sources.filter { it.loc.parent != dest && it.name in here }.map { it.name }
+        return sources.filter { it.loc.parent != dest && it.name.lowercase() in here }.map { it.name }
     }
 
     fun paste(picked: List<Entry>, dest: Loc, mode: Mode, clash: Clash): Outcome {

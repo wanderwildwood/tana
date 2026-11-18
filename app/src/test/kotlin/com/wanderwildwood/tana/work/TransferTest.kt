@@ -81,6 +81,13 @@ class TransferTest {
         assertEquals("p", File(root, "x/photo.jpg").readText())
     }
 
+    @Test fun aNameThatDiffersOnlyByCaseIsAskedAbout() {
+        write("src/Readme.txt", "new")
+        write("dst/README.txt", "old")
+        val dst = Loc(LocalStore.ID, "dst")
+        assertEquals(listOf("Readme.txt"), transfer().clashes(listOf(entry("src/Readme.txt")), dst))
+    }
+
     @Test fun clashesAreFoundAndEachAnswerDoesWhatItSays() {
         write("src/a.txt", "new")
         write("src/b.txt", "new b")
