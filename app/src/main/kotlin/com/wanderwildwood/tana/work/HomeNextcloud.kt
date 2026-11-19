@@ -19,17 +19,18 @@ object HomeNextcloud {
     const val ID = "home"
     const val STORE_ID = Server.DAV_PREFIX + ID
 
-    /** The folder a Nextcloud keeps [user]'s files in. */
-    fun folder(server: String, user: String): String =
-        server.trim().trimEnd('/') + "/remote.php/dav/files/" + encodePath(user) + "/"
+    /** The folder a Nextcloud keeps the files of the user with id [uid] in. */
+    fun folder(server: String, uid: String): String =
+        server.trim().trimEnd('/') + "/remote.php/dav/files/" + encodePath(uid) + "/"
 
     /** A server's address as shown: without "https://" and without a slash at the end. */
     fun shown(server: String): String = server.trim().substringAfter("://").trimEnd('/')
 
+    /** Signs in with the login name ([HomeAccount.Held.user]); the folder is by user id ([HomeAccount.Held.uid]). */
     fun server(held: HomeAccount.Held): Server = Server(
         id = ID,
         name = shown(held.server),
-        host = folder(held.server, held.user),
+        host = folder(held.server, held.uid),
         share = "",
         user = held.user,
         password = held.password,
@@ -88,7 +89,16 @@ object HomeNextcloud {
             // using it"): that one has done what was needed, and this answer may be the older.
             if (prefs.homeWho != who || prefs.homeStamp != stamp) return@edit false
             when (val step = HomeAccount.follow(who, stamp, answer)) {
-                is HomeAccount.Step.Keep -> false
+                is HomeAccount.Step.Keep -> {
+                    // Same stamp, but Home may have filled in the user id since the mirror was
+                    // written (a Home updated to give it): the folder then follows it.
+                    val held = (answer as? HomeAccount.Answer.Has)?.held ?: return@edit false
+                    val now = server(held)
+                    val mirror = prefs.servers.firstOrNull { it.id == ID } ?: return@edit false
+                    if (mirror.host == now.host) return@edit false
+                    prefs.servers = withHome(prefs.servers, mirror.copy(host = now.host))
+                    true
+                }
                 is HomeAccount.Step.Take -> {
                     prefs.servers = withHome(prefs.servers, server(step.held))
                     prefs.homeStamp = step.held.stamp

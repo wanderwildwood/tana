@@ -16,6 +16,12 @@ class HomeNextcloudTest {
         assertEquals("cloud.example.org", home.name)
     }
 
+    @Test fun signsInWithLoginNameAndPathsByUserId() {
+        val mail = HomeNextcloud.server(HomeAccount.Held("https://cloud.example.org", "Ada@Example.org", "pw", "s1", "ada"))
+        assertEquals("https://cloud.example.org/remote.php/dav/files/ada/", mail.host)
+        assertEquals("Ada@Example.org", mail.user)
+    }
+
     @Test fun shownWithoutScheme() {
         assertEquals("cloud.example.org", HomeNextcloud.shown("https://cloud.example.org/"))
         assertEquals("10.0.0.2:8080/nc", HomeNextcloud.shown("http://10.0.0.2:8080/nc"))
