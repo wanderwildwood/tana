@@ -1082,7 +1082,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         val others = _state.value.others.filterNot { it.id == root.id }
         prefs.others = others
         Stores.setOthers(others, app.contentResolver)
-        save(_state.value.pins.filterNot { it.loc.store == root.storeId })
+        savePins { pins -> pins.filterNot { it.loc.store == root.storeId } }
         _state.update { it.copy(others = others) }
     }
 
@@ -1136,16 +1136,20 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     // ---------------------------------------------------------------- the start page
 
     fun pin(entry: Entry) {
-        val pins = _state.value.pins
-        if (pins.any { it.loc == entry.loc }) return
-        save(pins + Pin(entry.loc, entry.name.ifEmpty { rootOf(entry.loc).second }))
+        if (_state.value.pins.any { it.loc == entry.loc }) return
+        val pin = Pin(entry.loc, entry.name.ifEmpty { rootOf(entry.loc).second })
+        savePins { pins -> if (pins.any { it.loc == pin.loc }) pins else pins + pin }
         clearSelection()
     }
 
-    fun unpin(pin: Pin) = save(_state.value.pins - pin)
+    fun unpin(pin: Pin) = savePins { it - pin }
 
-    private fun save(pins: List<Pin>) {
-        prefs.pins = pins
+    /**
+     * The pins changed from what is saved, not from the screen's copy: Home's account may have
+     * moved or dropped some since ([HomeNextcloud.edit]).
+     */
+    private fun savePins(change: (List<Pin>) -> List<Pin>) {
+        val pins = HomeNextcloud.edit { change(prefs.pins).also { prefs.pins = it } }
         _state.update { it.copy(pins = pins) }
     }
 
@@ -1190,8 +1194,10 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         else StoreException(StoreException.Reason.SERVER_UNREACHABLE, draft.host.trim().substringAfter("://").substringBefore('/'))
         if (problem != null) return problem
         // From what is saved, not from the screen's copy: Home's account may have changed it since.
-        val servers = prefs.servers.filterNot { it.id == server.id } + server
-        prefs.servers = servers
+        val kept = server
+        val servers = withContext(Dispatchers.IO) {
+            HomeNextcloud.edit { (prefs.servers.filterNot { it.id == kept.id } + kept).also { prefs.servers = it } }
+        }
         Stores.setServers(servers)
         _state.update { it.copy(servers = servers, home = HomeNextcloud.use(prefs)) }
         return null
@@ -1224,8 +1230,10 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
     /** "Stop using it". */
     fun stopHome() {
-        HomeNextcloud.stop(app)
-        reloadServers()
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { HomeNextcloud.stop(app) }
+            reloadServers()
+        }
     }
 
     /** The servers, pins and Home's account read again after [HomeNextcloud] changed them. */
@@ -1243,11 +1251,19 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun removeServer(server: Server) {
-        val servers = prefs.servers.filterNot { it.id == server.id }
-        prefs.servers = servers
-        Stores.setServers(servers)
-        save(prefs.pins.filterNot { it.loc.store == server.storeId })
-        _state.update { it.copy(servers = servers, home = HomeNextcloud.use(prefs)) }
+        viewModelScope.launch {
+            val (servers, pins) = withContext(Dispatchers.IO) {
+                HomeNextcloud.edit {
+                    val servers = prefs.servers.filterNot { it.id == server.id }
+                    prefs.servers = servers
+                    val pins = prefs.pins.filterNot { it.loc.store == server.storeId }
+                    prefs.pins = pins
+                    servers to pins
+                }
+            }
+            Stores.setServers(servers)
+            _state.update { it.copy(servers = servers, pins = pins, home = HomeNextcloud.use(prefs)) }
+        }
     }
 
     // ---------------------------------------------------------------- info

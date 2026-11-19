@@ -13,7 +13,7 @@ import com.wanderwildwood.tana.store.encodePath
  * left out of backups like everything of this app, written again on each new stamp and taken
  * out as soon as Home signs out, is gone, or holds another account.
  *
- * Everything here that asks Home runs off the main thread.
+ * Everything here runs off the main thread: it asks Home, or opens and seals passwords.
  */
 object HomeNextcloud {
     const val ID = "home"
@@ -64,28 +64,44 @@ object HomeNextcloud {
     }
 
     /**
+     * Every change to [Prefs.servers] or [Prefs.pins] is made inside this, here and on the
+     * screens alike: each one reads the list, changes it and writes it back, and two at once
+     * would lose one of the changes. Home is never asked inside it, so a slow Home holds
+     * nothing up.
+     */
+    fun <T> edit(block: () -> T): T = synchronized(lock, block)
+
+    private val lock = Any()
+
+    /**
      * Asks Home and does what [HomeAccount.follow] says. True when anything changed, so the
      * screens read the servers again. Not on the main thread.
      */
-    @Synchronized
     fun refresh(context: Context): Boolean {
         val prefs = Prefs(context)
         val who = prefs.homeWho
         if (who.isEmpty()) return false
-        return when (val step = HomeAccount.follow(who, prefs.homeStamp, HomeAccount.ask(context))) {
-            is HomeAccount.Step.Keep -> false
-            is HomeAccount.Step.Take -> {
-                prefs.servers = withHome(prefs.servers, server(step.held))
-                prefs.homeStamp = step.held.stamp
-                true
-            }
-            is HomeAccount.Step.Drop -> {
-                // Signed out or gone: the pins stay, so the same account comes back with them.
-                // Another account: it is no longer this one, and needs a press of its own.
-                prefs.servers = prefs.servers.filterNot { it.id == ID }
-                prefs.homeStamp = ""
-                if (!step.following) forget(prefs)
-                true
+        val stamp = prefs.homeStamp
+        val answer = HomeAccount.ask(context)
+        return edit {
+            // Changed while Home was being asked (by another ask, a press of "Use" or "Stop
+            // using it"): that one has done what was needed, and this answer may be the older.
+            if (prefs.homeWho != who || prefs.homeStamp != stamp) return@edit false
+            when (val step = HomeAccount.follow(who, stamp, answer)) {
+                is HomeAccount.Step.Keep -> false
+                is HomeAccount.Step.Take -> {
+                    prefs.servers = withHome(prefs.servers, server(step.held))
+                    prefs.homeStamp = step.held.stamp
+                    true
+                }
+                is HomeAccount.Step.Drop -> {
+                    // Signed out or gone: the pins stay, so the same account comes back with them.
+                    // Another account: it is no longer this one, and needs a press of its own.
+                    prefs.servers = prefs.servers.filterNot { it.id == ID }
+                    prefs.homeStamp = ""
+                    if (!step.following) forget(prefs)
+                    true
+                }
             }
         }
     }
@@ -96,10 +112,14 @@ object HomeNextcloud {
      * sign-ins to the same folder; their pins move to it. False when Home has no account to
      * give. Not on the main thread.
      */
-    @Synchronized
     fun start(context: Context, replacing: String?): Boolean {
         val held = HomeAccount.read(context) ?: return false
         val prefs = Prefs(context)
+        edit { take(prefs, held, replacing) }
+        return true
+    }
+
+    private fun take(prefs: Prefs, held: HomeAccount.Held, replacing: String?) {
         val home = server(held)
         val before = prefs.servers
         val replaced = replaced(before, home, replacing)
@@ -113,16 +133,16 @@ object HomeNextcloud {
             .filter { it.loc.store !in gone || it.loc.store in moved }
             .map { if (it.loc.store in moved) it.copy(loc = it.loc.copy(store = STORE_ID)) else it }
             .distinctBy { it.loc }
-        return true
     }
 
     /** "Stop using it": the choice, the stamp, the mirror and the pins to it are forgotten. */
-    @Synchronized
     fun stop(context: Context) {
         val prefs = Prefs(context)
-        prefs.servers = prefs.servers.filterNot { it.id == ID }
-        prefs.homeStamp = ""
-        forget(prefs)
+        edit {
+            prefs.servers = prefs.servers.filterNot { it.id == ID }
+            prefs.homeStamp = ""
+            forget(prefs)
+        }
     }
 
     private fun forget(prefs: Prefs) {

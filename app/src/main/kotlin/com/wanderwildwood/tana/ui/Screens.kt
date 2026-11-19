@@ -659,21 +659,41 @@ fun ServerScreen(initial: Server, vm: BrowserViewModel, onOwn: () -> Unit, onDon
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     // "Use the phone's Nextcloud account", offered only when Home has one for this app: asked
-    // off the main thread when the screen opens, and again on each change notice from Home.
-    // Offered on a new server, and on one of this app's own Nextcloud or WebDAV servers.
+    // off the main thread each time the app is started with this screen open, and again on
+    // each change notice from Home while it is started. Offered on a new server, and on one
+    // of this app's own Nextcloud or WebDAV servers.
     val ui by vm.state.collectAsStateWithLifecycle()
     val offerHome = ui.home == null && (initial.id.isEmpty() || initial.isDav)
     var homeThere by remember { mutableStateOf(false) }
     if (offerHome) {
-        DisposableEffect(Unit) {
+        val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+        DisposableEffect(lifecycleOwner) {
             val check = {
                 scope.launch {
                     homeThere = withContext(Dispatchers.IO) { runCatching { HomeAccount.available(context) }.getOrDefault(false) }
                 }
             }
-            check()
-            val stop = HomeAccount.observe(context) { check() }
-            onDispose { stop() }
+            var stopWatching: (() -> Unit)? = null
+            val watcher = androidx.lifecycle.LifecycleEventObserver { _, event ->
+                when (event) {
+                    androidx.lifecycle.Lifecycle.Event.ON_START -> {
+                        stopWatching?.invoke()
+                        stopWatching = HomeAccount.observe(context) { check() }
+                        check()
+                    }
+                    androidx.lifecycle.Lifecycle.Event.ON_STOP -> {
+                        stopWatching?.invoke()
+                        stopWatching = null
+                    }
+                    else -> Unit
+                }
+            }
+            // Added to a lifecycle already started, it is sent ON_START at once.
+            lifecycleOwner.lifecycle.addObserver(watcher)
+            onDispose {
+                lifecycleOwner.lifecycle.removeObserver(watcher)
+                stopWatching?.invoke()
+            }
         }
     }
     var switching by remember { mutableStateOf(false) }
@@ -687,7 +707,8 @@ fun ServerScreen(initial: Server, vm: BrowserViewModel, onOwn: () -> Unit, onDon
     var checking by remember { mutableStateOf(false) }
     var problem by remember { mutableStateOf<String?>(null) }
     val editing = initial.id.isNotEmpty()
-    val ready = host.isNotBlank() && (dav || share.isNotBlank()) && !checking
+    // Not while Home's account is being taken in this server's place: Save would put it back.
+    val ready = host.isNotBlank() && (dav || share.isNotBlank()) && !checking && !switching
     // Anything typed is asked about before it is thrown away: the first press of Close or Back
     // says so, the second leaves.
     val changed = name != initial.name || kind != initial.kind || host != initial.host ||

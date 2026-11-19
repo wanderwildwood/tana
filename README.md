@@ -57,8 +57,8 @@ as places like any other.
   folders. A file on a server is fetched to the phone to be opened or shared. Away from home it
   reaches whatever the phone can reach, so a server's Tailscale address works with Tailscale on.
   A Nextcloud is added by its address, your user name and an app password made for the phone
-  (in Nextcloud, Settings → Security → Devices & sessions). With Home (the launcher of this
-  shop) signed in to a Nextcloud, "Use the phone's Nextcloud account" on the Add a server page
+  (in Nextcloud, Settings → Security → Devices & sessions). With Home (the launcher) signed
+  in to a Nextcloud, "Use the phone's Nextcloud account" on the Add a server page
   takes that account instead, with no password to type; it follows Home's sign-in, and when Home
   signs out the server shows as signed out until Home is back.
   A swipe down at the top of a folder reads it again, on a server or on the phone.
