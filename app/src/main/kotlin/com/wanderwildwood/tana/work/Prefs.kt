@@ -67,6 +67,20 @@ class Prefs(context: Context) {
             ServersProvider.rootsChanged(app)
         }
 
+    /**
+     * The choice to use Home's Nextcloud account ([HomeNextcloud]): who it is (server and user,
+     * [HomeAccount.Held.who]), empty when it is not used. No password: that is Home's, and the
+     * copy in [servers] only mirrors it.
+     */
+    var homeWho: String
+        get() = prefs.getString("home_who", null).orEmpty()
+        set(value) = prefs.edit().putString("home_who", value).apply()
+
+    /** The stamp of Home's account as last taken; empty while Home is signed out. */
+    var homeStamp: String
+        get() = prefs.getString("home_stamp", null).orEmpty()
+        set(value) = prefs.edit().putString("home_stamp", value).apply()
+
     /** What the Nearby page calls this phone to other devices; null until the reader names it. */
     var nearbyName: String?
         get() = prefs.getString("nearby_name", null)

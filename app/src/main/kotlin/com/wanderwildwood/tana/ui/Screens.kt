@@ -22,6 +22,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -53,10 +54,14 @@ import com.wanderwildwood.tana.R
 import com.wanderwildwood.tana.work.SortBy
 import com.wanderwildwood.tana.store.Server
 import com.wanderwildwood.tana.store.Stores
+import com.wanderwildwood.tana.work.HomeAccount
+import com.wanderwildwood.tana.work.HomeNextcloud
 import com.wanderwildwood.tana.work.Kind
 import com.wanderwildwood.tana.work.TRASH_DAYS
 import com.wanderwildwood.tana.work.Volumes
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
@@ -169,6 +174,7 @@ fun HomeScreen(
     vm: BrowserViewModel,
     onAddServer: () -> Unit,
     onEditServer: (Server) -> Unit,
+    onHomeSignedOut: () -> Unit,
     onAddOther: () -> Unit,
     onAbout: () -> Unit,
 ) {
@@ -222,12 +228,28 @@ fun HomeScreen(
 
             if (!phoneOnly) item { Heading(stringResource(R.string.home_section_servers)) }
             items(if (phoneOnly) emptyList() else state.servers, key = { "s:" + it.id }) { server ->
+                val home = state.home?.takeIf { server.id == HomeNextcloud.ID }
                 PlaceRow(
                     server.name,
-                    if (server.isDav) server.host.substringAfter("://").trimEnd('/') else "${server.host} / ${server.share}",
+                    when {
+                        home != null -> stringResource(R.string.home_account_in_use, home.user, home.server)
+                        server.isDav -> server.host.substringAfter("://").trimEnd('/')
+                        else -> "${server.host} / ${server.share}"
+                    },
                     onPress = { vm.go(Place.Folder(com.wanderwildwood.tana.store.Loc(server.storeId, ""))) },
                     onLongPress = { onEditServer(server) },
                 )
+            }
+            // Home's account while Home is signed out: the place stays, closed, and says why.
+            state.home?.takeIf { !phoneOnly && state.servers.none { it.id == HomeNextcloud.ID } }?.let { home ->
+                item(key = "s:" + HomeNextcloud.ID) {
+                    PlaceRow(
+                        home.server,
+                        stringResource(R.string.home_account_signed_out, stringResource(R.string.home_account_kept)),
+                        onPress = onHomeSignedOut,
+                        onLongPress = onHomeSignedOut,
+                    )
+                }
             }
             if (!phoneOnly) item { PlaceRow(stringResource(R.string.home_add_server), null, onAddServer) }
 
@@ -629,9 +651,32 @@ private fun kindLabel(k: Kind) = when (k) {
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ServerScreen(initial: Server, vm: BrowserViewModel, onDone: () -> Unit) {
+fun ServerScreen(initial: Server, vm: BrowserViewModel, onOwn: () -> Unit, onDone: () -> Unit) {
+    if (initial.id == HomeNextcloud.ID) {
+        HomeServerScreen(vm, onOwn, onDone)
+        return
+    }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    // "Use the phone's Nextcloud account", offered only when Home has one for this app: asked
+    // off the main thread when the screen opens, and again on each change notice from Home.
+    // Offered on a new server, and on one of this app's own Nextcloud or WebDAV servers.
+    val ui by vm.state.collectAsStateWithLifecycle()
+    val offerHome = ui.home == null && (initial.id.isEmpty() || initial.isDav)
+    var homeThere by remember { mutableStateOf(false) }
+    if (offerHome) {
+        DisposableEffect(Unit) {
+            val check = {
+                scope.launch {
+                    homeThere = withContext(Dispatchers.IO) { runCatching { HomeAccount.available(context) }.getOrDefault(false) }
+                }
+            }
+            check()
+            val stop = HomeAccount.observe(context) { check() }
+            onDispose { stop() }
+        }
+    }
+    var switching by remember { mutableStateOf(false) }
     var name by remember { mutableStateOf(initial.name) }
     var kind by remember { mutableStateOf(initial.kind) }
     val dav = kind == Server.DAV
@@ -715,6 +760,20 @@ fun ServerScreen(initial: Server, vm: BrowserViewModel, onDone: () -> Unit) {
                     HorizontalDividerMMD()
                 }
             }
+            if (offerHome && homeThere) {
+                item {
+                    PlaceRow(stringResource(R.string.home_account_use), null, {
+                        if (!switching && !checking) {
+                            switching = true
+                            scope.launch {
+                                val done = vm.useHome(if (initial.id.isEmpty()) null else initial)
+                                switching = false
+                                if (done) onDone() else homeThere = false
+                            }
+                        }
+                    })
+                }
+            }
             // The kind is chosen once, when the server is added: a server's files are known by
             // it, and pins to them would not survive a change.
             if (!editing) {
@@ -758,6 +817,55 @@ fun ServerScreen(initial: Server, vm: BrowserViewModel, onDone: () -> Unit) {
                 item {
                     HorizontalDividerMMD(Modifier.padding(top = 10.dp))
                     PlaceRow(stringResource(if (armed) R.string.server_remove_armed else R.string.server_remove), null, pressRemove)
+                }
+            }
+        }
+    }
+}
+
+/**
+ * The server that is Home's Nextcloud account: who on which server, or that Home is signed out,
+ * and "Stop using it", which goes back to this app's own sign-in, empty ([onOwn]).
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun HomeServerScreen(vm: BrowserViewModel, onOwn: () -> Unit, onDone: () -> Unit) {
+    val ui by vm.state.collectAsStateWithLifecycle()
+    val home = ui.home
+    // Stopped from elsewhere (Home now holds another account): nothing left to show here.
+    LaunchedEffect(home == null) { if (home == null) onDone() }
+    KeyboardFirst(onDone)
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.surface,
+        topBar = {
+            TopAppBarMMD(
+                title = { TextMMD(text = stringResource(R.string.server_edit_title)) },
+                navigationIcon = { BarButton(Icons.Close, stringResource(R.string.cancel), onDone) },
+            )
+        },
+    ) { padding ->
+        PagedColumn(Modifier.fillMaxSize().padding(padding).background(MaterialTheme.colorScheme.surface), showCutRow = true) {
+            if (home != null) {
+                item {
+                    TextMMD(
+                        text = stringResource(R.string.home_account_in_use, home.user, home.server),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                    )
+                    if (!home.signedIn) {
+                        TextMMD(
+                            text = stringResource(R.string.home_account_signed_out, stringResource(R.string.home_account_kept)),
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 14.dp),
+                        )
+                    }
+                    HorizontalDividerMMD()
+                }
+                item {
+                    PlaceRow(stringResource(R.string.home_account_stop), null, {
+                        vm.stopHome()
+                        onOwn()
+                    })
                 }
             }
         }

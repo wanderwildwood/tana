@@ -30,6 +30,7 @@ import com.wanderwildwood.tana.work.Ask
 import com.wanderwildwood.tana.work.Photos
 import com.wanderwildwood.tana.work.Picking
 import com.wanderwildwood.tana.work.Pin
+import com.wanderwildwood.tana.work.HomeNextcloud
 import com.wanderwildwood.tana.work.Prefs
 import com.wanderwildwood.tana.work.Previews
 import com.wanderwildwood.tana.work.Purpose
@@ -150,6 +151,8 @@ data class UiState(
     val grid: Boolean = false,
     val volumes: List<Volume> = emptyList(),
     val servers: List<Server> = emptyList(),
+    /** Home's Nextcloud account, when this app uses it; see [HomeNextcloud]. */
+    val home: HomeNextcloud.Use? = null,
     val others: List<SafRoot> = emptyList(),
     /**
      * The folder from another app the reading just failed in, when that folder itself can no
@@ -203,6 +206,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
             showHidden = prefs.showHidden,
             grid = prefs.grid,
             servers = prefs.servers,
+            home = HomeNextcloud.use(prefs),
             others = prefs.others,
             pins = prefs.pins,
         ),
@@ -1185,19 +1189,65 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         val problem: Throwable? = if (answered.second) answered.first
         else StoreException(StoreException.Reason.SERVER_UNREACHABLE, draft.host.trim().substringAfter("://").substringBefore('/'))
         if (problem != null) return problem
-        val servers = _state.value.servers.filterNot { it.id == server.id } + server
+        // From what is saved, not from the screen's copy: Home's account may have changed it since.
+        val servers = prefs.servers.filterNot { it.id == server.id } + server
         prefs.servers = servers
         Stores.setServers(servers)
-        _state.update { it.copy(servers = servers) }
+        _state.update { it.copy(servers = servers, home = HomeNextcloud.use(prefs)) }
         return null
     }
 
+    // ---------------------------------------------------------------- Home's Nextcloud
+
+    /**
+     * Asks Home about its Nextcloud account and does as it says: a new password is taken, a
+     * sign-out (or Home gone, or another account in it) takes the server away. On every start
+     * and resume, and on each change notice from Home. Nothing is said: the start page shows it.
+     */
+    fun checkHome() {
+        viewModelScope.launch {
+            val changed = withContext(Dispatchers.IO) {
+                runCatching { HomeNextcloud.refresh(app) }.getOrDefault(false) ||
+                    // Or changed while the app was away, by Android's picker asking (ServersProvider).
+                    HomeNextcloud.use(prefs) != _state.value.home || prefs.servers != _state.value.servers
+            }
+            if (changed) reloadServers()
+        }
+    }
+
+    /** "Use the phone's Nextcloud account", in place of [replacing] if it is given. False when Home had none to give. */
+    suspend fun useHome(replacing: Server?): Boolean {
+        val done = withContext(Dispatchers.IO) { runCatching { HomeNextcloud.start(app, replacing?.id) }.getOrDefault(false) }
+        reloadServers()
+        return done
+    }
+
+    /** "Stop using it". */
+    fun stopHome() {
+        HomeNextcloud.stop(app)
+        reloadServers()
+    }
+
+    /** The servers, pins and Home's account read again after [HomeNextcloud] changed them. */
+    private fun reloadServers() {
+        val servers = prefs.servers
+        val pins = prefs.pins
+        Stores.setServers(servers)
+        _state.update { it.copy(servers = servers, pins = pins, home = HomeNextcloud.use(prefs)) }
+        // A folder on a server that has just gone is left for the start page, which says why.
+        val here = _state.value.folder
+        if (here != null && here.store.startsWith(Server.DAV_PREFIX) && servers.none { it.storeId == here.store }) {
+            history.clear()
+            show(Place.Home)
+        }
+    }
+
     fun removeServer(server: Server) {
-        val servers = _state.value.servers.filterNot { it.id == server.id }
+        val servers = prefs.servers.filterNot { it.id == server.id }
         prefs.servers = servers
         Stores.setServers(servers)
-        save(_state.value.pins.filterNot { it.loc.store == server.storeId })
-        _state.update { it.copy(servers = servers) }
+        save(prefs.pins.filterNot { it.loc.store == server.storeId })
+        _state.update { it.copy(servers = servers, home = HomeNextcloud.use(prefs)) }
     }
 
     // ---------------------------------------------------------------- info

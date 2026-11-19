@@ -330,6 +330,14 @@
     <!-- A server -->
 
     <string name="server_add_title">Add a server</string>
+    <!-- Home's Nextcloud account: Home (the launcher) signs in to Nextcloud once for the whole
+         phone, and this app can use that account. %1$s is the user, %2$s the server without https:// -->
+    <string name="home_account_use">Use the phone\'s Nextcloud account</string>
+    <string name="home_account_in_use">%1$s on %2$s, from Home.</string>
+    <string name="home_account_stop">Stop using it</string>
+    <!-- %1$s is home_account_kept -->
+    <string name="home_account_signed_out">Home is signed out of Nextcloud, so this app is too. Your %1$s stay on the phone.</string>
+    <string name="home_account_kept">pins and copied files</string>
     <string name="server_edit_title">Server</string>
     <string name="server_name">Name</string>
     <string name="server_name_hint">What to call it here</string>

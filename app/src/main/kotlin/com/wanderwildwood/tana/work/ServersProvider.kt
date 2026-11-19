@@ -63,6 +63,12 @@ class ServersProvider : DocumentsProvider() {
 
     override fun queryRoots(projection: Array<out String>?): Cursor {
         val cursor = MatrixCursor(projection ?: ROOT_COLUMNS)
+        // Another app is about to reach the servers: Home's Nextcloud account is asked about
+        // first, as before any other use of it (never on the main thread, where a call from
+        // this app's own process could land).
+        if (android.os.Looper.myLooper() != android.os.Looper.getMainLooper()) {
+            runCatching { HomeNextcloud.refresh(context!!) }
+        }
         // With no servers there is no place, and the picker lists this app by its name instead.
         val servers = servers().ifEmpty { return cursor }
         cursor.newRow()

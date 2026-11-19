@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -50,6 +51,8 @@ import com.wanderwildwood.tana.ui.TroubleDialog
 import com.wanderwildwood.tana.ui.describe
 import com.wanderwildwood.tana.ui.monochrome
 import com.wanderwildwood.tana.work.Asked
+import com.wanderwildwood.tana.work.HomeAccount
+import com.wanderwildwood.tana.work.HomeNextcloud
 import com.wanderwildwood.tana.work.PdfSource
 import com.wanderwildwood.tana.work.Picking
 import com.wanderwildwood.tana.work.Printer
@@ -176,16 +179,32 @@ private fun Browser(
     // Coming back to the app is when a file may have arrived from elsewhere: a download, a
     // sync, a card put in. The folder on screen is read again.
     val lifecycleOwner = LocalLifecycleOwner.current
+    // Home's Nextcloud account is asked about on every start and resume (each start is
+    // followed by a resume), and on each change notice from Home while the app is started.
     DisposableEffect(lifecycleOwner) {
         var first = true
+        var stopWatching: (() -> Unit)? = null
         val watcher = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_START) {
-                if (!first) vm.refresh()
-                first = false
+            when (event) {
+                Lifecycle.Event.ON_START -> {
+                    if (!first) vm.refresh()
+                    first = false
+                    stopWatching?.invoke()
+                    stopWatching = HomeAccount.observe(context) { vm.checkHome() }
+                }
+                Lifecycle.Event.ON_RESUME -> vm.checkHome()
+                Lifecycle.Event.ON_STOP -> {
+                    stopWatching?.invoke()
+                    stopWatching = null
+                }
+                else -> Unit
             }
         }
         lifecycleOwner.lifecycle.addObserver(watcher)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(watcher) }
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(watcher)
+            stopWatching?.invoke()
+        }
     }
 
     BackHandler {
@@ -203,7 +222,13 @@ private fun Browser(
     val pdf = state.pdf
     val text = state.text
     when {
-        server != null -> ServerScreen(server, vm) { editing = null }
+        server != null -> key(server.id) {
+            ServerScreen(
+                server, vm,
+                // "Stop using it" on Home's account leaves the app's own sign-in, empty.
+                onOwn = { editing = Server(id = "", name = "", host = "", share = "", kind = Server.DAV) },
+            ) { editing = null }
+        }
         state.trash != null -> TrashScreen(state.trash!!, vm)
         nearby != null -> NearbyScreen(nearby, vm)
         sheet != null -> SheetScreen(sheet, vm)
@@ -219,6 +244,11 @@ private fun Browser(
             vm = vm,
             onAddServer = { editing = Server(id = "", name = "", host = "", share = "") },
             onEditServer = { editing = it },
+            onHomeSignedOut = {
+                state.home?.let { use ->
+                    editing = Server(id = HomeNextcloud.ID, name = use.server, host = "", share = "", user = use.user, kind = Server.DAV)
+                }
+            },
             onAddOther = { runCatching { pickOther.launch(null) } },
             onAbout = { about = true },
         )
