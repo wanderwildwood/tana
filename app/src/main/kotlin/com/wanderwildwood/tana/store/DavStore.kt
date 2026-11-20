@@ -238,6 +238,18 @@ class DavStore(override val server: Server, private val spool: File) : ServerSto
         else -> StoreException(StoreException.Reason.SERVER_ERROR, subject)
     }
 
+    /** What a Nextcloud said when asked whose account a login is ([askUid]). */
+    sealed class UidAnswer {
+        /** The account's user id. */
+        class Id(val uid: String) : UidAnswer()
+
+        /** The server answered, but with no user id: not a Nextcloud, or one too old to say. */
+        object None : UidAnswer()
+
+        /** No answer to go by: the server could not be reached, or refused the login. Ask again another time. */
+        object Later : UidAnswer()
+    }
+
     companion object {
         private val OCTETS = "application/octet-stream".toMediaType()
         private val XML = "application/xml; charset=utf-8".toMediaType()
@@ -298,18 +310,23 @@ class DavStore(override val server: Server, private val spool: File) : ServerSto
         }
 
         /**
-         * The folder to keep for what was typed. A Nextcloud is usually given by its address
-         * alone; its files are under /remote.php/dav/files/<user>/, and that is tried first when
-         * the address has no path. Anything else is taken as the folder itself. Throws the
-         * problem when neither answers as a WebDAV folder these credentials open.
+         * The folder to keep for what was typed, as the server to keep. A Nextcloud is usually
+         * given by its address alone; its files are under /remote.php/dav/files/<user id>/, and
+         * that is tried first when the address has no path. The user id is asked of the server
+         * ([askUid], Nextcloud's `ocs/v2.php/cloud/user`), because it can differ from the login
+         * name (an email address, another case); a server that does not say is tried with the
+         * login name. Anything else is taken as the folder itself. Throws the problem when
+         * neither answers as a WebDAV folder these credentials open.
          */
-        fun resolve(server: Server, spool: File): String {
+        fun resolve(server: Server, spool: File, askUid: (String, Server) -> UidAnswer = ::askUid): Server {
             val typed = normalise(server.host) ?: throw StoreException(StoreException.Reason.NOT_WEBDAV, server.host)
             val path = typed.toHttpUrlOrNull()?.encodedPath.orEmpty()
             if (path == "/" && server.user.isNotBlank()) {
-                val nextcloud = typed + "remote.php/dav/files/" + encodePath(server.user.trim()) + "/"
+                val login = server.user.trim()
+                val uid = (askUid(typed, server) as? UidAnswer.Id)?.uid ?: login
+                val nextcloud = typed + "remote.php/dav/files/" + encodePath(uid) + "/"
                 val tried = runCatching { DavStore(server.copy(host = nextcloud), spool).list("") }
-                if (tried.isSuccess) return nextcloud
+                if (tried.isSuccess) return server.copy(host = nextcloud, uid = uid)
                 // A refused login is the answer, not a reason to try the plain address.
                 (tried.exceptionOrNull() as? StoreException)?.let {
                     if (it.reason == StoreException.Reason.LOGIN_REFUSED || it.reason == StoreException.Reason.SERVER_UNREACHABLE ||
@@ -318,7 +335,96 @@ class DavStore(override val server: Server, private val spool: File) : ServerSto
                 }
             }
             DavStore(server.copy(host = typed), spool).list("")
-            return typed
+            return server.copy(host = typed, uid = "")
+        }
+
+        /** The user id in Nextcloud's answer to `ocs/v2.php/cloud/user?format=json` (`ocs.data.id`), or null. */
+        fun userId(code: Int, body: String): String? {
+            if (code != 200) return null
+            return runCatching {
+                org.json.JSONObject(body).getJSONObject("ocs").getJSONObject("data").getString("id").trim().takeIf { it.isNotEmpty() }
+            }.getOrNull()
+        }
+
+        /** What [userId] makes of an answer with [code] and [body]. */
+        fun uidAnswer(code: Int, body: String): UidAnswer = when {
+            code == 401 || code == 403 || code >= 500 -> UidAnswer.Later
+            else -> userId(code, body)?.let { UidAnswer.Id(it) } ?: UidAnswer.None
+        }
+
+        /**
+         * Asks the Nextcloud at [address] (the server's own address, no files path) whose
+         * account [server]'s login is. Never to a plain http address out on the internet.
+         */
+        fun askUid(address: String, server: Server): UidAnswer {
+            val url = address.trimEnd('/') + "/ocs/v2.php/cloud/user?format=json"
+            if (!plainHttpAllowed(url)) return UidAnswer.Later
+            return try {
+                val request = Request.Builder().url(url)
+                    .header("Authorization", Credentials.basic(server.user.trim(), server.password, Charsets.UTF_8))
+                    .header("OCS-APIRequest", "true")
+                    .header("Accept", "application/json")
+                    .build()
+                client.newCall(request).execute().use { uidAnswer(it.code, it.body?.string().orEmpty()) }
+            } catch (_: Exception) {
+                UidAnswer.Later
+            }
+        }
+
+        private const val FILES = "/remote.php/dav/files/"
+
+        /**
+         * A Nextcloud files address taken apart: the server's own address (with a slash at the
+         * end), the folder's user segment as written, and what follows it. Null for any other.
+         */
+        fun filesFolder(host: String): Triple<String, String, String>? {
+            val at = host.indexOf(FILES)
+            if (at < 0 || !host.contains("://")) return null
+            val after = host.substring(at + FILES.length)
+            val segment = after.substringBefore('/')
+            if (segment.isEmpty()) return null
+            return Triple(host.substring(0, at + 1), segment, after.substring(segment.length))
+        }
+
+        /**
+         * Whether [server], one of the app's own sign-ins, is a Nextcloud files folder named
+         * after the login name and never checked against the server's user id: kept so by an
+         * earlier version, which built the folder from the login name.
+         */
+        fun needsUid(server: Server): Boolean {
+            if (!server.isDav || server.uid.isNotEmpty() || server.user.isBlank()) return false
+            val segment = filesFolder(server.host)?.second ?: return false
+            return segment == encodePath(server.user.trim())
+        }
+
+        /**
+         * [server] after the server answered [answer] about its user id ([needsUid]): the folder
+         * renamed after the id, and the id kept so it is not asked again. Null when there is
+         * nothing to go by yet ([UidAnswer.Later]).
+         */
+        fun withUid(server: Server, answer: UidAnswer): Server? {
+            val (base, _, rest) = filesFolder(server.host) ?: return null
+            return when (answer) {
+                is UidAnswer.Later -> null
+                is UidAnswer.None -> server.copy(uid = server.user.trim())
+                is UidAnswer.Id -> server.copy(host = base + FILES.trimStart('/') + encodePath(answer.uid) + rest, uid = answer.uid)
+            }
+        }
+
+        /**
+         * A WebDAV server's address as shown: no scheme, no slash at the end, and for a Nextcloud
+         * no "/remote.php/dav/files/<user>" (the user's name or id is nobody else's to show, and
+         * the account is said elsewhere); a folder below it is shown, decoded.
+         */
+        fun shown(host: String): String {
+            val trimmed = host.trim()
+            val folder = filesFolder(trimmed)
+            val text = if (folder == null) trimmed else {
+                val below = folder.third.trim('/').split('/').filter { it.isNotEmpty() }
+                    .joinToString("/") { runCatching { decodeHref(it) }.getOrDefault(it) }
+                folder.first.trimEnd('/') + if (below.isEmpty()) "" else "/$below"
+            }
+            return text.substringAfter("://").trimEnd('/')
         }
     }
 }

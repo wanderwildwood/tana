@@ -12,6 +12,10 @@ import org.json.JSONObject
  * anyone on the network in. For WebDAV, [host] is the full address of the folder everything is
  * under ("http://192.168.1.20:11000/remote.php/dav/files/me/") and [share] is not used.
  *
+ * For a Nextcloud, [uid] is the user id the server knows the account by, which the files folder
+ * is named after and which can differ from the login name in [user] (an email address, another
+ * case). Empty for a server that is not a Nextcloud, or one saved before it was asked for.
+ *
  * The password, where there is one, is kept in the app's own private storage, which no other
  * app can read and which is left out of backups.
  */
@@ -24,13 +28,14 @@ data class Server(
     val password: String = "",
     val domain: String = "",
     val kind: String = SMB,
+    val uid: String = "",
 ) {
     val isDav: Boolean get() = kind == DAV
 
     val storeId: String get() = (if (isDav) DAV_PREFIX else PREFIX) + id
 
     /** Never the password, wherever a server is printed. */
-    override fun toString() = "Server(id=$id, name=$name, host=$host, share=$share, user=$user, kind=$kind)"
+    override fun toString() = "Server(id=$id, name=$name, host=$host, share=$share, user=$user, uid=$uid, kind=$kind)"
 
     fun toJson(): JSONObject = JSONObject()
         .put("id", id)
@@ -41,6 +46,7 @@ data class Server(
         .put("password", password)
         .put("domain", domain)
         .put("kind", kind)
+        .put("uid", uid)
 
     companion object {
         const val PREFIX = "smb:"
@@ -58,6 +64,7 @@ data class Server(
             password = o.optString("password"),
             domain = o.optString("domain"),
             kind = o.optString("kind", SMB).ifEmpty { SMB },
+            uid = o.optString("uid"),
         )
 
         fun listFromJson(text: String?): List<Server> {

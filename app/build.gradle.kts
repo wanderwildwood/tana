@@ -129,6 +129,8 @@ dependencies {
     implementation(libs.okhttp)
 
     testImplementation(libs.junit)
+    // The platform's org.json is a stub off the phone.
+    testImplementation(libs.json)
 }
 
 // The Licenses page lists what the build actually packs: this plugin walks each variant's runtime

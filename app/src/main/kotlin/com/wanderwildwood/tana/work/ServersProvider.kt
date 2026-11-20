@@ -10,6 +10,7 @@ import android.provider.DocumentsContract.Document
 import android.provider.DocumentsContract.Root
 import android.provider.DocumentsProvider
 import com.wanderwildwood.tana.R
+import com.wanderwildwood.tana.store.DavStore
 import com.wanderwildwood.tana.store.Entry
 import com.wanderwildwood.tana.store.Server
 import com.wanderwildwood.tana.store.StoreException
@@ -41,6 +42,9 @@ class ServersProvider : DocumentsProvider() {
     override fun onCreate(): Boolean {
         val ctx = context!!
         Stores.spool = File(ctx.cacheDir, "spool")
+        // Before a server is used: Home asked again when the app has just come to the front, and
+        // an own Nextcloud sign-in kept by an earlier version given its user id.
+        Stores.beforeServer = { id -> ServerGate.before(ctx, id) }
         // Saves still going up when the app was last stopped: kept, not left in the cache.
         // And copies kept inside the app for want of room go to Download once there is some.
         val writing = File(ctx.cacheDir, WRITING)
@@ -456,7 +460,7 @@ class ServersProvider : DocumentsProvider() {
     private val conflicts = java.util.concurrent.ConcurrentHashMap<String, String>()
     private val failed = java.util.concurrent.ConcurrentHashMap<String, String>()
 
-    private fun label(server: Server) = server.name.ifBlank { server.host }
+    private fun label(server: Server) = server.name.ifBlank { if (server.isDav) DavStore.shown(server.host) else server.host }
 
     /** A server's top folder (or the place holding the servers, [TOP]): takes new things, cannot be renamed or deleted. */
     private fun folderRow(cursor: MatrixCursor, id: String, name: String) {

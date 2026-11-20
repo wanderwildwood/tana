@@ -58,8 +58,22 @@ object Stores {
     @Volatile
     var spool: java.io.File? = null
 
+    /**
+     * Called with a server's store id before that server's store is handed out, on the thread
+     * asking for it and outside this object's lock, so whatever must be settled before the
+     * first request (Home asked whether its account still holds) is settled first. Set once at
+     * start, like [spool].
+     */
+    @Volatile
+    var beforeServer: ((String) -> Unit)? = null
+
+    fun get(id: String): Store {
+        if (id.startsWith(Server.DAV_PREFIX) || id.startsWith(Server.PREFIX)) beforeServer?.invoke(id)
+        return find(id)
+    }
+
     @Synchronized
-    fun get(id: String): Store = when {
+    private fun find(id: String): Store = when {
         id == LocalStore.ID -> phone
         id.startsWith(ZipStore.PREFIX) -> zip(java.io.File(id.removePrefix(ZipStore.PREFIX)))
         else -> servers[id] ?: others[id]

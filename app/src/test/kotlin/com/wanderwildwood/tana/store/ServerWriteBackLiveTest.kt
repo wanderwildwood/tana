@@ -35,7 +35,7 @@ class ServerWriteBackLiveTest {
                 kind = Server.DAV,
             )
             val spool = tmp.newFolder("spool")
-            stores += DavStore(server.copy(host = DavStore.resolve(server, spool)), spool)
+            stores += DavStore(DavStore.resolve(server, spool), spool)
         }
         System.getenv("TANA_SMB_HOST")?.takeIf { it.isNotEmpty() }?.let { host ->
             stores += SmbStore(

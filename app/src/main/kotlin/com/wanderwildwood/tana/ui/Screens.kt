@@ -52,6 +52,7 @@ import com.mudita.mmd.components.text_field.TextFieldMMD
 import com.mudita.mmd.components.top_app_bar.TopAppBarMMD
 import com.wanderwildwood.tana.R
 import com.wanderwildwood.tana.work.SortBy
+import com.wanderwildwood.tana.store.DavStore
 import com.wanderwildwood.tana.store.Server
 import com.wanderwildwood.tana.store.Stores
 import com.wanderwildwood.tana.work.HomeAccount
@@ -233,7 +234,7 @@ fun HomeScreen(
                     server.name,
                     when {
                         home != null -> stringResource(R.string.home_account_in_use, home.user, home.server)
-                        server.isDav -> server.host.substringAfter("://").trimEnd('/')
+                        server.isDav -> DavStore.shown(server.host)
                         else -> "${server.host} / ${server.share}"
                     },
                     onPress = { vm.go(Place.Folder(com.wanderwildwood.tana.store.Loc(server.storeId, ""))) },

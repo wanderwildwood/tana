@@ -31,6 +31,7 @@ import com.wanderwildwood.tana.work.Photos
 import com.wanderwildwood.tana.work.Picking
 import com.wanderwildwood.tana.work.Pin
 import com.wanderwildwood.tana.work.HomeNextcloud
+import com.wanderwildwood.tana.work.ServerGate
 import com.wanderwildwood.tana.work.Prefs
 import com.wanderwildwood.tana.work.Previews
 import com.wanderwildwood.tana.work.Purpose
@@ -1171,9 +1172,10 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
                 if (typed != null && !DavStore.plainHttpAllowed(typed)) {
                     return@async StoreException(StoreException.Reason.PLAIN_HTTP, typed.trimEnd('/'))
                 }
-                // A Nextcloud given by its address alone is kept as the folder its files are in.
+                // A Nextcloud given by its address alone is kept as the folder its files are in,
+                // named after the user id the server gives for the login.
                 return@async try {
-                    server = server.copy(host = DavStore.resolve(server, java.io.File(getApplication<Application>().cacheDir, "spool")))
+                    server = DavStore.resolve(server, java.io.File(getApplication<Application>().cacheDir, "spool"))
                     null
                 } catch (e: Exception) {
                     e
@@ -1213,7 +1215,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     fun checkHome() {
         viewModelScope.launch {
             val changed = withContext(Dispatchers.IO) {
-                runCatching { HomeNextcloud.refresh(app) }.getOrDefault(false) ||
+                runCatching { ServerGate.askHome(app) }.getOrDefault(false) ||
                     // Or changed while the app was away, by Android's picker asking (ServersProvider).
                     HomeNextcloud.use(prefs) != _state.value.home || prefs.servers != _state.value.servers
             }

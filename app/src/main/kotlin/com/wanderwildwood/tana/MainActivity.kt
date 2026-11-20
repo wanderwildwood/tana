@@ -53,6 +53,7 @@ import com.wanderwildwood.tana.ui.monochrome
 import com.wanderwildwood.tana.work.Asked
 import com.wanderwildwood.tana.work.HomeAccount
 import com.wanderwildwood.tana.work.HomeNextcloud
+import com.wanderwildwood.tana.work.ServerGate
 import com.wanderwildwood.tana.work.PdfSource
 import com.wanderwildwood.tana.work.Picking
 import com.wanderwildwood.tana.work.Printer
@@ -181,12 +182,15 @@ private fun Browser(
     val lifecycleOwner = LocalLifecycleOwner.current
     // Home's Nextcloud account is asked about on every start and resume (each start is
     // followed by a resume), and on each change notice from Home while the app is started.
+    // Coming to the front, the copy kept of it is not used again until Home has answered: the
+    // first request to its server waits for that (ServerGate).
     DisposableEffect(lifecycleOwner) {
         var first = true
         var stopWatching: (() -> Unit)? = null
         val watcher = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_START -> {
+                    ServerGate.cameBack()
                     if (!first) vm.refresh()
                     first = false
                     stopWatching?.invoke()
