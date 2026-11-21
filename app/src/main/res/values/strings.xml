@@ -354,7 +354,7 @@
     <string name="server_dav_host_hint">http://192.168.1.20:11000</string>
     <string name="server_dav_user_hint">Your user name on it</string>
     <string name="server_dav_password">App password</string>
-    <string name="server_dav_note">For a Nextcloud, its address alone is enough. Make an app password for this phone in Nextcloud, under Settings → Security → Devices &amp; sessions, and type it here. Any other WebDAV server: the full address of the folder. Away from home, the phone reaches it only if the address is one it can reach from there, such as a Tailscale address with Tailscale on.</string>
+    <string name="server_dav_note">For a Nextcloud, its address alone is enough. Make an app password for this phone in Nextcloud, under Settings → Security → Devices &amp; sessions, and type it here. Any other WebDAV server: the full address of the folder, such as https://app.koofr.net/dav/Koofr for Koofr, with your email as the user. Away from home, the phone reaches it only if the address is one it can reach from there, such as a Tailscale address with Tailscale on.</string>
     <string name="server_note">The shared drives on a Samba or Windows server. Away from home, the phone reaches it only if the server’s address is one it can reach from there, such as a Tailscale address with Tailscale on.</string>
     <string name="server_save">Save</string>
     <string name="server_discard_armed">You have not saved this server. Press Close again to leave without saving it.</string>

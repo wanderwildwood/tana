@@ -738,7 +738,7 @@ fun ServerScreen(initial: Server, vm: BrowserViewModel, onOwn: () -> Unit, onDon
                     host = host.trim(),
                     share = if (dav) "" else share.trim().trim('/', '\\'),
                     user = user.trim(),
-                    password = password,
+                    password = if (dav) password.trim() else password,
                     kind = kind,
                 )
                 val failed = vm.saveServer(draft)
