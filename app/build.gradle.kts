@@ -18,8 +18,8 @@ android {
         // tablets. Anything newer is asked for where it is used.
         minSdk = 30
         targetSdk = 31
-        versionCode = 55
-        versionName = "0.9.24"
+        versionCode = 56
+        versionName = "0.9.25"
     }
 
     // A real keystore in signing/ signs every build type when it is present, so the
