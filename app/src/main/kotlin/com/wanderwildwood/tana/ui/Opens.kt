@@ -83,11 +83,16 @@ private fun opener(context: Context): Opener {
 }
 
 /**
- * "Opens folders and downloads", read again each time the app comes back — the answer is
- * given on Android's page, and returning from it is when it may have changed.
+ * Who answers, read again each time the app comes back — the answer is given on Android's page,
+ * and returning from it is when it may have changed.
+ *
+ * Read by the screen, not inside the row (21 Nov 2026): the row is the list's last, and a row is
+ * composed only once the page reaches it. Empty until its answer came, it had no height, so on a
+ * list that filled its pages exactly it sat just past the foot, was never composed, and so never
+ * got its answer: the page would not turn to it.
  */
 @Composable
-internal fun OpensRow() {
+internal fun rememberOpener(): Opener? {
     val context = LocalContext.current
     var round by remember { mutableIntStateOf(0) }
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -99,9 +104,16 @@ internal fun OpensRow() {
     val opener by produceState<Opener?>(null, round) {
         value = withContext(Dispatchers.IO) { opener(context) }
     }
+    return opener
+}
+
+/** "Opens folders and downloads", given [opener] from [rememberOpener]. */
+@Composable
+internal fun OpensRow(opener: Opener) {
+    val context = LocalContext.current
     var explain by remember { mutableStateOf<Opener.Other?>(null) }
 
-    val shown = opener ?: return
+    val shown = opener
     Column {
         Heading(stringResource(R.string.home_section_opens))
         when (shown) {

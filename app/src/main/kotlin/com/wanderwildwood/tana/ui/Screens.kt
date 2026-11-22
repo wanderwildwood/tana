@@ -180,6 +180,7 @@ fun HomeScreen(
     onAbout: () -> Unit,
 ) {
     val context = LocalContext.current
+    val opener = rememberOpener()
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
@@ -268,7 +269,7 @@ fun HomeScreen(
             if (!phoneOnly) item { PlaceRow(stringResource(R.string.home_add_other), null, onAddOther) }
 
             // Last, and quiet once it says Files: whether this is the app that answers.
-            if (vm.picking == null) item { OpensRow() }
+            if (vm.picking == null && opener != null) item(key = "opens") { OpensRow(opener) }
         }
     }
 }
