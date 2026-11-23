@@ -1,5 +1,7 @@
 package com.wanderwildwood.tana.ui
 
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.material3.LocalTextStyle
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -129,25 +131,55 @@ fun TextScreen(source: PdfSource?, title: String?, markdown: Boolean, onBack: ()
 private fun Lines(book: TextBook, markdown: Boolean, sp: Int) {
     val state = rememberLazyListState()
     val ink = MaterialTheme.colorScheme.onSurface
+    // A long line of a plain file (a paragraph written as one line) is cut into rows of whole lines,
+    // so a turn never opens on half a line. Only those: every other line stays a lazy row, and which
+    // lines are long is read from the index, so a big file still opens at once.
+    val fit = rememberWholeLineFit()
+    // One style for measuring and drawing a plain line, so the cut and the page agree.
+    val plain = LocalTextStyle.current.merge(TextStyle(fontSize = sp.sp, lineHeight = (sp * 1.35f).sp))
+    val long = remember(book, markdown) {
+        if (markdown) IntArray(0) else (0 until book.lineCount).filter { book.bytesOf(it) > LONG_LINE }.toIntArray()
+    }
     PagedColumn(
-        Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface),
+        Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).wholeLinePage(fit, less = 12.dp),
         state = state,
         contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 6.dp),
         showCutRow = true,
     ) {
-        items(count = book.lineCount, key = { it }) { i ->
-            val raw = remember(book, i) { book.line(i) }
-            if (markdown) {
-                MarkdownLine(Markdown.row(raw, book.isFence(i), book.isCode(i)), sp, ink)
-            } else {
+        var from = 0
+        fun shortLines(to: Int) {
+            val start = from
+            if (to > start) items(count = to - start, key = { start + it }) { k -> LineRow(book, start + k, markdown, sp, ink, plain) }
+        }
+        for (i in long) {
+            shortLines(i)
+            wholeLineItems(i, book.line(i).replace("\t", "    "), plain, fit, gap = 2.dp) { run, _, textModifier ->
                 TextMMD(
-                    text = raw.replace("\t", "    ").ifEmpty { " " },
-                    fontSize = sp.sp,
-                    lineHeight = (sp * 1.35f).sp,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 1.dp),
+                    text = run,
+                    style = plain,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 1.dp).then(textModifier),
                 )
             }
+            from = i + 1
         }
+        shortLines(book.lineCount)
+    }
+}
+
+/** Lines longer than this many bytes are cut into rows of whole lines when they are taller than the page. */
+private const val LONG_LINE = 300
+
+@Composable
+private fun LineRow(book: TextBook, i: Int, markdown: Boolean, sp: Int, ink: androidx.compose.ui.graphics.Color, plain: TextStyle) {
+    val raw = remember(book, i) { book.line(i) }
+    if (markdown) {
+        MarkdownLine(Markdown.row(raw, book.isFence(i), book.isCode(i)), sp, ink)
+    } else {
+        TextMMD(
+            text = raw.replace("\t", "    ").ifEmpty { " " },
+            style = plain,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 1.dp),
+        )
     }
 }
 

@@ -133,6 +133,9 @@ class TextBook private constructor(
         return decode(block, length)
     }
 
+    /** How many bytes the line [index] takes, its line break included; read from the index alone. */
+    fun bytesOf(index: Int): Long = (if (index + 1 < lineCount) starts[index + 1] else end) - starts[index]
+
     /** Whether the row is a ``` or ~~~ line of a Markdown file, which is not shown. */
     fun isFence(index: Int) = fences?.get(index) == true
 
