@@ -41,9 +41,13 @@ object Printer {
 
     fun canPrint(name: String) = Pdfs.canRead(name) || Names.extension(name) in PICTURES
 
-    /** False when the phone has nothing to print with; the screen says so. */
+    /** Whether the phone has anything to print with; a row for printing is offered only if so. */
+    fun available(context: Context): Boolean =
+        context.packageManager.hasSystemFeature(PackageManager.FEATURE_PRINTING)
+
+    /** False when printing did not start; the screen says so. */
     fun print(activity: Activity, file: File): Boolean {
-        if (!activity.packageManager.hasSystemFeature(PackageManager.FEATURE_PRINTING)) return false
+        if (!available(activity)) return false
         val printing = activity.getSystemService(PrintManager::class.java) ?: return false
         val adapter = if (Pdfs.canRead(file.name)) PdfPages(file) else PicturePage(activity, file)
         return runCatching { printing.print(file.name, adapter, null) }.isSuccess

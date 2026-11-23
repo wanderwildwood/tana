@@ -281,12 +281,14 @@ fun MoreDialog(
     /** From search results, which come from many folders: nothing that makes a file "here". */
     fromSearch: Boolean = false,
 ) {
+    val context = LocalContext.current
     val one = chosen.singleOrNull()
+    val printHere = remember { Printer.available(context) }
     EInkDialog(onDismiss = onDismiss) {
         if (chosen.any { !it.isFolder }) DialogRow(stringResource(R.string.action_share), onClick = onShare)
         DialogRow(stringResource(R.string.action_send_nearby), onClick = onSendNearby)
         if (one != null && !one.isFolder) DialogRow(stringResource(R.string.action_open_with), onClick = onOpenWith)
-        if (one != null && !one.isFolder && Printer.canPrint(one.name)) DialogRow(stringResource(R.string.action_print), onClick = onPrint)
+        if (one != null && !one.isFolder && printHere && Printer.canPrint(one.name)) DialogRow(stringResource(R.string.action_print), onClick = onPrint)
         if (one != null && !readOnly && !fromSearch && !one.isFolder && Names.extension(one.name) == "zip") {
             DialogRow(stringResource(R.string.action_extract), onClick = onExtract)
         }
