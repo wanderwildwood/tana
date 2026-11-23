@@ -141,11 +141,13 @@ private fun Lines(book: TextBook, markdown: Boolean, sp: Int) {
         if (markdown) IntArray(0) else (0 until book.lineCount).filter { book.bytesOf(it) > LONG_LINE }.toIntArray()
     }
     PagedColumn(
-        Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).wholeLinePage(fit, less = 12.dp),
+        Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).wholeLinePage(fit),
         state = state,
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 6.dp),
         showCutRow = true,
     ) {
+        // The gap above the text is a row of its own, not padding on the list: a list draws its
+        // rows in its padding too, and the line above the page's first one showed there (23 Nov 2026).
+        item(key = "top", contentType = "gap") { Spacer(Modifier.height(6.dp)) }
         var from = 0
         fun shortLines(to: Int) {
             val start = from
@@ -163,6 +165,7 @@ private fun Lines(book: TextBook, markdown: Boolean, sp: Int) {
             from = i + 1
         }
         shortLines(book.lineCount)
+        item(key = "end", contentType = "gap") { Spacer(Modifier.height(6.dp)) }
     }
 }
 
