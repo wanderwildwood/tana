@@ -48,6 +48,11 @@ by whatever route, carries no password anyone can read. The settings are also le
 Android's backups (`allowBackup="false"`). The password is sent only to that server, when
 signing in. A server added as a guest has no password to keep.
 
+With Home (`com.wanderwildwood.iori`) signed in to a Nextcloud, "Use the phone's Nextcloud
+account" adds that server with no password typed. Cabinet asks Home for the account only after
+checking that the app answering really is Home, by its signing certificate. It keeps only that choice; the password stays Home's, is asked for when it is needed, and is let go when Home signs out.
+Cabinet also asks Home whether its dark mode switch is on, a yes or no.
+
 ## Folders from other apps
 
 A folder added from another app is one you chose in Android's own folder picker, and the access
